@@ -1,0 +1,34 @@
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+    paths:
+      - .github/workflows/build-event-core.yaml
+      - "event-core/**"
+      - "google-token-fetcher/**"
+      - "redis-retry/**"
+      - Dockerfile
+      - Cargo.lock
+
+env:
+  docker_image_tag: ${{ github.ref == 'refs/heads/main' && github.sha || github.ref_name }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: integration-os/google-artifact-registry-action@v2
+        with:
+          image: "us-docker.pkg.dev/integrationos/docker-oss/event-core:${{ env.docker_image_tag }}"
+          service_account: github-actions@integrationos.iam.gserviceaccount.com
+          workload_identity_provider: projects/356173785332/locations/global/workloadIdentityPools/github-actions/providers/github-actions
+          build-args: |
+            "EXECUTABLE=event-core"
