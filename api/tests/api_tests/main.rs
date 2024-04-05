@@ -1,0 +1,9 @@
+mod auth_tests;
+mod get_tests;
+mod pagination_tests;
+mod passthrough_tests;
+mod schema_tests;
+mod test_crud;
+mod test_server;
+mod transaction_tests;
+mod unified_tests;

@@ -1,0 +1,77 @@
+# See https://stackoverflow.com/questions/75951150/why-cant-my-cache-action-triggered-inside-a-pull-request-not-access-the-cache-t
+
+name: Post Merge Cache Building on Master Branch
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+        id: rust-cache
+      - name: Check for cache hit
+        run: echo "cache-hit=${{ steps.rust-cache.outputs.cache-hit }}"
+      - if: ${{ steps.rust-cache.outputs.cache-hit == 'false' }}
+        run: cargo fmt --check
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        id: rust-cache
+      - name: Check for cache hit
+        run: echo "cache-hit=${{ steps.rust-cache.outputs.cache-hit }}"
+      - if: ${{ steps.rust-cache.outputs.cache-hit == 'false' }}
+        name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - if: ${{ steps.rust-cache.outputs.cache-hit == 'false' }}
+        run: cargo check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        id: rust-cache
+      - name: Check for cache hit
+        run: echo "cache-hit=${{ steps.rust-cache.outputs.cache-hit }}"
+      - if: ${{ steps.rust-cache.outputs.cache-hit == 'false' }}
+        name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - if: ${{ steps.rust-cache.outputs.cache-hit == 'false' }}
+        run: cargo clippy
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove cached stuff
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        id: rust-cache
+      - name: Check for cache hit
+        run: echo "cache-hit=${{ steps.rust-cache.outputs.cache-hit }}"
+      - if: ${{ steps.rust-cache.outputs.cache-hit == 'false' }}
+        name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - if: ${{ steps.rust-cache.outputs.cache-hit == 'false' }}
+        name: Install latest nextest release
+        uses: taiki-e/install-action@nextest
+      - if: ${{ steps.rust-cache.outputs.cache-hit == 'false' }}
+        run: cargo nextest run --all-features

@@ -1,0 +1,59 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+dummy = ["fake", "integrationos-domain/dummy"]
+
+[dependencies]
+anyhow.workspace = true
+axum.workspace = true
+bson.workspace = true
+chrono.workspace = true
+convert_case.workspace = true
+dotenvy.workspace = true
+envconfig.workspace = true
+fake = { workspace = true, optional = true }
+futures.workspace = true
+futures-util.workspace = true
+handlebars.workspace = true
+http-serde-ext.workspace = true
+http.workspace = true
+hyper = "0.14.27"
+indexmap = "2.1.0"
+integrationos-domain = { workspace = true, features = [
+    "unified",
+    "metrics",
+    "axum-error",
+] }
+jsonwebtoken.workspace = true
+moka.workspace = true
+mongodb.workspace = true
+num_cpus = "1"
+openapiv3.workspace = true
+rand.workspace = true
+redis-retry = { path = "../redis-retry" }
+reqwest.workspace = true
+segment = "0.2.3"
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+strum.workspace = true
+tokio.workspace = true
+tower = { version = "0.4.13", features = ["filter"] }
+tower-http.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true
+validator.workspace = true
+
+[dev-dependencies]
+testcontainers-modules = { workspace = true, features = ["mongo", "redis"] }
+event-core = { path = "../event-core" }
+gateway = { path = "../gateway" }
+mockito.workspace = true
+uuid.workspace = true
+
+[[test]]
+name = "api_tests"
+required-features = ["dummy"]
