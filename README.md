@@ -174,6 +174,6 @@ docker-compose exec mongo mongosh -u integrationos -p $MONGO_PASSWORD --authenti
 ```
 
 
-## License
+# License
 
 IntegrationOS is released under the [**GPL-3.0 license**](LICENSE).
