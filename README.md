@@ -4,10 +4,8 @@
  </p>
 
 <p align="center">
-  <a href="https://integrationos.com">
     <img src="https://assets-global.website-files.com/5f6b97302bb70b93e591d51f/657a3a1aec47c8ec20b396fe_IntegrationOS%20main%20logo-p-500.png#gh-dark-mode-only" height="64px">
     <img src="https://assets.buildable.dev/catalog/social/logo-dark.png#gh-light-mode-only" height="64px">
-  </a>
 </p>
 
 <p align="center"><b>Ship integrations, remarkably fast.</b></p>
@@ -136,9 +134,9 @@ View the full guide [here](https://docs.integrationos.com/docs/quickstart).
 
 ## Prerequisites
 
-* [Docker](https://docs.docker.com/engine/) and [Docker Compose](https://docs.docker.com/compose/)
-* A [Google Cloud KMS](https://cloud.google.com/kms/docs) key ring
-* [`gcloud`](https://cloud.google.com/sdk/gcloud) installed, logged into an account that has `roles/cloudkms.cryptoKeyEncrypterDecrypter` access, and configured with [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc)
+- [Docker](https://docs.docker.com/engine/) and [Docker Compose](https://docs.docker.com/compose/)
+- A [Google Cloud KMS](https://cloud.google.com/kms/docs) key ring
+- [`gcloud`](https://cloud.google.com/sdk/gcloud) installed, logged into an account that has `roles/cloudkms.cryptoKeyEncrypterDecrypter` access, and configured with [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc)
 
 ## Setup
 
@@ -173,7 +171,6 @@ Connecting to a MongoDB shell
 source .env
 docker-compose exec mongo mongosh -u integrationos -p $MONGO_PASSWORD --authenticationDatabase=admin events-service
 ```
-
 
 # License
 
