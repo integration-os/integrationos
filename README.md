@@ -71,7 +71,7 @@ import { AuthKitToken } from "@integrationos/authkit-node";
 
 app.post("/authkit-token", async (request, response) => {
   const authKitToken = new AuthKitToken(process.env.INTEGRATIONOS_SANDBOX_API_KEY);
-  
+
 // Specifying how the token will be constructed
   const token = await authKitToken.create({
     group: "org_123", // a meaningful identifier (i.e., organizationId)
@@ -137,11 +137,11 @@ View the full guide [here](https://docs.integrationos.com/docs/quickstart).
 
 * [Docker](https://docs.docker.com/engine/) and [Docker Compose](https://docs.docker.com/compose/)
 * A [Google Cloud KMS](https://cloud.google.com/kms/docs) key ring
-* [`gcloud`](https://cloud.google.com/sdk/gcloud) installed and logged into an account with `roles/cloudkms.cryptoKeyEncrypterDecrypter` access
+* [`gcloud`](https://cloud.google.com/sdk/gcloud) installed, logged into an account that has `roles/cloudkms.cryptoKeyEncrypterDecrypter` access, and configured with [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc)
 
 ## Setup
 
-1. Copy `.env-example` to `.env` and set the values
+1. Copy `.env-example` to `.env`. Review and update the environment variables.
 
 2. Run the containers
 
@@ -160,8 +160,8 @@ View the full guide [here](https://docs.integrationos.com/docs/quickstart).
 
     ```shell
     source .env
-    docker-compose -f docker-compose.data.yml run migrate-before
-    docker-compose -f docker-compose.data.yml run migrate-after
+    docker-compose -f docker-compose.data.yml run --rm migrate-before
+    docker-compose -f docker-compose.data.yml run --rm migrate-after
     ```
 
 ## Other actions
