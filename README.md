@@ -5,7 +5,8 @@
 
 <p align="center">
   <a href="https://integrationos.com">
-    <img src="https://assets-global.website-files.com/5f6b97302bb70b93e591d51f/657a3a1aec47c8ec20b396fe_IntegrationOS%20main%20logo-p-500.png" height="64px">
+    <img src="https://assets-global.website-files.com/5f6b97302bb70b93e591d51f/657a3a1aec47c8ec20b396fe_IntegrationOS%20main%20logo-p-500.png#gh-dark-mode-only" height="64px">
+    <img src="https://assets.buildable.dev/catalog/social/logo-dark.png#gh-light-mode-only" height="64px">
   </a>
 </p>
 
