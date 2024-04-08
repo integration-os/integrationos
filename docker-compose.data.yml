@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  migrate-before:
+    platform: linux/amd64
+    image: us-docker.pkg.dev/integrationos/docker-oss/typescript-services:1.0.0
+    command: npm run run-migrations::before
+    environment:
+      - MONGO_URI=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017/events-service?authSource=admin
+      - MONGO_DB_NAME=events-service
+
+  migrate-after:
+    platform: linux/amd64
+    image: us-docker.pkg.dev/integrationos/docker-oss/typescript-services:1.0.0
+    command: npm run run-migrations::after
+    environment:
+      - MONGO_URI=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017/events-service?authSource=admin
+      - MONGO_DB_NAME=events-service
