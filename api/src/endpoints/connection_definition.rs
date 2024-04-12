@@ -1,4 +1,6 @@
-use super::{create, delete, update, ApiResult, CrudHook, CrudRequest, ReadResponse};
+use super::{
+    create, delete, update, ApiResult, CachedRequest, CrudHook, CrudRequest, ReadResponse,
+};
 use crate::{
     internal_server_error, not_found,
     server::{AppState, AppStores},
@@ -333,7 +335,9 @@ impl CrudRequest for CreateRequest {
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.connection_config
     }
+}
 
+impl CachedRequest for CreateRequest {
     fn get_cache(
         state: Arc<AppState>,
     ) -> Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<Self::Output>>>> {

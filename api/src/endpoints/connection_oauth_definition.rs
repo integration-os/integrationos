@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, CrudHook, CrudRequest, ReadResponse};
+use super::{create, delete, read, update, CachedRequest, CrudHook, CrudRequest, ReadResponse};
 use crate::server::{AppState, AppStores};
 use axum::{
     routing::{patch, post},
@@ -202,7 +202,9 @@ impl CrudRequest for FrontendOauthConnectionDefinition {
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.frontend_oauth_config.clone()
     }
+}
 
+impl CachedRequest for FrontendOauthConnectionDefinition {
     fn get_cache(
         state: Arc<AppState>,
     ) -> Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<Self::Output>>>> {

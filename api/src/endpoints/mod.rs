@@ -51,11 +51,12 @@ pub trait CrudRequest: Sized {
     fn into_public(self) -> Result<Self::Output, Self::Error>;
     fn update(self, record: &mut Self::Output);
     fn get_store(stores: AppStores) -> MongoStore<Self::Output>;
+}
+
+pub trait CachedRequest: CrudRequest {
     fn get_cache(
-        _state: Arc<AppState>,
-    ) -> Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<Self::Output>>>> {
-        todo!()
-    }
+        state: Arc<AppState>,
+    ) -> Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<Self::Output>>>>;
 }
 
 pub type ApiError = (StatusCode, Json<ErrorResponse>);
@@ -192,7 +193,7 @@ pub async fn read_cached<T, U>(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Arc<ReadResponse<U>>>, ApiError>
 where
-    T: CrudRequest<Output = U> + 'static,
+    T: CachedRequest<Output = U> + 'static,
     U: Clone + Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
 {
     let cache = T::get_cache(state.clone());
