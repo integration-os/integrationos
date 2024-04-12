@@ -3,7 +3,7 @@ use crate::{
 };
 use axum::{extract::State, middleware::Next, response::Response};
 use http::Request;
-use integrationos_domain::{algebra::adapter::StoreAdapter, ApplicationError, InternalError};
+use integrationos_domain::{algebra::StoreExt, ApplicationError, InternalError};
 use mongodb::bson::doc;
 use std::sync::Arc;
 use tracing::error;
@@ -43,7 +43,7 @@ pub async fn auth<B>(
                     "deleted": false
                 })
                 .await
-                .map_err(|e| InternalError::connection_error(&e.to_string(), None))?;
+                .map_err(|e| InternalError::connection_error(e.as_ref(), None))?;
 
             if let Some(event_access) = event_access {
                 Ok(Arc::new(event_access))

@@ -1,8 +1,3 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
-
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use chrono::Utc;
@@ -12,25 +7,30 @@ use event_core::{
 };
 use fake::{Fake, Faker};
 use integrationos_domain::{
-    algebra::execution::ExecutionContext,
+    algebra::PipelineExt,
     common::{
-        duplicates::Duplicates, extractor::HttpExtractor, pipeline_context::Stage as PipelineStage,
-        root_context::Stage, Connection, Event, ExtractorContext, Pipeline, PipelineContext,
-        RootContext,
+        duplicates::Duplicates, extractor::HttpExtractor, Connection, Event, ExtractorContext,
+        Pipeline, PipelineContext, RootContext,
     },
     id::{prefix::IdPrefix, Id},
+    pipeline_context::PipelineStage,
+    root_context::RootStage,
 };
 use serde_json::Value;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
-type Contexts = Arc<Mutex<HashMap<Id, Vec<Box<dyn ExecutionContext>>>>>;
+type Contexts = Arc<Mutex<HashMap<Id, Vec<Box<dyn PipelineExt>>>>>;
 
 #[derive(Clone, Default)]
 pub struct MockStorage {
     pub contexts: Contexts,
     pub pipelines: Arc<Mutex<HashMap<String, Pipeline>>>,
     pub events: Arc<Mutex<HashMap<Id, Event>>>,
-    pub drop_at: Option<Stage>,
-    pub fail_at: Option<Stage>,
+    pub drop_at: Option<RootStage>,
+    pub fail_at: Option<RootStage>,
     pub fail_pipeline_at: Option<PipelineStage>,
 }
 
@@ -49,7 +49,7 @@ impl MockStorage {
 
 #[async_trait]
 impl ContextStore for MockStorage {
-    async fn get<T: ExecutionContext + Clone>(&self, context_key: &Id) -> Result<T> {
+    async fn get<T: PipelineExt + Clone>(&self, context_key: &Id) -> Result<T> {
         self.contexts
             .lock()
             .unwrap()
@@ -58,13 +58,13 @@ impl ContextStore for MockStorage {
                 let last = c.last();
                 last.expect("No context for {context_key}")
                     .downcast_ref::<T>()
-                    .expect("ExecutionContext could not be downcast")
+                    .expect("PipelineExt could not be downcast")
                     .clone()
             })
             .ok_or(anyhow!("No context for {context_key}"))
     }
 
-    async fn set<T: ExecutionContext + Clone>(&self, context: T) -> Result<()> {
+    async fn set<T: PipelineExt + Clone>(&self, context: T) -> Result<()> {
         let context = Box::new(context);
         self.contexts
             .lock()
@@ -93,16 +93,16 @@ impl ControlDataStore for MockStorage {
     async fn verify_event(&self, _event: &Event) -> Result<bool> {
         fail_at!(
             self.fail_at,
-            Some(Stage::ProcessedDuplicates),
+            Some(RootStage::ProcessedDuplicates),
             "Failed to fetch event"
         );
-        Ok(self.drop_at != Some(Stage::ProcessedDuplicates))
+        Ok(self.drop_at != Some(RootStage::ProcessedDuplicates))
     }
 
     async fn get_pipelines(&self, _event: &Event) -> Result<Vec<Pipeline>> {
         fail_at!(
             self.fail_at,
-            Some(Stage::Verified),
+            Some(RootStage::Verified),
             "Failed to get pipelines"
         );
         Ok(self.pipelines.lock().unwrap().values().cloned().collect())
@@ -213,14 +213,14 @@ async fn get_and_set_contexts_downcasting_works() {
 }
 
 impl MockStorage {
-    fn get_at<T: ExecutionContext + Clone>(&self, index: usize) -> T {
+    fn get_at<T: PipelineExt + Clone>(&self, index: usize) -> T {
         let c = self.contexts.lock().unwrap();
         let c = c.values().flatten().collect::<Vec<_>>();
 
         let last = c.get(index);
         last.expect("No context for {context_key}")
             .downcast_ref::<T>()
-            .expect("ExecutionContext could not be downcast")
+            .expect("PipelineExt could not be downcast")
             .clone()
     }
 }
@@ -274,13 +274,16 @@ async fn run_dispatcher() {
 
     for i in 0..7 {
         match i {
-            0 => assert_eq!(root_context!(Stage::Verified), store.get_at(i)),
-            1 => assert_eq!(root_context!(Stage::ProcessedDuplicates), store.get_at(i)),
+            0 => assert_eq!(root_context!(RootStage::Verified), store.get_at(i)),
+            1 => assert_eq!(
+                root_context!(RootStage::ProcessedDuplicates),
+                store.get_at(i)
+            ),
             2 => {
                 let mut map = HashMap::new();
                 map.insert(pipeline.id.clone(), pipeline_context!(PipelineStage::New));
                 assert_eq!(
-                    root_context!(Stage::ProcessingPipelines(map)),
+                    root_context!(RootStage::ProcessingPipelines(map)),
                     store.get_at(i)
                 );
             }

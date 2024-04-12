@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use integrationos_domain::{
-    algebra::crypto::Crypto, create_secret_response::CreateSecretResponse,
+    algebra::CryptoExt, create_secret_response::CreateSecretResponse,
     get_secret_request::GetSecretRequest, IntegrationOSError,
 };
 
@@ -9,7 +9,7 @@ use integrationos_domain::{
 pub struct MockSecretsClient;
 
 #[async_trait]
-impl Crypto for MockSecretsClient {
+impl CryptoExt for MockSecretsClient {
     async fn decrypt(
         &self,
         _secret: &GetSecretRequest,

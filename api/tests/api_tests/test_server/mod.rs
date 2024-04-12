@@ -1,9 +1,3 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    sync::{Arc, OnceLock, RwLock},
-    time::Duration,
-};
-
 use anyhow::Result;
 use api::{
     config::Config,
@@ -19,7 +13,7 @@ use fake::{Fake, Faker};
 use http::StatusCode;
 use http::{header::AUTHORIZATION, Method};
 use integrationos_domain::{
-    algebra::adapter::StoreAdapter,
+    algebra::{CryptoExt, MongoStore, StoreExt},
     common::{
         access_key_data::AccessKeyData,
         access_key_prefix::AccessKeyPrefix,
@@ -31,12 +25,10 @@ use integrationos_domain::{
         environment::Environment,
         event_access::EventAccess,
         event_type::EventType,
-        mongo::MongoDbStore,
         AccessKey, Connection, Store,
     },
     create_secret_response::{CreateSecretAuthor, CreateSecretResponse},
     get_secret_request::GetSecretRequest,
-    prelude::crypto::Crypto,
     IntegrationOSError,
 };
 use mockito::{Matcher, Server as MockServer, ServerGuard};
@@ -45,6 +37,11 @@ use rand::Rng;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use serde_json::{from_value, to_value};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::{Arc, OnceLock, RwLock},
+    time::Duration,
+};
 use testcontainers_modules::{
     mongo::Mongo,
     redis::Redis,
@@ -99,7 +96,7 @@ pub struct MockSecretsClient {
 }
 
 #[async_trait]
-impl Crypto for MockSecretsClient {
+impl CryptoExt for MockSecretsClient {
     async fn encrypt(
         &self,
         key: String,
@@ -240,9 +237,8 @@ impl TestServer {
 
         let db = Client::with_uri_str(&db).await.unwrap().database(&db_name);
 
-        let store: MongoDbStore<EventAccess> = MongoDbStore::new_with_db(db, Store::EventAccess)
-            .await
-            .unwrap();
+        let store: MongoStore<EventAccess> =
+            MongoStore::new(&db, &Store::EventAccess).await.unwrap();
 
         store
             .create_many(&[live.clone(), test.clone()])

@@ -33,7 +33,7 @@ mongodb.workspace = true
 num_cpus = "1"
 openapiv3.workspace = true
 rand.workspace = true
-redis-retry = { path = "../redis-retry" }
+redis.workspace = true
 reqwest.workspace = true
 segment = "0.2.3"
 semver.workspace = true

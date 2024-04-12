@@ -1,14 +1,14 @@
 use crate::store::ContextStore;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use integrationos_domain::{algebra::execution::ExecutionContext, id::Id};
+use integrationos_domain::{algebra::PipelineExt, id::Id};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
 
-type Contexts = Arc<Mutex<HashMap<Id, Vec<Box<dyn ExecutionContext>>>>>;
+type Contexts = Arc<Mutex<HashMap<Id, Vec<Box<dyn PipelineExt>>>>>;
 
 #[derive(Clone, Default)]
 pub struct MockContextStorage {
@@ -25,7 +25,7 @@ impl MockContextStorage {
 
 #[async_trait]
 impl ContextStore for MockContextStorage {
-    async fn get<T: ExecutionContext + Clone + for<'a> Deserialize<'a> + Unpin>(
+    async fn get<T: PipelineExt + Clone + for<'a> Deserialize<'a> + Unpin>(
         &self,
         context_key: &Id,
     ) -> Result<T> {
@@ -37,13 +37,13 @@ impl ContextStore for MockContextStorage {
                 let last = c.last();
                 last.expect("No context for {context_key}")
                     .downcast_ref::<T>()
-                    .expect("ExecutionContext could not be downcast")
+                    .expect("PipelineExt could not be downcast")
                     .clone()
             })
             .ok_or(anyhow!("No context for {context_key}"))
     }
 
-    async fn set<T: ExecutionContext + Clone + Serialize>(&self, context: T) -> Result<()> {
+    async fn set<T: PipelineExt + Clone + Serialize>(&self, context: T) -> Result<()> {
         let context = Box::new(context);
         self.contexts
             .lock()

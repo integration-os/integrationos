@@ -11,7 +11,7 @@ use axum::{
     Json, Router,
 };
 use integrationos_domain::{
-    algebra::adapter::StoreAdapter,
+    algebra::{MongoStore, StoreExt},
     common::{
         api_model_config::AuthMethod,
         connection_definition::{
@@ -19,7 +19,6 @@ use integrationos_domain::{
             FormDataItem, Frontend, Paths, Spec,
         },
         event_access::EventAccess,
-        mongo::MongoDbStore,
         record_metadata::RecordMetadata,
         settings::Settings,
     },
@@ -333,14 +332,12 @@ impl CrudRequest for CreateRequest {
         record.record_metadata.active = self.active;
     }
 
-    fn get_store(stores: AppStores) -> MongoDbStore<Self::Output> {
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.connection_config
     }
 }
 
 impl CachedRequest for CreateRequest {
-    type Output = ConnectionDefinition;
-
     fn get_cache(
         state: Arc<AppState>,
     ) -> Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<Self::Output>>>> {

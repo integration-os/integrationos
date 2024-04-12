@@ -1,13 +1,13 @@
-use std::sync::Arc;
-
+use super::{read, CrudRequest};
+use crate::server::{AppState, AppStores};
 use axum::{routing::get, Router};
 use bson::doc;
-use integrationos_domain::common::{event_access::EventAccess, mongo::MongoDbStore, Event};
+use integrationos_domain::{
+    algebra::MongoStore,
+    common::{event_access::EventAccess, Event},
+};
 use serde::{Deserialize, Serialize};
-
-use crate::server::{AppState, AppStores};
-
-use super::{read, CrudRequest};
+use std::sync::Arc;
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new().route("/", get(read::<CreateEventRequest, Event>))
@@ -28,7 +28,7 @@ impl CrudRequest for CreateEventRequest {
         unimplemented!()
     }
 
-    fn get_store(stores: AppStores) -> MongoDbStore<Self::Output> {
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.event
     }
 

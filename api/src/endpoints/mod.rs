@@ -1,3 +1,29 @@
+use crate::{
+    api_payloads::ErrorResponse,
+    internal_server_error, not_found,
+    server::{AppState, AppStores},
+    util::shape_mongo_filter,
+};
+use anyhow::Result;
+use axum::{
+    async_trait,
+    extract::{Path, Query, State},
+    Extension, Json,
+};
+use bson::{doc, SerializerOptions};
+use http::{HeaderMap, HeaderValue, StatusCode};
+use integrationos_domain::{
+    algebra::{MongoStore, StoreExt},
+    common::{event_access::EventAccess, Connection},
+    ApplicationError, IntegrationOSError, InternalError, OAuth, Store,
+};
+use moka::future::Cache;
+use mongodb::options::FindOneOptions;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::{collections::BTreeMap, sync::Arc};
+use tokio::try_join;
+use tracing::error;
+
 pub mod common_enum;
 pub mod common_model;
 pub mod connection;
@@ -15,37 +41,7 @@ pub mod pipeline;
 pub mod transactions;
 pub mod unified;
 
-use crate::{
-    api_payloads::ErrorResponse,
-    bad_request, internal_server_error, not_found,
-    server::{AppState, AppStores},
-    util::shape_mongo_filter,
-};
-use anyhow::Result;
-use axum::{
-    async_trait,
-    extract::{Path, Query, State},
-    Extension, Json,
-};
-use bson::{doc, SerializerOptions};
-use http::{HeaderMap, HeaderValue, StatusCode};
-use integrationos_domain::{
-    algebra::adapter::StoreAdapter,
-    common::{event_access::EventAccess, mongo::MongoDbStore, Connection},
-    IntegrationOSError, OAuth, Store,
-};
-use moka::future::Cache;
-use mongodb::options::FindOneOptions;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{collections::BTreeMap, sync::Arc};
-use tokio::try_join;
-use tracing::error;
-
 const INTEGRATION_OS_PASSTHROUGH_HEADER: &str = "x-integrationos-passthrough";
-
-pub type GetCache<T> = Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<T>>>>;
-pub type ApiError = (StatusCode, Json<ErrorResponse>);
-pub type ApiResult<T> = Result<Json<T>, ApiError>;
 
 pub trait CrudRequest: Sized {
     type Output: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static;
@@ -54,14 +50,17 @@ pub trait CrudRequest: Sized {
     fn into_with_event_access(self, event_access: Arc<EventAccess>) -> Self::Output;
     fn into_public(self) -> Result<Self::Output, Self::Error>;
     fn update(self, record: &mut Self::Output);
-    fn get_store(stores: AppStores) -> MongoDbStore<Self::Output>;
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output>;
 }
 
-pub trait CachedRequest: Sized {
-    type Output: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static;
-
-    fn get_cache(state: Arc<AppState>) -> GetCache<Self::Output>;
+pub trait CachedRequest: CrudRequest {
+    fn get_cache(
+        state: Arc<AppState>,
+    ) -> Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<Self::Output>>>>;
 }
+
+pub type ApiError = (StatusCode, Json<ErrorResponse>);
+pub type ApiResult<T> = Result<Json<T>, ApiError>;
 
 #[async_trait]
 pub trait CrudHook<Input>
@@ -194,7 +193,7 @@ pub async fn read_cached<T, U>(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Arc<ReadResponse<U>>>, ApiError>
 where
-    T: CrudRequest<Output = U> + CachedRequest<Output = U> + 'static,
+    T: CachedRequest<Output = U> + 'static,
     U: Clone + Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
 {
     let cache = T::get_cache(state.clone());
@@ -357,19 +356,21 @@ where
 struct SparseConnection {
     oauth: OAuth,
 }
-
 async fn get_connection(
     access: &EventAccess,
     connection_id: &HeaderValue,
     stores: &AppStores,
     cache: &Cache<(Arc<str>, HeaderValue), Arc<Connection>>,
-) -> Result<Arc<Connection>, ApiError> {
+) -> Result<Arc<Connection>, IntegrationOSError> {
     let connection = cache
         .try_get_with(
             (access.ownership.id.clone(), connection_id.clone()),
             async {
                 let Ok(connection_id_str) = connection_id.to_str() else {
-                    return Err(bad_request!("Invalid connection key header"));
+                    return Err(ApplicationError::bad_request(
+                        "Invalid connection key header",
+                        None,
+                    ));
                 };
 
                 let connection = match stores
@@ -383,12 +384,12 @@ async fn get_connection(
                 {
                     Ok(Some(data)) => Arc::new(data),
                     Ok(None) => {
-                        return Err(not_found!("Connection"));
+                        return Err(ApplicationError::not_found("Connection", None));
                     }
                     Err(e) => {
                         error!("Error fetching connection: {:?}", e);
 
-                        return Err(internal_server_error!());
+                        return Err(InternalError::unknown("Error fetching connection", None));
                     }
                 };
 
@@ -418,12 +419,12 @@ async fn get_connection(
         {
             Ok(Some(data)) => data,
             Ok(None) => {
-                return Err(not_found!("Connection"));
+                return Err(ApplicationError::not_found("Connection", None));
             }
             Err(e) => {
                 error!("Error fetching connection: {:?}", e);
 
-                return Err(internal_server_error!());
+                return Err(InternalError::unknown("Error fetching connection", None));
             }
         };
         let mut connection = (*connection).clone();

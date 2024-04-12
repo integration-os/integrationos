@@ -6,19 +6,14 @@ use anyhow::{bail, Context as AnyhowContext, Result};
 use async_trait::async_trait;
 use bson::{doc, SerializerOptions};
 use futures::future::join_all;
-use google_token_fetcher::GoogleTokenFetcher;
 use handlebars::Handlebars;
 use http::header::AUTHORIZATION;
 use integrationos_domain::{
-    algebra::{adapter::StoreAdapter, crypto::Crypto},
+    algebra::{CryptoExt, FecherExt, GoogleTokenFetcher, MongoStore, StoreExt},
     common::{
-        duplicates::Duplicates,
-        encrypted_access_key::EncryptedAccessKey,
-        event_access::EventAccess,
-        extractor::HttpExtractor,
-        middleware::Middleware,
-        mongo::{MongoDbStore, MongoDbStoreConfig},
-        Connection, Event, Pipeline, Store,
+        duplicates::Duplicates, encrypted_access_key::EncryptedAccessKey,
+        event_access::EventAccess, extractor::HttpExtractor, middleware::Middleware, Connection,
+        Event, Pipeline, Store,
     },
     id::Id,
     service::unified_destination::UnifiedDestination,
@@ -32,10 +27,10 @@ use tracing::{error, warn};
 
 #[derive(Clone)]
 pub struct MongoControlDataStore {
-    pub connections_store: MongoDbStore<Connection>,
-    pub event_store: MongoDbStore<Event>,
-    pub event_access_store: MongoDbStore<EventAccess>,
-    pub pipelines_store: MongoDbStore<Pipeline>,
+    pub connections_store: MongoStore<Connection>,
+    pub event_store: MongoStore<Event>,
+    pub event_access_store: MongoStore<EventAccess>,
+    pub pipelines_store: MongoStore<Pipeline>,
     pub connections_cache: Cache<String, Connection>,
     pub event_cache: Cache<Id, Event>,
     pub event_access_cache: Cache<String, EventAccess>,
@@ -49,7 +44,7 @@ pub struct MongoControlDataStore {
 impl MongoControlDataStore {
     pub async fn new(
         config: &EventCoreConfig,
-        secrets_client: Arc<dyn Crypto + Sync + Send>,
+        secrets_client: Arc<dyn CryptoExt + Sync + Send>,
     ) -> Result<Self> {
         let mut client_options = ClientOptions::parse(&config.db.control_db_url)
             .await
@@ -61,12 +56,9 @@ impl MongoControlDataStore {
 
         let db = client.database(&config.db.control_db_name);
 
-        let connections_store =
-            MongoDbStore::new(MongoDbStoreConfig::new(db.clone(), Store::Connections)).await?;
-        let event_access_store =
-            MongoDbStore::new(MongoDbStoreConfig::new(db.clone(), Store::EventAccess)).await?;
-        let pipelines_store =
-            MongoDbStore::new(MongoDbStoreConfig::new(db, Store::Pipelines)).await?;
+        let connections_store = MongoStore::new(&db.clone(), &Store::Connections).await?;
+        let event_access_store = MongoStore::new(&db.clone(), &Store::EventAccess).await?;
+        let pipelines_store = MongoStore::new(&db, &Store::Pipelines).await?;
 
         let mut event_client_options = ClientOptions::parse(&config.db.event_db_url)
             .await
@@ -77,7 +69,7 @@ impl MongoControlDataStore {
             .with_context(|| "Failed to create events MongoDB client with options")?;
 
         let event_db = client.database(&config.db.event_db_name);
-        let event_store = MongoDbStore::new(MongoDbStoreConfig::new(event_db, Store::Events))
+        let event_store = MongoStore::new(&event_db, &Store::Events)
             .await
             .with_context(|| {
                 format!(
@@ -124,7 +116,7 @@ impl MongoControlDataStore {
     }
 
     async fn fetch_google_auth_token(&self, url: &str) -> Option<String> {
-        let token_fetcher = &(self.token_fetcher.clone()?);
+        let token_fetcher = &(self.clone().token_fetcher?);
         match token_fetcher.get_token(url).await {
             Ok(header) => Some(header),
             Err(_) => None,

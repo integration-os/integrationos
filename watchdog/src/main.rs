@@ -4,20 +4,18 @@ use dotenvy::dotenv;
 use envconfig::Envconfig;
 use futures::{future::join_all, TryStreamExt};
 use integrationos_domain::{
-    algebra::adapter::StoreAdapter,
+    algebra::{MongoStore, RedisCache, StoreExt},
     common::{
-        event_with_context::EventWithContext,
-        mongo::{MongoDbStore, MongoDbStoreConfig},
-        pipeline_context::Stage as PipelineStage,
-        root_context::Stage,
-        Event, ExtractorContext, PipelineContext, RootContext, Store,
+        event_with_context::EventWithContext, ExtractorContext, PipelineContext, RootContext, Store,
     },
+    pipeline_context::PipelineStage,
+    root_context::RootStage,
 };
 use mongodb::{
     bson::{doc, Bson, Document},
     options::FindOneOptions,
 };
-use redis_retry::{AsyncCommands, LposOptions, Redis, RedisResult};
+use redis::{AsyncCommands, LposOptions, RedisResult};
 use std::time::Duration;
 use tracing::{debug, error, info, metadata::LevelFilter, warn};
 use tracing_subscriber::EnvFilter;
@@ -36,7 +34,7 @@ async fn main() -> Result<()> {
 
     info!("Starting watchdog with config: {config}");
 
-    let mut redis = Redis::new(&config.redis).await?;
+    let mut redis = RedisCache::new(&config.redis, 100).await?;
 
     let key = config.redis.event_throughput_key.clone();
     let mut redis_clone = redis.clone();
@@ -70,7 +68,7 @@ async fn main() -> Result<()> {
         .with_context(|| "Could not connect to events db")?;
 
     let event_db = event_client.database(&config.db.event_db_name);
-    let event_store = MongoDbStore::new(MongoDbStoreConfig::<Event>::new(event_db, Store::Events))
+    let event_store = MongoStore::new(&event_db, &Store::Events)
         .await
         .with_context(|| {
             format!(
@@ -167,7 +165,7 @@ async fn main() -> Result<()> {
                 continue;
             };
 
-            if let Stage::ProcessingPipelines(ref mut pipelines) = root_context.stage {
+            if let RootStage::ProcessingPipelines(ref mut pipelines) = root_context.stage {
                 let futs = pipelines.values().map(|p| {
                     pipeline_coll.find_one(
                         doc! {

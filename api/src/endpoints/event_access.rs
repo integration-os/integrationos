@@ -1,5 +1,11 @@
-use std::sync::Arc;
-
+use super::{delete, read, CrudRequest};
+use crate::{
+    api_payloads::ErrorResponse,
+    bad_request,
+    config::Config,
+    internal_server_error,
+    server::{AppState, AppStores},
+};
 use anyhow::Result;
 use axum::{
     extract::State,
@@ -8,7 +14,7 @@ use axum::{
     Extension, Json, Router,
 };
 use integrationos_domain::{
-    algebra::adapter::StoreAdapter,
+    algebra::{MongoStore, StoreExt},
     common::{
         access_key_data::AccessKeyData,
         access_key_prefix::AccessKeyPrefix,
@@ -16,7 +22,6 @@ use integrationos_domain::{
         environment::Environment,
         event_access::EventAccess,
         event_type::EventType,
-        mongo::MongoDbStore,
         ownership::Ownership,
         record_metadata::RecordMetadata,
         AccessKey,
@@ -26,19 +31,9 @@ use integrationos_domain::{
 use mongodb::bson::doc;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::{error, warn};
-
 use validator::Validate;
-
-use crate::{
-    api_payloads::ErrorResponse,
-    bad_request,
-    config::Config,
-    internal_server_error,
-    server::{AppState, AppStores},
-};
-
-use super::{delete, read, CrudRequest};
 
 const DEFAULT_GROUP: &str = "event-inc-internal";
 const DEFAULT_NAMESPACE: &str = "default";
@@ -76,7 +71,7 @@ impl CrudRequest for CreateEventAccessRequest {
         unimplemented!()
     }
 
-    fn get_store(stores: AppStores) -> MongoDbStore<Self::Output> {
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.event_access
     }
 

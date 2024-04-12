@@ -3,10 +3,11 @@ use crate::server::{AppState, AppStores};
 use axum::{routing::post, Router};
 use bson::doc;
 use integrationos_domain::{
+    algebra::MongoStore,
     common::{
         configuration::pipeline::PipelineConfig, destination::Destination,
-        event_access::EventAccess, middleware::Middleware, mongo::MongoDbStore,
-        record_metadata::RecordMetadata, signature::Signature, source::Source, Pipeline,
+        event_access::EventAccess, middleware::Middleware, record_metadata::RecordMetadata,
+        signature::Signature, source::Source, Pipeline,
     },
     id::{prefix::IdPrefix, Id},
 };
@@ -86,7 +87,7 @@ impl CrudRequest for CreatePipelineRequest {
         record.record_metadata.mark_updated(&record.ownership.id);
     }
 
-    fn get_store(stores: AppStores) -> MongoDbStore<Self::Output> {
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.pipeline
     }
 }

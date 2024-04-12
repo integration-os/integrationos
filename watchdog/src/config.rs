@@ -1,7 +1,7 @@
-use envconfig::Envconfig;
-use integrationos_domain::common::database::DatabaseConfig;
-use redis_retry::Config as RedisConfig;
 use std::fmt::{Display, Formatter};
+
+use envconfig::Envconfig;
+use integrationos_domain::{cache::CacheConfig, common::database::DatabaseConfig};
 
 #[derive(Envconfig, Clone)] // Intentionally no Debug so secret is not printed
 pub struct Config {
@@ -10,7 +10,7 @@ pub struct Config {
     #[envconfig(from = "POLL_DURATION", default = "10")] // 10 seconds
     pub poll_duration: u64,
     #[envconfig(nested = true)]
-    pub redis: RedisConfig,
+    pub redis: CacheConfig,
     #[envconfig(nested = true)]
     pub db: DatabaseConfig,
 }

@@ -11,7 +11,7 @@ use fake::{
 };
 use http::Method;
 use integrationos_domain::{
-    algebra::crypto::Crypto,
+    algebra::CryptoExt,
     common::{
         api_model_config::{ApiModelConfig, AuthMethod, SamplesInput, SchemasInput},
         connection_model_definition::{
@@ -142,7 +142,7 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
 
 async fn get_control_store(
     config: &EventCoreConfig,
-    secrets_client: Arc<dyn Crypto + Sync + Send>,
+    secrets_client: Arc<dyn CryptoExt + Sync + Send>,
 ) -> MongoControlDataStore {
     MongoControlDataStore::new(config, secrets_client)
         .await
@@ -183,7 +183,7 @@ async fn test_send_to_destination() {
     #[derive(Clone)]
     struct SecretsClient;
     #[async_trait::async_trait]
-    impl Crypto for SecretsClient {
+    impl CryptoExt for SecretsClient {
         async fn decrypt(&self, _secret: &GetSecretRequest) -> Result<Value, IntegrationOSError> {
             Ok(json!({
                 "STRIPE_SECRET_KEY": "Stripe secret key"

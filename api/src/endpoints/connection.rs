@@ -1,5 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
-
+use super::{delete, read, CrudRequest};
+use crate::{
+    api_payloads::{DeleteResponse, ErrorResponse, UpdateResponse},
+    bad_request,
+    endpoints::event_access::{generate_event_access, CreateEventAccessPayloadWithOwnership},
+    internal_server_error, not_found,
+    server::{AppState, AppStores},
+};
 use anyhow::{bail, Result};
 use axum::{
     extract::{Path, State},
@@ -11,11 +17,10 @@ use chrono::Utc;
 use convert_case::{Case, Casing};
 use http::HeaderMap;
 use integrationos_domain::{
-    algebra::adapter::StoreAdapter,
+    algebra::{MongoStore, StoreExt},
     common::{
         connection_definition::ConnectionDefinition, event_access::EventAccess,
-        mongo::MongoDbStore, record_metadata::RecordMetadata, settings::Settings, Connection,
-        Throughput,
+        record_metadata::RecordMetadata, settings::Settings, Connection, Throughput,
     },
     id::{prefix::IdPrefix, Id},
 };
@@ -23,18 +28,9 @@ use mongodb::bson::doc;
 use mongodb::bson::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::{collections::HashMap, sync::Arc};
 use tracing::error;
 use validator::Validate;
-
-use crate::{
-    api_payloads::{DeleteResponse, ErrorResponse, UpdateResponse},
-    bad_request,
-    endpoints::event_access::{generate_event_access, CreateEventAccessPayloadWithOwnership},
-    internal_server_error, not_found,
-    server::{AppState, AppStores},
-};
-
-use super::{delete, read, CrudRequest};
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -107,7 +103,7 @@ impl CrudRequest for CreateConnectionPayload {
         unimplemented!()
     }
 
-    fn get_store(stores: AppStores) -> MongoDbStore<Self::Output> {
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.connection
     }
 

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use integrationos_domain::{
-    algebra::execution::ExecutionContext,
+    algebra::PipelineExt,
     common::{duplicates::Duplicates, extractor::HttpExtractor, Connection, Event, Pipeline},
     id::Id,
 };
@@ -10,11 +10,11 @@ use serde_json::Value;
 
 #[async_trait]
 pub trait ContextStore {
-    async fn get<T: ExecutionContext + Clone + for<'a> Deserialize<'a> + Unpin>(
+    async fn get<T: PipelineExt + Clone + for<'a> Deserialize<'a> + Unpin>(
         &self,
         context_key: &Id,
     ) -> Result<T>;
-    async fn set<T: ExecutionContext + Clone + Serialize>(&self, context: T) -> Result<()>;
+    async fn set<T: PipelineExt + Clone + Serialize>(&self, context: T) -> Result<()>;
 }
 
 #[async_trait]

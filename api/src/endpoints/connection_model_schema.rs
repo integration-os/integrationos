@@ -14,14 +14,13 @@ use axum::{
 };
 use http::StatusCode;
 use integrationos_domain::{
-    algebra::adapter::StoreAdapter,
+    algebra::{MongoStore, StoreExt},
     common::{
         connection_model_schema::{
             ConnectionModelSchema, Mappings, PublicConnectionModelSchema, SchemaPaths,
         },
         event_access::EventAccess,
         json_schema::JsonSchema,
-        mongo::MongoDbStore,
     },
     id::{prefix::IdPrefix, Id},
 };
@@ -161,7 +160,7 @@ impl CrudRequest for PublicGetConnectionModelSchema {
         unimplemented!()
     }
 
-    fn get_store(stores: AppStores) -> MongoDbStore<Self::Output> {
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.public_model_schema.clone()
     }
 }
@@ -230,7 +229,7 @@ impl CrudRequest for CreateRequest {
         record.mapping = self.mapping;
     }
 
-    fn get_store(stores: AppStores) -> MongoDbStore<Self::Output> {
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.model_schema.clone()
     }
 }

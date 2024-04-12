@@ -1,7 +1,11 @@
 use crate::store::{ContextStore, ControlDataStore};
 use anyhow::{Context, Result};
-use integrationos_domain::common::{event_with_context::EventWithContext, Event, Transaction};
-use redis_retry::{AsyncCommands, Config, Redis};
+use integrationos_domain::{
+    algebra::RedisCache,
+    cache::CacheConfig,
+    common::{event_with_context::EventWithContext, Event, Transaction},
+};
+use redis::AsyncCommands;
 use std::{sync::Arc, time::Duration};
 use tokio::{join, sync::Mutex, time::sleep};
 use tracing::error;
@@ -11,8 +15,8 @@ pub struct EventHandler<
     T: ControlDataStore + Sync + Send + 'static,
     U: ContextStore + Sync + Send + 'static,
 > {
-    config: Config,
-    redis: Arc<Mutex<Redis>>,
+    config: CacheConfig,
+    redis: Arc<Mutex<RedisCache>>,
     control_store: Arc<T>,
     context_store: Arc<U>,
 }
@@ -20,8 +24,12 @@ pub struct EventHandler<
 impl<T: ControlDataStore + Sync + Send + 'static, U: ContextStore + Sync + Send + 'static>
     EventHandler<T, U>
 {
-    pub async fn new(config: Config, control_store: Arc<T>, context_store: Arc<U>) -> Result<Self> {
-        let redis = Arc::new(Mutex::new(Redis::new(&config).await?));
+    pub async fn new(
+        config: CacheConfig,
+        control_store: Arc<T>,
+        context_store: Arc<U>,
+    ) -> Result<Self> {
+        let redis = Arc::new(Mutex::new(RedisCache::new(&config, 100).await?));
 
         Ok(Self {
             config,

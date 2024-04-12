@@ -15,7 +15,7 @@ use bson::SerializerOptions;
 use chrono::Utc;
 use http::HeaderMap;
 use integrationos_domain::{
-    algebra::adapter::StoreAdapter,
+    algebra::{MongoStore, StoreExt},
     common::{
         api_model_config::{
             ApiModelConfig, AuthMethod, ModelPaths, ResponseBody, SamplesInput, SchemasInput,
@@ -25,7 +25,6 @@ use integrationos_domain::{
             TestConnection, TestConnectionState,
         },
         event_access::EventAccess,
-        mongo::MongoDbStore,
     },
     get_secret_request::GetSecretRequest,
     id::{prefix::IdPrefix, Id},
@@ -393,7 +392,7 @@ impl CrudRequest for CreateRequest {
         record.record_metadata.version = self.version;
     }
 
-    fn get_store(stores: AppStores) -> MongoDbStore<Self::Output> {
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.model_config.clone()
     }
 }
