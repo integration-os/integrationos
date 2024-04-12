@@ -2,7 +2,7 @@ use crate::{
     config::Config,
     endpoints::{
         connection_oauth_definition::FrontendOauthConnectionDefinition, openapi::OpenAPIData,
-        GetCache,
+        ReadResponse,
     },
     metrics::Metric,
     routes,
@@ -11,7 +11,7 @@ use anyhow::{anyhow, Context, Result};
 use axum::Router;
 use http::HeaderValue;
 use integrationos_domain::{
-    algebra::crypto::Crypto,
+    algebra::{CryptoExt, MongoStore},
     common::{
         common_model::CommonModel,
         connection_definition::ConnectionDefinition,
@@ -20,7 +20,6 @@ use integrationos_domain::{
         connection_oauth_definition::{ConnectionOAuthDefinition, Settings},
         cursor::Cursor,
         event_access::EventAccess,
-        mongo::MongoDbStore,
         stage::Stage,
         Connection, Event, Pipeline, Store, Transaction,
     },
@@ -31,30 +30,30 @@ use integrationos_domain::{
 use moka::future::Cache;
 use mongodb::{options::UpdateOptions, Client, Database};
 use segment::{AutoBatcher, Batcher, HttpClient};
-use std::{sync::Arc, time::Duration};
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 use tokio::{sync::mpsc::Sender, time::timeout, try_join};
 use tracing::{error, info, trace, warn};
 
 #[derive(Clone)]
 pub struct AppStores {
     pub db: Database,
-    pub model_config: MongoDbStore<ConnectionModelDefinition>,
-    pub oauth_config: MongoDbStore<ConnectionOAuthDefinition>,
-    pub frontend_oauth_config: MongoDbStore<FrontendOauthConnectionDefinition>,
-    pub model_schema: MongoDbStore<ConnectionModelSchema>,
-    pub public_model_schema: MongoDbStore<PublicConnectionModelSchema>,
-    pub common_model: MongoDbStore<CommonModel>,
-    pub common_enum: MongoDbStore<CommonEnum>,
-    pub connection: MongoDbStore<Connection>,
-    pub public_connection_details: MongoDbStore<PublicConnectionDetails>,
-    pub settings: MongoDbStore<Settings>,
-    pub connection_config: MongoDbStore<ConnectionDefinition>,
-    pub pipeline: MongoDbStore<Pipeline>,
-    pub event_access: MongoDbStore<EventAccess>,
-    pub event: MongoDbStore<Event>,
-    pub transactions: MongoDbStore<Transaction>,
-    pub cursors: MongoDbStore<Cursor>,
-    pub stages: MongoDbStore<Stage>,
+    pub model_config: MongoStore<ConnectionModelDefinition>,
+    pub oauth_config: MongoStore<ConnectionOAuthDefinition>,
+    pub frontend_oauth_config: MongoStore<FrontendOauthConnectionDefinition>,
+    pub model_schema: MongoStore<ConnectionModelSchema>,
+    pub public_model_schema: MongoStore<PublicConnectionModelSchema>,
+    pub common_model: MongoStore<CommonModel>,
+    pub common_enum: MongoStore<CommonEnum>,
+    pub connection: MongoStore<Connection>,
+    pub public_connection_details: MongoStore<PublicConnectionDetails>,
+    pub settings: MongoStore<Settings>,
+    pub connection_config: MongoStore<ConnectionDefinition>,
+    pub pipeline: MongoStore<Pipeline>,
+    pub event_access: MongoStore<EventAccess>,
+    pub event: MongoStore<Event>,
+    pub transactions: MongoStore<Transaction>,
+    pub cursors: MongoStore<Cursor>,
+    pub stages: MongoStore<Stage>,
 }
 
 #[derive(Clone)]
@@ -65,9 +64,15 @@ pub struct AppState {
     pub openapi_data: OpenAPIData,
     pub http_client: reqwest::Client,
     pub connections_cache: Cache<(Arc<str>, HeaderValue), Arc<Connection>>,
-    pub connection_definitions_cache: GetCache<ConnectionDefinition>,
-    pub connection_oauth_definitions_cache: GetCache<FrontendOauthConnectionDefinition>,
-    pub secrets_client: Arc<dyn Crypto + Sync + Send>,
+    pub connection_definitions_cache:
+        Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<ConnectionDefinition>>>>,
+    pub connection_oauth_definitions_cache: Arc<
+        Cache<
+            Option<BTreeMap<String, String>>,
+            Arc<ReadResponse<FrontendOauthConnectionDefinition>>,
+        >,
+    >,
+    pub secrets_client: Arc<dyn CryptoExt + Sync + Send>,
     pub extractor_caller: UnifiedDestination,
     pub event_tx: Sender<Event>,
     pub metric_tx: Sender<Metric>,
@@ -81,7 +86,7 @@ pub struct Server {
 impl Server {
     pub async fn init(
         config: Config,
-        secrets_client: Arc<dyn Crypto + Sync + Send + 'static>,
+        secrets_client: Arc<dyn CryptoExt + Sync + Send + 'static>,
     ) -> Result<Self> {
         let client = Client::with_uri_str(&config.db_config.control_db_url).await?;
         let db = client.database(&config.db_config.control_db_name);
@@ -89,30 +94,26 @@ impl Server {
         let http_client = reqwest::ClientBuilder::new()
             .timeout(Duration::from_secs(config.http_client_timeout_secs))
             .build()?;
-        let model_config =
-            MongoDbStore::new_with_db(db.clone(), Store::ConnectionModelDefinitions).await?;
-        let oauth_config =
-            MongoDbStore::new_with_db(db.clone(), Store::ConnectionOAuthDefinitions).await?;
+        let model_config = MongoStore::new(&db, &Store::ConnectionModelDefinitions).await?;
+        let oauth_config = MongoStore::new(&db, &Store::ConnectionOAuthDefinitions).await?;
         let frontend_oauth_config =
-            MongoDbStore::new_with_db(db.clone(), Store::ConnectionOAuthDefinitions).await?;
-        let model_schema =
-            MongoDbStore::new_with_db(db.clone(), Store::ConnectionModelSchemas).await?;
+            MongoStore::new(&db, &Store::ConnectionOAuthDefinitions).await?;
+        let model_schema = MongoStore::new(&db, &Store::ConnectionModelSchemas).await?;
         let public_model_schema =
-            MongoDbStore::new_with_db(db.clone(), Store::PublicConnectionModelSchemas).await?;
-        let common_model = MongoDbStore::new_with_db(db.clone(), Store::CommonModels).await?;
-        let common_enum = MongoDbStore::new_with_db(db.clone(), Store::CommonEnums).await?;
-        let connection = MongoDbStore::new_with_db(db.clone(), Store::Connections).await?;
+            MongoStore::new(&db, &Store::PublicConnectionModelSchemas).await?;
+        let common_model = MongoStore::new(&db, &Store::CommonModels).await?;
+        let common_enum = MongoStore::new(&db, &Store::CommonEnums).await?;
+        let connection = MongoStore::new(&db, &Store::Connections).await?;
         let public_connection_details =
-            MongoDbStore::new_with_db(db.clone(), Store::PublicConnectionDetails).await?;
-        let settings = MongoDbStore::new_with_db(db.clone(), Store::Settings).await?;
-        let connection_config =
-            MongoDbStore::new_with_db(db.clone(), Store::ConnectionDefinitions).await?;
-        let pipeline = MongoDbStore::new_with_db(db.clone(), Store::Pipelines).await?;
-        let event_access = MongoDbStore::new_with_db(db.clone(), Store::EventAccess).await?;
-        let event = MongoDbStore::new_with_db(db.clone(), Store::Events).await?;
-        let transactions = MongoDbStore::new_with_db(db.clone(), Store::Transactions).await?;
-        let cursors = MongoDbStore::new_with_db(db.clone(), Store::Cursors).await?;
-        let stages = MongoDbStore::new_with_db(db.clone(), Store::Stages).await?;
+            MongoStore::new(&db, &Store::PublicConnectionDetails).await?;
+        let settings = MongoStore::new(&db, &Store::Settings).await?;
+        let connection_config = MongoStore::new(&db, &Store::ConnectionDefinitions).await?;
+        let pipeline = MongoStore::new(&db, &Store::Pipelines).await?;
+        let event_access = MongoStore::new(&db, &Store::EventAccess).await?;
+        let event = MongoStore::new(&db, &Store::Events).await?;
+        let transactions = MongoStore::new(&db, &Store::Transactions).await?;
+        let cursors = MongoStore::new(&db, &Store::Cursors).await?;
+        let stages = MongoStore::new(&db, &Store::Stages).await?;
 
         let extractor_caller = UnifiedDestination::new(
             config.db_config.clone(),

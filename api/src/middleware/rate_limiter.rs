@@ -7,8 +7,8 @@ use axum::{
     Extension,
 };
 use http::{HeaderName, Request};
-use integrationos_domain::event_access::EventAccess;
-use redis_retry::{AsyncCommands, Redis};
+use integrationos_domain::{algebra::RedisCache, event_access::EventAccess};
+use redis::AsyncCommands;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
 use tracing::warn;
@@ -25,7 +25,7 @@ pub struct RateLimiter {
 
 impl RateLimiter {
     pub async fn new(state: Arc<AppState>) -> Result<Self> {
-        let mut redis = Redis::new_with_retry_count(&state.config.redis_config, 0)
+        let mut redis = RedisCache::new(&state.config.redis_config, 0)
             .await
             .with_context(|| "Could not connect to redis")?;
 

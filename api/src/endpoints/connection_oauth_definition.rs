@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, CachedRequest, CrudHook, CrudRequest, GetCache};
+use super::{create, delete, read, update, CrudHook, CrudRequest, ReadResponse};
 use crate::server::{AppState, AppStores};
 use axum::{
     routing::{patch, post},
@@ -6,20 +6,21 @@ use axum::{
 };
 use chrono::Utc;
 use integrationos_domain::{
+    algebra::MongoStore,
     common::{
         api_model_config::{ApiModelConfig, Compute, Function, Lang},
         connection_oauth_definition::{
             ComputeRequest, ConnectionOAuthDefinition, Frontend, OAuthApiConfig, OAuthCompute,
         },
         event_access::EventAccess,
-        mongo::MongoDbStore,
     },
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
 };
+use moka::future::Cache;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -166,7 +167,7 @@ impl CrudRequest for CreateRequest {
         record.record_metadata.updated = true;
     }
 
-    fn get_store(stores: AppStores) -> MongoDbStore<Self::Output> {
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.oauth_config.clone()
     }
 }
@@ -198,15 +199,13 @@ impl CrudRequest for FrontendOauthConnectionDefinition {
         unimplemented!()
     }
 
-    fn get_store(stores: AppStores) -> MongoDbStore<Self::Output> {
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.frontend_oauth_config.clone()
     }
-}
 
-impl CachedRequest for FrontendOauthConnectionDefinition {
-    type Output = FrontendOauthConnectionDefinition;
-
-    fn get_cache(state: Arc<AppState>) -> GetCache<Self::Output> {
+    fn get_cache(
+        state: Arc<AppState>,
+    ) -> Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<Self::Output>>>> {
         state.connection_oauth_definitions_cache.clone()
     }
 }

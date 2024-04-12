@@ -1,6 +1,7 @@
 use envconfig::Envconfig;
-use integrationos_domain::common::{database::DatabaseConfig, secrets::SecretsConfig};
-use redis_retry::Config as RedisConfig;
+use integrationos_domain::common::{
+    cache::CacheConfig as RedisConfig, database::DatabaseConfig, secrets::SecretsConfig,
+};
 use std::fmt::{Display, Formatter};
 
 #[derive(Envconfig, Clone)] // Intentionally no Debug so secret is not printed

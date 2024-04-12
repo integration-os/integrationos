@@ -1,6 +1,5 @@
 use super::event_access::CreateEventAccessPayloadWithOwnership;
 use crate::{endpoints::ApiError, internal_server_error, not_found, server::AppState};
-use anyhow::anyhow;
 use axum::{
     extract::{Path, State},
     routing::post,
@@ -9,7 +8,7 @@ use axum::{
 use chrono::{Duration, Utc};
 use http::{HeaderMap, HeaderName, HeaderValue};
 use integrationos_domain::{
-    algebra::adapter::StoreAdapter,
+    algebra::{MongoStore, StoreExt},
     common::{
         api_model_config::ContentType,
         connection_definition::ConnectionDefinition,
@@ -17,7 +16,6 @@ use integrationos_domain::{
             Computation, ConnectionOAuthDefinition, OAuthResponse, PlatformSecret, Settings,
         },
         event_access::EventAccess,
-        mongo::MongoDbStore,
         ownership::Ownership,
         Connection, OAuth, Throughput,
     },
@@ -198,11 +196,7 @@ async fn oauth_handler(
             expires_at: Some(
                 (chrono::Utc::now()
                     + Duration::try_seconds(oauth_secret.expires_in as i64)
-                        .ok_or(anyhow!("Invalid expires_in timestamp"))
-                        .map_err(|e| {
-                            error!("Failed to decode oauth response: {}", e);
-                            internal_server_error!()
-                        })?)
+                        .unwrap_or(Duration::zero()))
                 .timestamp(),
             ),
         }),
@@ -413,7 +407,7 @@ async fn find_connection_definition(
     state: &State<Arc<AppState>>,
     connection_definition_id: &Id,
 ) -> ApiResult<ConnectionDefinition> {
-    let connection_definition_store: &MongoDbStore<ConnectionDefinition> =
+    let connection_definition_store: &MongoStore<ConnectionDefinition> =
         &state.app_stores.connection_config;
 
     let connection_definition: ConnectionDefinition = connection_definition_store
@@ -432,7 +426,7 @@ async fn find_oauth_definition(
     state: &State<Arc<AppState>>,
     platform: &str,
 ) -> ApiResult<ConnectionOAuthDefinition> {
-    let oauth_definition_store: &MongoDbStore<ConnectionOAuthDefinition> =
+    let oauth_definition_store: &MongoStore<ConnectionOAuthDefinition> =
         &state.app_stores.oauth_config;
 
     let oauth_definition: ConnectionOAuthDefinition = oauth_definition_store
@@ -452,7 +446,7 @@ async fn find_settings(
     ownership: &Ownership,
     is_admin: bool,
 ) -> ApiResult<Settings> {
-    let settings_store: &MongoDbStore<Settings> = &state.app_stores.settings;
+    let settings_store: &MongoStore<Settings> = &state.app_stores.settings;
 
     let ownership_id = if !is_admin {
         ownership.id.to_string()

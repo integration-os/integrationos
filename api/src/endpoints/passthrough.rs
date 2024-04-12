@@ -1,5 +1,5 @@
-use std::{collections::HashMap, sync::Arc};
-
+use super::{get_connection, INTEGRATION_OS_PASSTHROUGH_HEADER};
+use crate::{metrics::Metric, server::AppState};
 use axum::{
     extract::{Query, State},
     response::IntoResponse,
@@ -8,15 +8,15 @@ use axum::{
 };
 use http::{header::CONTENT_LENGTH, HeaderMap, HeaderName, Method, Uri};
 use hyper::body::Bytes;
-use integrationos_domain::common::{
-    destination::{Action, Destination},
-    event_access::EventAccess,
+use integrationos_domain::{
+    common::{
+        destination::{Action, Destination},
+        event_access::EventAccess,
+    },
+    ApplicationError, InternalError,
 };
+use std::{collections::HashMap, sync::Arc};
 use tracing::error;
-
-use crate::{bad_request, metrics::Metric, server::AppState, service_unavailable};
-
-use super::{get_connection, INTEGRATION_OS_PASSTHROUGH_HEADER};
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new().route(
@@ -38,7 +38,10 @@ pub async fn passthrough_request(
     body: Bytes,
 ) -> impl IntoResponse {
     let Some(connection_key_header) = headers.get(&state.config.headers.connection_header) else {
-        return Err(bad_request!("Missing connection key header"));
+        return Err(ApplicationError::bad_request(
+            "Connection header not found",
+            None,
+        ));
     };
 
     let connection = get_connection(
@@ -79,7 +82,7 @@ pub async fn passthrough_request(
                 e
             );
 
-            service_unavailable!()
+            e
         })?;
 
     let mut headers = HeaderMap::new();
@@ -113,7 +116,7 @@ pub async fn passthrough_request(
             e
         );
 
-        service_unavailable!()
+        InternalError::script_error("Error retrieving bytes from response", None)
     })?;
 
     Ok((status, headers, bytes))

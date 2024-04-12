@@ -12,7 +12,6 @@ chrono.workspace = true
 dotenvy.workspace = true
 envconfig.workspace = true
 futures.workspace = true
-google-token-fetcher = { path = "../google-token-fetcher" }
 handlebars.workspace = true
 http.workspace = true
 integrationos-domain = { workspace = true, features = ["unified"] }
@@ -21,7 +20,7 @@ metrics = "0.21.1"
 metrics-exporter-prometheus = "0.12.1"
 moka.workspace = true
 mongodb.workspace = true
-redis-retry = { path = "../redis-retry" }
+redis.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -1,6 +1,8 @@
 use envconfig::Envconfig;
-use integrationos_domain::common::{database::DatabaseConfig, environment::Environment};
-use redis_retry::Config as RedisConfig;
+use integrationos_domain::{
+    cache::CacheConfig,
+    common::{database::DatabaseConfig, environment::Environment},
+};
 use std::{
     fmt::{Display, Formatter},
     net::SocketAddr,
@@ -17,7 +19,7 @@ pub struct Config {
     #[envconfig(from = "ENVIRONMENT", default = "live")]
     pub environment: Environment,
     #[envconfig(nested = true)]
-    pub redis: RedisConfig,
+    pub redis: CacheConfig,
     #[envconfig(nested = true)]
     pub db: DatabaseConfig,
 }
@@ -46,7 +48,7 @@ impl Default for Config {
             cache_size: 10_000,
             secret_key: "32KFFT_i4UpkJmyPwY2TGzgHpxfXs7zS".to_owned(),
             environment: Environment::Test,
-            redis: RedisConfig::default(),
+            redis: CacheConfig::default(),
             db: DatabaseConfig::default(),
         }
     }

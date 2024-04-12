@@ -11,9 +11,8 @@ use futures::{Stream, StreamExt, TryStreamExt};
 use http::StatusCode;
 use indexmap::IndexMap;
 use integrationos_domain::{
-    algebra::{adapter::StoreAdapter, measured::TimedExt},
+    algebra::{MongoStore, StoreExt, TimedExt},
     common_model::{CommonEnum, CommonModel},
-    mongo::MongoDbStore,
 };
 use mongodb::error::Error as MongoError;
 use openapiv3::*;
@@ -51,8 +50,8 @@ impl OpenAPIData {
 
     pub fn spawn_openapi_generation(
         &self,
-        cm_store: MongoDbStore<CommonModel>,
-        ce_store: MongoDbStore<CommonEnum>,
+        cm_store: MongoStore<CommonModel>,
+        ce_store: MongoStore<CommonEnum>,
     ) -> JoinHandle<Result<(), anyhow::Error>> {
         spawn_openapi_generation(cm_store, ce_store, self.clone())
     }
@@ -168,8 +167,8 @@ pub async fn get_openapi(
 }
 
 fn spawn_openapi_generation(
-    cm_store: MongoDbStore<CommonModel>,
-    ce_store: MongoDbStore<CommonEnum>,
+    cm_store: MongoStore<CommonModel>,
+    ce_store: MongoStore<CommonEnum>,
     state: OpenAPIData,
 ) -> JoinHandle<Result<(), anyhow::Error>> {
     tokio::spawn(async move {
@@ -279,8 +278,8 @@ fn spawn_openapi_generation(
 
 async fn generate_references_data(
     cm: CommonModel,
-    cm_store: MongoDbStore<CommonModel>,
-    ce_store: MongoDbStore<CommonEnum>,
+    cm_store: MongoStore<CommonModel>,
+    ce_store: MongoStore<CommonEnum>,
 ) -> Result<PathWithSchema, anyhow::Error> {
     let mut schema = IndexMap::new();
     let (child_cms, missing) = cm

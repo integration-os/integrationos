@@ -1,5 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
-
+use crate::{config::Headers, metrics::Metric, server::AppState};
 use axum::{
     extract::{Path, Query, State},
     response::{IntoResponse, Response},
@@ -15,16 +14,12 @@ use integrationos_domain::{
         encrypted_access_key::EncryptedAccessKey, encrypted_data::PASSWORD_LENGTH,
         event_access::EventAccess, AccessKey, Event,
     },
-    ApplicationError, IntegrationOSError,
+    ApplicationError, InternalError,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::{collections::HashMap, sync::Arc};
 use tracing::error;
-
-use crate::{
-    bad_request, config::Headers, debug_error, internal_server_error, metrics::Metric,
-    not_found_with_custom_message, server::AppState, service_unavailable,
-};
 
 use super::{get_connection, INTEGRATION_OS_PASSTHROUGH_HEADER};
 
@@ -187,7 +182,10 @@ pub async fn process_request(
     body: Option<Value>,
 ) -> impl IntoResponse {
     let Some(connection_key_header) = headers.get(&state.config.headers.connection_header) else {
-        return Err(bad_request!("Missing connection key header"));
+        return Err(ApplicationError::bad_request(
+            "Missing connection key header",
+            None,
+        ));
     };
     let connection = get_connection(
         user_event_access.as_ref(),
@@ -195,7 +193,11 @@ pub async fn process_request(
         &state.app_stores,
         &state.connections_cache,
     )
-    .await?;
+    .await
+    .map_err(|e| {
+        error!("Error getting connection: {:?}", e);
+        e
+    })?;
 
     let Query(query_params) = query_params.unwrap_or_default();
 
@@ -215,7 +217,7 @@ pub async fn process_request(
         ..
     } = &action
     else {
-        return Err(internal_server_error!());
+        return Err(ApplicationError::bad_request("Invalid action", None));
     };
     let event_name = format!(
         "{}::{}::{}::{}",
@@ -238,18 +240,7 @@ pub async fn process_request(
                 "Error executing connection model definition in unified endpoint: {:?}",
                 e
             );
-            if state.config.debug_mode {
-                return debug_error!(format!("{e:?}"));
-            }
-            match e {
-                IntegrationOSError::Internal(_) => service_unavailable!(),
-                IntegrationOSError::Application(e) => match e {
-                    ApplicationError::NotFound { .. } => {
-                        not_found_with_custom_message!("The requested resource was not found")
-                    }
-                    _ => internal_server_error!(),
-                },
-            }
+            e
         })?;
 
     *response.headers_mut() = response
@@ -276,12 +267,15 @@ pub async fn process_request(
                 .try_into()
                 .map_err(|e| {
                     error!("event_access_password is not 32 bytes in length: {e}");
-                    internal_server_error!()
+                    InternalError::decryption_error(
+                        "event_access_password is not 32 bytes in length",
+                        None,
+                    )
                 })?;
 
             let access_key = AccessKey::parse(&encrypted_access_key, &password).map_err(|e| {
                 error!("Could not decrypt access key: {e}");
-                internal_server_error!()
+                InternalError::decryption_error("Could not decrypt access key", None)
             })?;
             const META: &str = "meta";
             let body = serde_json::to_string(&json!({
@@ -289,7 +283,7 @@ pub async fn process_request(
             }))
             .map_err(|e| {
                 error!("Could not serialize meta body to string: {e}");
-                internal_server_error!()
+                InternalError::invalid_argument("Could not serialize meta body to string", None)
             })?;
 
             let name = if parts.status.is_success() {

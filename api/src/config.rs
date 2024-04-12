@@ -4,10 +4,10 @@ use std::{
 };
 
 use envconfig::Envconfig;
+use integrationos_domain::cache::CacheConfig as RedisConfig;
 use integrationos_domain::common::{
     claude::ClaudeConfig, database::DatabaseConfig, openai::OpenAiConfig, secrets::SecretsConfig,
 };
-use redis_retry::Config as RedisConfig;
 
 #[derive(Envconfig, Clone)]
 pub struct Config {

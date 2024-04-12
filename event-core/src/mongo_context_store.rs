@@ -2,7 +2,7 @@ use crate::{config::EventCoreConfig, store::ContextStore};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use bson::doc;
-use integrationos_domain::{algebra::execution::ExecutionContext, id::Id};
+use integrationos_domain::{algebra::PipelineExt, id::Id};
 use mongodb::{Client, Database};
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
@@ -26,7 +26,7 @@ impl MongoContextStore {
 
 #[async_trait]
 impl ContextStore for MongoContextStore {
-    async fn get<T: ExecutionContext + Clone + for<'a> Deserialize<'a> + Unpin>(
+    async fn get<T: PipelineExt + Clone + for<'a> Deserialize<'a> + Unpin>(
         &self,
         context_key: &Id,
     ) -> Result<T> {
@@ -37,11 +37,11 @@ impl ContextStore for MongoContextStore {
         Ok(context.ok_or_else(|| anyhow!("No context found"))?)
     }
 
-    async fn set<T: ExecutionContext + Clone + Serialize>(&self, context: T) -> Result<()> {
+    async fn set<T: PipelineExt + Clone + Serialize>(&self, context: T) -> Result<()> {
         let instant = Instant::now();
         let coll = self.db.collection(&self.collection_name);
         if let Err(e) = coll.insert_one(context, None).await {
-            error!("ExecutionContext insertion error {e}");
+            error!("PipelineExt insertion error {e}");
         }
         trace!(
             "Wrote context in {}",

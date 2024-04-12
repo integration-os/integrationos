@@ -9,12 +9,14 @@ use futures::{
     FutureExt,
 };
 use integrationos_domain::{
-    algebra::execution::{ExecutionContext, Status},
+    algebra::{PipelineExt, PipelineStatus},
     common::{
-        extractor_context::Stage as ExtractorStage, middleware::Middleware,
-        pipeline_context::Stage as PipelineStage, root_context::Stage as RootStage, Event,
-        ExtractorContext, PipelineContext, RootContext, Transaction,
+        extractor_context::Stage as ExtractorStage, middleware::Middleware, ExtractorContext,
+        PipelineContext, RootContext, Transaction,
     },
+    pipeline_context::PipelineStage,
+    root_context::RootStage,
+    Event,
 };
 use js_sandbox_ios::Script;
 use serde_json::{json, Value};
@@ -138,7 +140,7 @@ where
                     context.stage = RootStage::Verified;
                 } else {
                     warn!("Event did not verify, dropped");
-                    context.status = Status::Dropped {
+                    context.status = PipelineStatus::Dropped {
                         reason: "Did not verify".to_owned(),
                     };
                 }
@@ -369,7 +371,7 @@ where
                         }
                     }
                 }
-                context.status = Status::Dropped {
+                context.status = PipelineStatus::Dropped {
                     reason: "Failed destination".to_string(),
                 };
                 warn!("Failed destination");
@@ -459,7 +461,7 @@ where
             }
         }
 
-        context.status = Status::Dropped {
+        context.status = PipelineStatus::Dropped {
             reason: "Failed extractor".to_string(),
         };
         self.context_store.set(context.clone()).await?;

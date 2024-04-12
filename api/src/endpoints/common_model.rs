@@ -10,13 +10,12 @@ use axum::{
     Router,
 };
 use integrationos_domain::{
-    algebra::adapter::StoreAdapter,
+    algebra::{MongoStore, StoreExt},
     api_model_config::Lang,
     common::{
         common_model::{CommonModel, Field},
         event_access::EventAccess,
         json_schema::JsonSchema,
-        mongo::MongoDbStore,
     },
     id::{prefix::IdPrefix, Id},
     IntegrationOSError,
@@ -113,7 +112,7 @@ impl CrudRequest for CreateRequest {
         record.sample = self.sample;
     }
 
-    fn get_store(stores: AppStores) -> MongoDbStore<Self::Output> {
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.common_model.clone()
     }
 }
@@ -161,7 +160,7 @@ async fn as_json_schema(path: Path<Id>, state: State<Arc<AppState>>) -> ApiResul
 async fn update_interface(
     interface: HashMap<Lang, String>,
     record: &CommonModel,
-    cm_store: &MongoDbStore<CommonModel>,
+    cm_store: &MongoStore<CommonModel>,
 ) -> Result<(), IntegrationOSError> {
     match bson::to_bson(&interface) {
         Ok(interface) => {

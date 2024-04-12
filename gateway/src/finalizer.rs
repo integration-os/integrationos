@@ -2,30 +2,28 @@ use crate::{config::Config, finalize_event::FinalizeEvent};
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use integrationos_domain::{
-    algebra::adapter::StoreAdapter,
+    algebra::{MongoStore, RedisCache, StoreExt},
     common::{
-        encrypted_access_key::EncryptedAccessKey,
-        event_with_context::EventWithContext,
-        mongo::{MongoDbStore, MongoDbStoreConfig},
-        Event, RootContext, Store,
+        encrypted_access_key::EncryptedAccessKey, event_with_context::EventWithContext, Event,
+        RootContext, Store,
     },
 };
 use mongodb::Collection;
-use redis_retry::{AsyncCommands, Redis};
+use redis::AsyncCommands;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{debug, error};
 
 pub struct Finalizer {
-    redis: Arc<Mutex<Redis>>,
+    redis: Arc<Mutex<RedisCache>>,
     context_collection: Collection<RootContext>,
-    event_store: MongoDbStore<Event>,
+    event_store: MongoStore<Event>,
     queue_name: String,
 }
 
 impl Finalizer {
     pub async fn new(config: Config) -> Result<Self> {
-        let redis = Redis::new_with_retry_count(&config.redis, 2).await?;
+        let redis = RedisCache::new(&config.redis, 2).await?;
 
         let context_mongo_client = mongodb::Client::with_uri_str(config.db.context_db_url)
             .await
@@ -37,7 +35,7 @@ impl Finalizer {
             .await
             .with_context(|| "Could not connect to mongodb")?;
         let mongo = mongo.database(&config.db.event_db_name);
-        let event_store = MongoDbStore::new(MongoDbStoreConfig::new(mongo, Store::Events))
+        let event_store = MongoStore::new(&mongo, &Store::Events)
             .await
             .with_context(|| {
                 format!(
