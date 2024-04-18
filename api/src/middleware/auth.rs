@@ -1,17 +1,17 @@
 use crate::{
     endpoints::ApiError, internal_server_error, not_found, server::AppState, unauthorized,
 };
-use axum::{extract::State, middleware::Next, response::Response};
+use axum::{body::Body, extract::State, middleware::Next, response::Response};
 use http::Request;
 use integrationos_domain::{algebra::StoreExt, ApplicationError, InternalError};
 use mongodb::bson::doc;
 use std::sync::Arc;
 use tracing::error;
 
-pub async fn auth<B>(
+pub async fn auth(
     State(state): State<Arc<AppState>>,
-    mut req: Request<B>,
-    next: Next<B>,
+    mut req: Request<Body>,
+    next: Next,
 ) -> Result<Response, ApiError> {
     let Some(auth_header) = req.headers().get(&state.config.headers.auth_header) else {
         return Err(unauthorized!());

@@ -1,16 +1,3 @@
-use std::{iter::once, sync::Arc};
-
-use axum::{
-    error_handling::HandleErrorLayer,
-    routing::{get, post},
-    Router,
-};
-use http::HeaderName;
-use integrationos_domain::common::connection_model_schema::PublicConnectionModelSchema;
-use tower::{filter::FilterLayer, ServiceBuilder};
-use tower_http::{sensitive_headers::SetSensitiveRequestHeadersLayer, trace::TraceLayer};
-use tracing::warn;
-
 use crate::{
     endpoints::{
         connection,
@@ -21,13 +8,24 @@ use crate::{
     middleware::{
         auth,
         blocker::{handle_blocked_error, BlockInvalidHeaders},
-        rate_limiter::{self, RateLimiter},
+        extractor::OwnershipId,
     },
     server::AppState,
 };
+use axum::{
+    error_handling::HandleErrorLayer,
+    routing::{get, post},
+    Router,
+};
+use http::HeaderName;
+use integrationos_domain::connection_model_schema::PublicConnectionModelSchema;
+use std::{iter::once, sync::Arc};
+use tower::{filter::FilterLayer, ServiceBuilder};
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+use tower_http::{sensitive_headers::SetSensitiveRequestHeadersLayer, trace::TraceLayer};
 
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
-    let r = Router::new()
+    let routes = Router::new()
         .nest("/pipelines", pipeline::get_router())
         .nest("/events", events::get_router())
         .nest("/transactions", transactions::get_router())
@@ -48,30 +46,33 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         .nest("/oauth", oauth::get_router())
         .nest("/unified", unified::get_router());
 
-    let r = match RateLimiter::new(state.clone()).await {
-        Ok(rate_limiter) => r.layer(axum::middleware::from_fn_with_state(
-            Arc::new(rate_limiter),
-            rate_limiter::rate_limiter,
-        )),
-        Err(e) => {
-            warn!("Could not connect to redis: {e}");
-            r
-        }
-    };
+    let config = Box::new(
+        GovernorConfigBuilder::default()
+            .per_second(state.config.burst_rate_limit)
+            .burst_size(state.config.burst_size)
+            .key_extractor(OwnershipId)
+            .use_headers()
+            .finish()
+            .expect("Failed to build GovernorConfig"),
+    );
 
-    r.layer(axum::middleware::from_fn_with_state(
-        state.clone(),
-        auth::auth,
-    ))
-    .layer(TraceLayer::new_for_http())
-    .layer(SetSensitiveRequestHeadersLayer::new(once(
-        HeaderName::from_lowercase(state.config.headers.auth_header.as_bytes()).unwrap(),
-    )))
-    .layer(
-        ServiceBuilder::new()
-            .layer(HandleErrorLayer::new(handle_blocked_error))
-            .layer(FilterLayer::new(
-                BlockInvalidHeaders::new(state.clone()).await,
-            )),
-    )
+    routes
+        .layer(GovernorLayer {
+            config: Box::leak(config),
+        })
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            auth::auth,
+        ))
+        .layer(TraceLayer::new_for_http())
+        .layer(SetSensitiveRequestHeadersLayer::new(once(
+            HeaderName::from_lowercase(state.config.headers.auth_header.as_bytes()).unwrap(),
+        )))
+        .layer(
+            ServiceBuilder::new()
+                .layer(HandleErrorLayer::new(handle_blocked_error))
+                .layer(FilterLayer::new(
+                    BlockInvalidHeaders::new(state.clone()).await,
+                )),
+        )
 }

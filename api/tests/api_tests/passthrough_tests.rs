@@ -4,7 +4,7 @@ use http::{
     header::{AUTHORIZATION, CONTENT_TYPE},
     Method, StatusCode,
 };
-use integrationos_domain::common::{
+use integrationos_domain::{
     api_model_config::{AuthMethod, SamplesInput, SchemasInput},
     connection_model_definition::CrudAction,
     environment::Environment,

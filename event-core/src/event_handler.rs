@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use integrationos_domain::{
     algebra::RedisCache,
     cache::CacheConfig,
-    common::{event_with_context::EventWithContext, Event, Transaction},
+    {event_with_context::EventWithContext, Event, Transaction},
 };
 use redis::AsyncCommands;
 use std::{sync::Arc, time::Duration};

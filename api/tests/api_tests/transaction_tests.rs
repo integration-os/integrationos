@@ -3,7 +3,7 @@ use std::time::Duration;
 use api::endpoints::{pipeline::CreatePipelineRequest, ReadResponse};
 use fake::{Fake, Faker};
 use http::{Method, StatusCode};
-use integrationos_domain::common::{
+use integrationos_domain::{
     connection_model_definition::PlatformInfo, destination::Action, environment::Environment,
     Transaction,
 };

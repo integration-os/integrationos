@@ -18,11 +18,12 @@ use convert_case::{Case, Casing};
 use http::HeaderMap;
 use integrationos_domain::{
     algebra::{MongoStore, StoreExt},
-    common::{
-        connection_definition::ConnectionDefinition, event_access::EventAccess,
-        record_metadata::RecordMetadata, settings::Settings, Connection, Throughput,
-    },
+    connection_definition::ConnectionDefinition,
+    event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
+    record_metadata::RecordMetadata,
+    settings::Settings,
+    Connection, Throughput,
 };
 use mongodb::bson::doc;
 use mongodb::bson::Regex;
@@ -93,22 +94,9 @@ async fn test_connection(
 
 impl CrudRequest for CreateConnectionPayload {
     type Output = Connection;
-    type Error = ();
-
-    fn into_with_event_access(self, _event_access: Arc<EventAccess>) -> Self::Output {
-        unimplemented!()
-    }
-
-    fn update(self, _record: &mut Self::Output) {
-        unimplemented!()
-    }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.connection
-    }
-
-    fn into_public(self) -> Result<Self::Output, Self::Error> {
-        unimplemented!()
     }
 }
 

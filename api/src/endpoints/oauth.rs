@@ -9,7 +9,10 @@ use chrono::{Duration, Utc};
 use http::{HeaderMap, HeaderName, HeaderValue};
 use integrationos_domain::{
     algebra::{MongoStore, StoreExt},
-    common::{
+    get_secret_request::GetSecretRequest,
+    id::{prefix::IdPrefix, Id},
+    oauth_secret::OAuthSecret,
+    {
         api_model_config::ContentType,
         connection_definition::ConnectionDefinition,
         connection_oauth_definition::{
@@ -19,9 +22,6 @@ use integrationos_domain::{
         ownership::Ownership,
         Connection, OAuth, Throughput,
     },
-    get_secret_request::GetSecretRequest,
-    id::{prefix::IdPrefix, Id},
-    oauth_secret::OAuthSecret,
 };
 use mongodb::bson::doc;
 use reqwest::Request;

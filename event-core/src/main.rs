@@ -9,22 +9,22 @@ use event_core::{
     mongo_context_store::MongoContextStore,
     mongo_control_data_store::MongoControlDataStore,
 };
-use integrationos_domain::service::secrets_client::SecretsClient;
+use integrationos_domain::{
+    client::secrets_client::SecretsClient,
+    telemetry::{get_subscriber, init_subscriber},
+};
 use metrics_exporter_prometheus::PrometheusBuilder;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio_condvar::Condvar;
-use tracing::{error, info, metadata::LevelFilter, warn};
-use tracing_subscriber::EnvFilter;
+use tracing::{error, info, warn};
 
-#[tokio::main(flavor = "multi_thread")]
+#[tokio::main]
 async fn main() -> Result<()> {
     dotenv().ok();
 
-    let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::DEBUG.into())
-        .from_env_lossy();
-    tracing_subscriber::fmt().with_env_filter(filter).init();
+    let suscriber = get_subscriber("event-core".into(), "info".into(), std::io::stdout);
+    init_subscriber(suscriber);
 
     let config = EventCoreConfig::init_from_env()?;
 

@@ -1,8 +1,6 @@
 use convert_case::{Case, Casing};
 use indexmap::IndexMap;
-use integrationos_domain::common::{
-    common_model::CommonModel, connection_model_definition::CrudAction,
-};
+use integrationos_domain::{common_model::CommonModel, connection_model_definition::CrudAction};
 use openapiv3::*;
 use strum::IntoEnumIterator;
 use tracing::debug;

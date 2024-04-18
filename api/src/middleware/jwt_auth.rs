@@ -1,30 +1,10 @@
 use crate::{api_payloads::ErrorResponse, server::AppState, unauthorized};
-use axum::{extract::State, middleware::Next, response::Response, Json};
+use axum::{body::Body, extract::State, middleware::Next, response::Response, Json};
 use http::{Request, StatusCode};
+use integrationos_domain::Claims;
 use jsonwebtoken::{DecodingKey, Validation};
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::info;
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Claims {
-    #[serde(rename = "_id")]
-    pub id: String,
-    pub email: String,
-    pub username: String,
-    pub user_key: String,
-    pub first_name: String,
-    pub last_name: String,
-    pub buildable_id: String,
-    pub container_id: String,
-    pub pointers: Vec<String>,
-    pub is_buildable_core: bool,
-    pub iat: i64,
-    pub exp: i64,
-    pub aud: String,
-    pub iss: String,
-}
 
 const BEARER_PREFIX: &str = "Bearer ";
 
@@ -43,10 +23,10 @@ impl JwtState {
     }
 }
 
-pub async fn jwt_auth<B>(
+pub async fn jwt_auth(
     State(state): State<Arc<JwtState>>,
-    mut req: Request<B>,
-    next: Next<B>,
+    mut req: Request<Body>,
+    next: Next,
 ) -> Result<Response, (StatusCode, Json<ErrorResponse>)> {
     let Some(auth_header) = req.headers().get(http::header::AUTHORIZATION) else {
         info!("missing authorization header");
@@ -67,7 +47,7 @@ pub async fn jwt_auth<B>(
 
     match jsonwebtoken::decode::<Claims>(token, &state.decoding_key, &state.validation) {
         Ok(decoded_token) => {
-            req.extensions_mut().insert(decoded_token.claims);
+            req.extensions_mut().insert(Arc::new(decoded_token.claims));
             Ok(next.run(req).await)
         }
         Err(e) => {

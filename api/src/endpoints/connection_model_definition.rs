@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, CrudHook, CrudRequest};
+use super::{create, delete, read, update, CrudHook, CrudRequest, Unit};
 use crate::{
     api_payloads::ErrorResponse,
     internal_server_error, not_found,
@@ -16,16 +16,14 @@ use chrono::Utc;
 use http::HeaderMap;
 use integrationos_domain::{
     algebra::{MongoStore, StoreExt},
-    common::{
-        api_model_config::{
-            ApiModelConfig, AuthMethod, ModelPaths, ResponseBody, SamplesInput, SchemasInput,
-        },
-        connection_model_definition::{
-            ConnectionModelDefinition, CrudAction, CrudMapping, ExtractorConfig, PlatformInfo,
-            TestConnection, TestConnectionState,
-        },
-        event_access::EventAccess,
+    api_model_config::{
+        ApiModelConfig, AuthMethod, ModelPaths, ResponseBody, SamplesInput, SchemasInput,
     },
+    connection_model_definition::{
+        ConnectionModelDefinition, CrudAction, CrudMapping, ExtractorConfig, PlatformInfo,
+        TestConnection, TestConnectionState,
+    },
+    event_access::EventAccess,
     get_secret_request::GetSecretRequest,
     id::{prefix::IdPrefix, Id},
 };
@@ -304,9 +302,8 @@ impl CrudHook<ConnectionModelDefinition> for CreateRequest {}
 
 impl CrudRequest for CreateRequest {
     type Output = ConnectionModelDefinition;
-    type Error = ();
 
-    fn into_public(self) -> Result<Self::Output, Self::Error> {
+    fn output(&self) -> Option<Self::Output> {
         let key = format!(
             "api::{}::{}::{}::{}::{}::{}",
             self.connection_platform,
@@ -320,42 +317,38 @@ impl CrudRequest for CreateRequest {
 
         let mut record = Self::Output {
             id: Id::new(IdPrefix::ConnectionModelDefinition, Utc::now()),
-            connection_platform: self.connection_platform,
+            connection_platform: self.connection_platform.clone(),
             connection_definition_id: self.connection_definition_id,
-            platform_version: self.platform_version,
+            platform_version: self.platform_version.clone(),
             key,
-            title: self.title,
-            name: self.name,
-            model_name: self.model_name,
+            title: self.title.clone(),
+            name: self.name.clone(),
+            model_name: self.model_name.clone(),
             platform_info: PlatformInfo::Api(ApiModelConfig {
-                base_url: self.base_url,
-                path: self.path,
+                base_url: self.base_url.clone(),
+                path: self.path.clone(),
                 content: Default::default(),
-                auth_method: self.auth_method,
-                headers: self.headers,
-                query_params: self.query_params,
-                schemas: self.schemas,
-                samples: self.samples,
-                responses: self.responses,
-                paths: self.paths,
+                auth_method: self.auth_method.clone(),
+                headers: self.headers.clone(),
+                query_params: self.query_params.clone(),
+                schemas: self.schemas.clone(),
+                samples: self.samples.clone(),
+                responses: self.responses.clone(),
+                paths: self.paths.clone(),
             }),
-            action: self.http_method,
-            action_name: self.action_name,
-            extractor_config: self.extractor_config,
+            action: self.http_method.clone(),
+            action_name: self.action_name.clone(),
+            extractor_config: self.extractor_config.clone(),
             test_connection_status: TestConnection::default(),
             is_default_crud_mapping: self.is_default_crud_mapping,
-            mapping: self.mapping,
+            mapping: self.mapping.clone(),
             record_metadata: Default::default(),
         };
-        record.record_metadata.version = self.version;
-        Ok(record)
+        record.record_metadata.version = self.version.clone();
+        Some(record)
     }
 
-    fn into_with_event_access(self, _event_access: Arc<EventAccess>) -> Self::Output {
-        unimplemented!()
-    }
-
-    fn update(self, record: &mut Self::Output) {
+    fn update(&self, record: &mut Self::Output) -> Unit {
         let key = format!(
             "api::{}::{}::{}::{}::{}::{}",
             self.connection_platform,
@@ -368,28 +361,28 @@ impl CrudRequest for CreateRequest {
         .to_lowercase();
 
         record.key = key;
-        record.connection_platform = self.connection_platform;
+        record.connection_platform = self.connection_platform.clone();
         record.connection_definition_id = self.connection_definition_id;
-        record.platform_version = self.platform_version;
-        record.title = self.title;
-        record.name = self.name;
-        record.action = self.http_method;
-        record.action_name = self.action_name;
+        record.platform_version = self.platform_version.clone();
+        record.title = self.title.clone();
+        record.name = self.name.clone();
+        record.action = self.http_method.clone();
+        record.action_name = self.action_name.clone();
         record.platform_info = PlatformInfo::Api(ApiModelConfig {
-            base_url: self.base_url,
-            path: self.path,
+            base_url: self.base_url.clone(),
+            path: self.path.clone(),
             content: Default::default(),
-            auth_method: self.auth_method,
-            headers: self.headers,
-            query_params: self.query_params,
-            schemas: self.schemas,
-            samples: self.samples,
-            responses: self.responses,
-            paths: self.paths,
+            auth_method: self.auth_method.clone(),
+            headers: self.headers.clone(),
+            query_params: self.query_params.clone(),
+            schemas: self.schemas.clone(),
+            samples: self.samples.clone(),
+            responses: self.responses.clone(),
+            paths: self.paths.clone(),
         });
-        record.mapping = self.mapping;
-        record.extractor_config = self.extractor_config;
-        record.record_metadata.version = self.version;
+        record.mapping = self.mapping.clone();
+        record.extractor_config = self.extractor_config.clone();
+        record.record_metadata.version = self.version.clone();
     }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {

@@ -1,12 +1,11 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
 use api::config::Config as ApiConfig;
 use envconfig::Envconfig;
 use gateway::{config::Config, finalizer::Finalizer, server::Server};
 use http::StatusCode;
-use integrationos_domain::common::event_response::EventResponse;
+use integrationos_domain::event_response::EventResponse;
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use testcontainers_modules::{redis::Redis, testcontainers::Container};
 use tokio::net::TcpListener;
 use uuid::Uuid;

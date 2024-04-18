@@ -1,4 +1,6 @@
-use super::{create, delete, read, update, CachedRequest, CrudHook, CrudRequest, ReadResponse};
+use super::{
+    create, delete, read, update, CachedRequest, CrudHook, CrudRequest, ReadResponse, Unit,
+};
 use crate::server::{AppState, AppStores};
 use axum::{
     routing::{patch, post},
@@ -7,12 +9,9 @@ use axum::{
 use chrono::Utc;
 use integrationos_domain::{
     algebra::MongoStore,
-    common::{
-        api_model_config::{ApiModelConfig, Compute, Function, Lang},
-        connection_oauth_definition::{
-            ComputeRequest, ConnectionOAuthDefinition, Frontend, OAuthApiConfig, OAuthCompute,
-        },
-        event_access::EventAccess,
+    api_model_config::{ApiModelConfig, Compute, Function, Lang},
+    connection_oauth_definition::{
+        ComputeRequest, ConnectionOAuthDefinition, Frontend, OAuthApiConfig, OAuthCompute,
     },
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
@@ -47,6 +46,7 @@ pub struct CreateRequest {
     pub separator: Option<String>,
     pub init: RequestParams,
     pub refresh: RequestParams,
+    pub is_full_template_enabled: bool,
 }
 
 impl CrudHook<ConnectionOAuthDefinition> for CreateRequest {}
@@ -66,102 +66,119 @@ fn default_separator() -> Option<String> {
 
 impl CrudRequest for CreateRequest {
     type Output = ConnectionOAuthDefinition;
-    type Error = ();
 
-    fn into_public(self) -> Result<Self::Output, Self::Error> {
-        Ok(Self::Output {
+    fn output(&self) -> Option<Self::Output> {
+        Some(Self::Output {
             id: Id::new(IdPrefix::ConnectionOAuthDefinition, Utc::now()),
-            connection_platform: self.connection_platform,
+            connection_platform: self.connection_platform.clone(),
             configuration: OAuthApiConfig {
-                init: self.init.configuration,
-                refresh: self.refresh.configuration,
+                init: self.init.configuration.clone(),
+                refresh: self.refresh.configuration.clone(),
             },
+            is_full_template_enabled: self.is_full_template_enabled,
             compute: OAuthCompute {
                 init: ComputeRequest {
                     response: Function(Compute {
                         entry: "compute".to_string(),
-                        function: self.init.response_compute,
+                        function: self.init.response_compute.clone(),
                         language: Lang::JavaScript,
                     }),
-                    computation: self.init.compute.map(|compute| {
-                        Function(Compute {
-                            entry: "compute".to_string(),
-                            function: compute,
-                            language: Lang::JavaScript,
+                    computation: self
+                        .init
+                        .compute
+                        .iter()
+                        .map(|compute| {
+                            Function(Compute {
+                                entry: "compute".to_string(),
+                                function: compute.clone(),
+                                language: Lang::JavaScript,
+                            })
                         })
-                    }),
+                        .next(),
                 },
                 refresh: ComputeRequest {
-                    computation: self.refresh.compute.map(|compute| {
-                        Function(Compute {
-                            entry: "compute".to_string(),
-                            function: compute,
-                            language: Lang::JavaScript,
+                    computation: self
+                        .refresh
+                        .compute
+                        .iter()
+                        .map(|compute| {
+                            Function(Compute {
+                                entry: "compute".to_string(),
+                                function: compute.clone(),
+                                language: Lang::JavaScript,
+                            })
                         })
-                    }),
+                        .next(),
                     response: Function(Compute {
                         entry: "compute".to_string(),
-                        function: self.refresh.response_compute,
+                        function: self.refresh.response_compute.clone(),
                         language: Lang::JavaScript,
                     }),
                 },
             },
             frontend: Frontend {
-                platform_redirect_uri: self.platform_redirect_uri,
-                ios_redirect_uri: self.ios_redirect_uri,
-                scopes: self.scopes,
-                separator: self.separator,
+                platform_redirect_uri: self.platform_redirect_uri.clone(),
+                ios_redirect_uri: self.ios_redirect_uri.clone(),
+                scopes: self.scopes.clone(),
+                separator: self.separator.clone(),
             },
             record_metadata: Default::default(),
             hooks: Default::default(),
         })
     }
 
-    fn into_with_event_access(self, _event_access: Arc<EventAccess>) -> Self::Output {
-        unimplemented!()
-    }
-
-    fn update(self, record: &mut Self::Output) {
-        record.connection_platform = self.connection_platform;
+    fn update(&self, record: &mut Self::Output) -> Unit {
+        record.connection_platform = self.connection_platform.clone();
         record.configuration = OAuthApiConfig {
-            init: self.init.configuration,
-            refresh: self.refresh.configuration,
+            init: self.init.configuration.clone(),
+            refresh: self.refresh.configuration.clone(),
         };
+        record.is_full_template_enabled = self.is_full_template_enabled;
         record.compute = OAuthCompute {
             init: ComputeRequest {
-                computation: self.init.compute.map(|compute| {
-                    Function(Compute {
-                        entry: "compute".to_string(),
-                        function: compute,
-                        language: Lang::JavaScript,
+                computation: self
+                    .init
+                    .compute
+                    .iter()
+                    .map(|compute| {
+                        Function(Compute {
+                            entry: "compute".to_string(),
+                            function: compute.clone(),
+                            language: Lang::JavaScript,
+                        })
                     })
-                }),
+                    .next(),
                 response: Function(Compute {
                     entry: "compute".to_string(),
-                    function: self.init.response_compute,
+                    function: self.init.response_compute.clone(),
                     language: Lang::JavaScript,
                 }),
             },
             refresh: ComputeRequest {
                 response: Function(Compute {
                     entry: "compute".to_string(),
-                    function: self.refresh.response_compute,
+                    function: self.refresh.response_compute.clone(),
                     language: Lang::JavaScript,
                 }),
-                computation: self.refresh.compute.map(|compute| {
-                    Function(Compute {
-                        entry: "compute".to_string(),
-                        function: compute,
-                        language: Lang::JavaScript,
+                computation: self
+                    .refresh
+                    .compute
+                    .iter()
+                    .map(|compute| {
+                        Function(Compute {
+                            entry: "compute".to_string(),
+                            function: compute.clone(),
+                            language: Lang::JavaScript,
+                        })
                     })
-                }),
+                    .next(),
             },
         };
         record.frontend = Frontend {
-            platform_redirect_uri: self.platform_redirect_uri,
-            ios_redirect_uri: self.ios_redirect_uri,
-            scopes: self.scopes,
-            separator: self.separator,
+            platform_redirect_uri: self.platform_redirect_uri.clone(),
+            ios_redirect_uri: self.ios_redirect_uri.clone(),
+            scopes: self.scopes.clone(),
+            separator: self.separator.clone(),
         };
         record.record_metadata.updated_at = Utc::now().timestamp_millis();
         record.record_metadata.updated = true;
@@ -185,19 +202,6 @@ pub struct FrontendOauthConnectionDefinition {
 
 impl CrudRequest for FrontendOauthConnectionDefinition {
     type Output = FrontendOauthConnectionDefinition;
-    type Error = ();
-
-    fn into_public(self) -> Result<Self::Output, Self::Error> {
-        unimplemented!()
-    }
-
-    fn into_with_event_access(self, _: Arc<EventAccess>) -> Self::Output {
-        unimplemented!()
-    }
-
-    fn update(self, _: &mut Self::Output) {
-        unimplemented!()
-    }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.frontend_oauth_config.clone()

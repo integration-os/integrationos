@@ -8,9 +8,7 @@ use event_core::{
 };
 use gateway::config::Config as GatewayConfig;
 use http::StatusCode;
-use integrationos_domain::common::{
-    event_response::EventResponse, event_with_context::EventWithContext,
-};
+use integrationos_domain::{event_response::EventResponse, event_with_context::EventWithContext};
 use tokio::sync::{
     mpsc::{self, Receiver},
     Mutex,

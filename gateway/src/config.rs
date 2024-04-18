@@ -1,7 +1,7 @@
 use envconfig::Envconfig;
 use integrationos_domain::{
     cache::CacheConfig,
-    common::{database::DatabaseConfig, environment::Environment},
+    {database::DatabaseConfig, environment::Environment},
 };
 use std::{
     fmt::{Display, Formatter},

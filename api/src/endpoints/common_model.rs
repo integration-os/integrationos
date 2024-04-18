@@ -12,12 +12,9 @@ use axum::{
 use integrationos_domain::{
     algebra::{MongoStore, StoreExt},
     api_model_config::Lang,
-    common::{
-        common_model::{CommonModel, Field},
-        event_access::EventAccess,
-        json_schema::JsonSchema,
-    },
+    common_model::{CommonModel, Field},
     id::{prefix::IdPrefix, Id},
+    json_schema::JsonSchema,
     IntegrationOSError,
 };
 use mongodb::bson::doc;
@@ -83,33 +80,28 @@ impl CrudHook<CommonModel> for CreateRequest {
 
 impl CrudRequest for CreateRequest {
     type Output = CommonModel;
-    type Error = ();
 
-    fn into_public(self) -> Result<Self::Output, Self::Error> {
+    fn output(&self) -> Option<Self::Output> {
         let mut record = Self::Output {
             id: Id::now(IdPrefix::CommonModel),
-            name: self.name,
-            fields: self.fields,
-            sample: self.sample,
-            category: self.category,
+            name: self.name.clone(),
+            fields: self.fields.clone(),
+            sample: self.sample.clone(),
+            category: self.category.clone(),
             primary: self.primary,
             interface: Default::default(),
             record_metadata: Default::default(),
         };
-        record.record_metadata.version = self.version;
-        Ok(record)
+        record.record_metadata.version = self.version.clone();
+        Some(record)
     }
 
-    fn into_with_event_access(self, _event_access: Arc<EventAccess>) -> Self::Output {
-        unimplemented!()
-    }
-
-    fn update(self, record: &mut Self::Output) {
-        record.name = self.name;
-        record.record_metadata.version = self.version;
-        record.fields = self.fields;
-        record.category = self.category;
-        record.sample = self.sample;
+    fn update(&self, record: &mut Self::Output) {
+        record.name = self.name.clone();
+        record.record_metadata.version = self.version.clone();
+        record.fields = self.fields.clone();
+        record.category = self.category.clone();
+        record.sample = self.sample.clone();
     }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {

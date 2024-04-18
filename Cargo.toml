@@ -1,19 +1,17 @@
 [workspace]
-
 resolver = "2"
-
 members = [
     "api",
     "event-core",
     "gateway",
-    "watchdog"
+    "watchdog",
 ]
 
 [workspace.dependencies]
 anyhow = "1.0.75"
+async-recursion = "1.0.5"
 async-trait = "0.1.74"
-axum = "0.6.20"
-axum-macros = "0.3.8"
+axum = {version = "0.7", features = ["macros"]}
 base64 = "0.21.5"
 base64ct = { version = "1.6.0", features = ["alloc"] }
 bson = "2.7.0"
@@ -21,7 +19,7 @@ chrono = { version = "0.4.31", features = ["serde"] }
 convert_case = "0.6.0"
 dotenvy = "0.15.7"
 envconfig = "0.10.0"
-fake = { version = "=2.9.1", features = [
+fake = { version = "2.9.2", features = [
     "uuid",
     "derive",
     "dummy",
@@ -34,9 +32,9 @@ fake = { version = "=2.9.1", features = [
 futures = "0.3.28"
 futures-util = "0.3.28"
 handlebars = "4.4.0"
-http = "0.2.9"
-http-serde-ext = "0.1.8"
-integrationos-domain = "1.0.0"
+http = "1.1.0"
+http-serde-ext = "1.0.2"
+integrationos-domain = "3.0.0"
 js-sandbox-ios = "0.1.0"
 jsonpath_lib = "0.3.0"
 jsonwebtoken = "8.3.0"
@@ -48,7 +46,7 @@ openapiv3 = { version = "2.0.0", features = ["skip_serializing_defaults"] }
 rand = "0.8.5"
 redis = { version = "0.23.3", features = ["connection-manager", "tokio-comp"] }
 regex = "1.10.2"
-reqwest = { version = "0.11.22", features = [
+reqwest = { version = "0.12.3", features = [
     "json",
     "rustls-tls",
 ], default-features = false }
@@ -64,7 +62,7 @@ tokio = { version = "1.33.0", features = [
     "time",
     "sync",
 ] }
-tower-http = { version = "0.4.4", features = [
+tower-http = { version = "0.5", features = [
     "trace",
     "cors",
     "sensitive-headers",
@@ -76,4 +74,4 @@ uuid = { version = "1.5.0", features = ["v4", "serde"] }
 validator = { version = "0.16.1", features = ["derive"] }
 
 [profile.release]
-lto = true
+lto = "thin"

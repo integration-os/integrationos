@@ -14,8 +14,8 @@ use bson::{doc, SerializerOptions};
 use http::{HeaderMap, HeaderValue, StatusCode};
 use integrationos_domain::{
     algebra::{MongoStore, StoreExt},
-    common::{event_access::EventAccess, Connection},
-    ApplicationError, IntegrationOSError, InternalError, OAuth, Store,
+    event_access::EventAccess,
+    ApplicationError, Connection, IntegrationOSError, InternalError, OAuth, Store,
 };
 use moka::future::Cache;
 use mongodb::options::FindOneOptions;
@@ -43,13 +43,28 @@ pub mod unified;
 
 const INTEGRATION_OS_PASSTHROUGH_HEADER: &str = "x-integrationos-passthrough";
 
+pub type Unit = ();
 pub trait CrudRequest: Sized {
     type Output: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static;
-    type Error: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static + std::fmt::Debug;
 
-    fn into_with_event_access(self, event_access: Arc<EventAccess>) -> Self::Output;
-    fn into_public(self) -> Result<Self::Output, Self::Error>;
-    fn update(self, record: &mut Self::Output);
+    /// Generate the output of the request based on the input and the event access.
+    ///
+    /// @param self
+    /// @param event_access
+    /// @return Option<Self::Output>
+    fn event_access(&self, _: Arc<EventAccess>) -> Option<Self::Output> {
+        None
+    }
+
+    /// Generate the output of the request based on the input.
+    /// @param self
+    /// @return Result<Option<Self::Output>, Self::Error>
+    fn output(&self) -> Option<Self::Output> {
+        None
+    }
+
+    ///
+    fn update(&self, _: &mut Self::Output) -> Unit {}
     fn get_store(stores: AppStores) -> MongoStore<Self::Output>;
 }
 
@@ -106,12 +121,14 @@ where
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
 {
     let output = if let Some(Extension(event_access)) = event_access {
-        req.into_with_event_access(event_access)
+        req.event_access(event_access)
     } else {
-        req.into_public().map_err(|e| {
-            error!("Error creating object: {:?}", e);
-            internal_server_error!()
-        })?
+        req.output()
+    };
+
+    let output = match output {
+        Some(output) => output,
+        None => return Err(not_found!("Record")),
     };
 
     match T::get_store(state.app_stores.clone())
@@ -356,6 +373,7 @@ where
 struct SparseConnection {
     oauth: OAuth,
 }
+
 async fn get_connection(
     access: &EventAccess,
     connection_id: &HeaderValue,

@@ -14,7 +14,10 @@ use http::StatusCode;
 use http::{header::AUTHORIZATION, Method};
 use integrationos_domain::{
     algebra::{CryptoExt, MongoStore, StoreExt},
-    common::{
+    create_secret_response::{CreateSecretAuthor, CreateSecretResponse},
+    get_secret_request::GetSecretRequest,
+    IntegrationOSError,
+    {
         access_key_data::AccessKeyData,
         access_key_prefix::AccessKeyPrefix,
         api_model_config::{AuthMethod, SamplesInput, SchemasInput},
@@ -27,9 +30,6 @@ use integrationos_domain::{
         event_type::EventType,
         AccessKey, Connection, Store,
     },
-    create_secret_response::{CreateSecretAuthor, CreateSecretResponse},
-    get_secret_request::GetSecretRequest,
-    IntegrationOSError,
 };
 use mockito::{Matcher, Server as MockServer, ServerGuard};
 use mongodb::Client;

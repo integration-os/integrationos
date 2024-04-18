@@ -8,13 +8,13 @@ use event_core::{
 use fake::{Fake, Faker};
 use integrationos_domain::{
     algebra::PipelineExt,
-    common::{
-        duplicates::Duplicates, extractor::HttpExtractor, Connection, Event, ExtractorContext,
-        Pipeline, PipelineContext, RootContext,
-    },
     id::{prefix::IdPrefix, Id},
     pipeline_context::PipelineStage,
     root_context::RootStage,
+    {
+        duplicates::Duplicates, extractor::HttpExtractor, Connection, Event, ExtractorContext,
+        Pipeline, PipelineContext, RootContext,
+    },
 };
 use serde_json::Value;
 use std::{

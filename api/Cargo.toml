@@ -15,18 +15,14 @@ convert_case.workspace = true
 dotenvy.workspace = true
 envconfig.workspace = true
 fake = { workspace = true, optional = true }
-futures.workspace = true
 futures-util.workspace = true
+futures.workspace = true
 handlebars.workspace = true
 http-serde-ext.workspace = true
 http.workspace = true
 hyper = "0.14.27"
 indexmap = "2.1.0"
-integrationos-domain = { workspace = true, features = [
-    "unified",
-    "metrics",
-    "axum-error",
-] }
+integrationos-domain = { workspace = true, features = [ "unified", "metrics", "axum-error", ] }
 jsonwebtoken.workspace = true
 moka.workspace = true
 mongodb.workspace = true
@@ -43,6 +39,7 @@ strum.workspace = true
 tokio.workspace = true
 tower = { version = "0.4.13", features = ["filter"] }
 tower-http.workspace = true
+tower_governor = "0.3.2"
 tracing-subscriber.workspace = true
 tracing.workspace = true
 validator.workspace = true

@@ -14,19 +14,17 @@ use axum::{
     Extension, Json, Router,
 };
 use integrationos_domain::{
+    access_key_data::AccessKeyData,
+    access_key_prefix::AccessKeyPrefix,
     algebra::{MongoStore, StoreExt},
-    common::{
-        access_key_data::AccessKeyData,
-        access_key_prefix::AccessKeyPrefix,
-        connection_definition::{ConnectionDefinitionType, Paths},
-        environment::Environment,
-        event_access::EventAccess,
-        event_type::EventType,
-        ownership::Ownership,
-        record_metadata::RecordMetadata,
-        AccessKey,
-    },
+    connection_definition::{ConnectionDefinitionType, Paths},
+    environment::Environment,
+    event_access::EventAccess,
+    event_type::EventType,
     id::{prefix::IdPrefix, Id},
+    ownership::Ownership,
+    record_metadata::RecordMetadata,
+    AccessKey,
 };
 use mongodb::bson::doc;
 use rand::Rng;
@@ -61,22 +59,9 @@ pub struct CreateEventAccessRequest {
 
 impl CrudRequest for CreateEventAccessRequest {
     type Output = EventAccess;
-    type Error = ();
-
-    fn into_with_event_access(self, _event_access: Arc<EventAccess>) -> Self::Output {
-        unimplemented!()
-    }
-
-    fn update(self, _record: &mut Self::Output) {
-        unimplemented!()
-    }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.event_access
-    }
-
-    fn into_public(self) -> Result<Self::Output, Self::Error> {
-        unimplemented!()
     }
 }
 
