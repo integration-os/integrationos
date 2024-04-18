@@ -9,7 +9,10 @@ use event_core::{
     mongo_context_store::MongoContextStore,
     mongo_control_data_store::MongoControlDataStore,
 };
-use integrationos_domain::{client::secrets_client::SecretsClient, telemetry::{get_subscriber, init_subscriber}};
+use integrationos_domain::{
+    client::secrets_client::SecretsClient,
+    telemetry::{get_subscriber, init_subscriber},
+};
 use metrics_exporter_prometheus::PrometheusBuilder;
 use std::sync::Arc;
 use tokio::sync::Mutex;
