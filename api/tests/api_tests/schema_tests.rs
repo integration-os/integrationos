@@ -2,12 +2,12 @@ use api::endpoints::{connection_model_schema::CreateRequest, ReadResponse};
 use fake::{Fake, Faker};
 use http::{Method, StatusCode};
 use integrationos_domain::{
-    common::{
+    id::{prefix::IdPrefix, Id},
+    {
         connection_model_schema::{ConnectionModelSchema, Mappings},
         environment::Environment,
         json_schema::JsonSchema,
     },
-    id::{prefix::IdPrefix, Id},
 };
 use serde_json::Value;
 

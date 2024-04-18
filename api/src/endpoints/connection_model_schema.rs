@@ -15,14 +15,12 @@ use axum::{
 use http::StatusCode;
 use integrationos_domain::{
     algebra::{MongoStore, StoreExt},
-    common::{
-        connection_model_schema::{
-            ConnectionModelSchema, Mappings, PublicConnectionModelSchema, SchemaPaths,
-        },
-        event_access::EventAccess,
-        json_schema::JsonSchema,
+    connection_model_schema::{
+        ConnectionModelSchema, Mappings, PublicConnectionModelSchema, SchemaPaths,
     },
+    event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
+    json_schema::JsonSchema,
 };
 use mongodb::bson::doc;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -146,19 +144,6 @@ pub async fn public_get_platform_models(
 
 impl CrudRequest for PublicGetConnectionModelSchema {
     type Output = PublicConnectionModelSchema;
-    type Error = ();
-
-    fn into_public(self) -> Result<Self::Output, Self::Error> {
-        unimplemented!()
-    }
-
-    fn into_with_event_access(self, _event_access: Arc<EventAccess>) -> Self::Output {
-        unimplemented!()
-    }
-
-    fn update(self, _record: &mut Self::Output) {
-        unimplemented!()
-    }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.public_model_schema.clone()
@@ -186,47 +171,42 @@ impl CrudHook<ConnectionModelSchema> for CreateRequest {}
 
 impl CrudRequest for CreateRequest {
     type Output = ConnectionModelSchema;
-    type Error = ();
 
-    fn into_public(self) -> Result<Self::Output, Self::Error> {
+    fn output(&self) -> Option<Self::Output> {
         let key = format!(
             "api::{}::{}::{}",
             self.connection_platform, self.platform_version, self.model_name
         )
         .to_lowercase();
 
-        Ok(Self::Output {
+        Some(Self::Output {
             id: Id::now(IdPrefix::ConnectionModelSchema),
             platform_id: self.platform_id,
             platform_page_id: self.platform_page_id,
-            connection_platform: self.connection_platform,
+            connection_platform: self.connection_platform.clone(),
             connection_definition_id: self.connection_definition_id,
-            platform_version: self.platform_version,
+            platform_version: self.platform_version.clone(),
             key,
-            model_name: self.model_name,
-            schema: self.schema,
-            mapping: self.mapping,
-            sample: self.sample,
-            paths: self.paths,
+            model_name: self.model_name.clone(),
+            schema: self.schema.clone(),
+            mapping: self.mapping.clone(),
+            sample: self.sample.clone(),
+            paths: self.paths.clone(),
             record_metadata: Default::default(),
         })
     }
 
-    fn into_with_event_access(self, _event_access: Arc<EventAccess>) -> Self::Output {
-        unimplemented!()
-    }
-
-    fn update(self, record: &mut Self::Output) {
+    fn update(&self, record: &mut Self::Output) {
         record.platform_id = self.platform_id;
         record.platform_page_id = self.platform_page_id;
-        record.connection_platform = self.connection_platform;
+        record.connection_platform = self.connection_platform.clone();
         record.connection_definition_id = self.connection_definition_id;
-        record.platform_version = self.platform_version;
-        record.model_name = self.model_name;
-        record.schema = self.schema;
-        record.sample = self.sample;
-        record.paths = self.paths;
-        record.mapping = self.mapping;
+        record.platform_version = self.platform_version.clone();
+        record.model_name = self.model_name.clone();
+        record.schema = self.schema.clone();
+        record.sample = self.sample.clone();
+        record.paths = self.paths.clone();
+        record.mapping = self.mapping.clone();
     }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {

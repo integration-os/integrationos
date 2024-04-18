@@ -7,7 +7,7 @@ use api::endpoints::{
 };
 use fake::{Fake, Faker};
 use http::{Method, StatusCode};
-use integrationos_domain::common::{
+use integrationos_domain::{
     common_model::CommonModel, connection_definition::ConnectionDefinition,
     connection_model_definition::ConnectionModelDefinition,
     connection_model_schema::ConnectionModelSchema,

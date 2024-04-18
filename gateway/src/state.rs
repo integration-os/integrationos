@@ -1,6 +1,6 @@
 use super::finalize_event::FinalizeEvent;
 use crate::config::Config;
-use integrationos_domain::common::{
+use integrationos_domain::{
     encrypted_access_key::EncryptedAccessKey, encrypted_data::PASSWORD_LENGTH, AccessKey,
 };
 use moka::future::Cache;

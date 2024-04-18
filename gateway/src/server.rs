@@ -5,17 +5,19 @@ use crate::{
 use anyhow::{anyhow, Result};
 use axum::{
     body::Bytes,
+    debug_handler,
     extract::{Path, Query, State},
     http::{HeaderMap, HeaderName, StatusCode},
     routing::{get, post},
     Json, Router,
 };
 use axum_prometheus::PrometheusMetricLayer;
-use integrationos_domain::common::{
+use integrationos_domain::{
     encrypted_access_key::EncryptedAccessKey, event_response::EventResponse, event_type::EventType,
     AccessKey, Event,
 };
 use std::{collections::HashMap, iter::once, sync::Arc};
+use tokio::net::TcpListener;
 use tower_http::{
     cors::{Any, CorsLayer},
     sensitive_headers::SetSensitiveRequestHeadersLayer,
@@ -55,8 +57,12 @@ impl Server {
     pub async fn run(&self) -> Result<()> {
         let app = self.get_router();
         info!("Gateway server listening on {}", self.config.address);
-        axum::Server::bind(&self.config.address)
-            .serve(app.into_make_service())
+
+        let tcp_listener = TcpListener::bind(&self.config.address)
+            .await
+            .map_err(|e| anyhow!("Failed to bind to address: {}", e))?;
+
+        axum::serve(tcp_listener, app.into_make_service())
             .await
             .map_err(|e| anyhow!("Server error: {}", e))
     }
@@ -157,7 +163,7 @@ impl Server {
     }
 }
 
-#[axum_macros::debug_handler]
+#[debug_handler]
 async fn post_event_sk(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
@@ -188,7 +194,7 @@ async fn post_event_sk(
     Server::handle_event(encrypted_key, body, None, headers.clone(), state).await
 }
 
-#[axum_macros::debug_handler]
+#[debug_handler]
 async fn post_event_id(
     headers: HeaderMap,
     query: Option<Query<HashMap<String, String>>>,
@@ -219,10 +225,11 @@ async fn get_root() {}
 #[cfg(test)]
 mod tests {
     use axum::{
-        body::{Body, HttpBody},
+        body::Body,
         http::{header::CONTENT_TYPE, Method, Request, StatusCode},
     };
-    use integrationos_domain::common::{
+    use http_body_util::BodyExt;
+    use integrationos_domain::{
         event_state::EventState,
         hashes::{HashType, HashValue},
     };
@@ -249,7 +256,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body = response.into_body().data().await.unwrap().unwrap();
+        let body = response.into_body().collect().await.unwrap().to_bytes();
         let resp = serde_json::from_slice::<EventResponse>(&body).unwrap();
         assert_eq!(resp.status, EventState::Acknowledged);
         assert_eq!(
@@ -289,8 +296,8 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        let body = response.into_body().data().await.unwrap().unwrap();
-        assert_eq!(body, "Invalid access key");
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        assert_eq!(&body[..], b"Invalid access key");
     }
 
     #[tokio::test]
@@ -310,7 +317,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body = response.into_body().data().await.unwrap().unwrap();
+        let body = response.into_body().collect().await.unwrap().to_bytes();
         let resp = serde_json::from_slice::<EventResponse>(&body).unwrap();
         assert_eq!(resp.status, EventState::Acknowledged);
         assert_eq!(
@@ -351,7 +358,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        let body = response.into_body().data().await.unwrap().unwrap();
+        let body = response.into_body().collect().await.unwrap().to_bytes();
         assert_eq!(body, "Invalid access key");
     }
 

@@ -1,5 +1,5 @@
 use envconfig::Envconfig;
-use integrationos_domain::common::{
+use integrationos_domain::{
     cache::CacheConfig as RedisConfig, database::DatabaseConfig, secrets::SecretsConfig,
 };
 use std::fmt::{Display, Formatter};

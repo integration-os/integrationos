@@ -10,13 +10,13 @@ use futures::{
 };
 use integrationos_domain::{
     algebra::{PipelineExt, PipelineStatus},
-    common::{
-        extractor_context::Stage as ExtractorStage, middleware::Middleware, ExtractorContext,
-        PipelineContext, RootContext, Transaction,
-    },
     pipeline_context::PipelineStage,
     root_context::RootStage,
     Event,
+    {
+        extractor_context::Stage as ExtractorStage, middleware::Middleware, ExtractorContext,
+        PipelineContext, RootContext, Transaction,
+    },
 };
 use js_sandbox_ios::Script;
 use serde_json::{json, Value};

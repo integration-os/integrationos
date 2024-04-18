@@ -2,8 +2,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use integrationos_domain::{
     algebra::PipelineExt,
-    common::{duplicates::Duplicates, extractor::HttpExtractor, Connection, Event, Pipeline},
     id::Id,
+    {duplicates::Duplicates, extractor::HttpExtractor, Connection, Event, Pipeline},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

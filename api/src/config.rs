@@ -5,7 +5,7 @@ use std::{
 
 use envconfig::Envconfig;
 use integrationos_domain::cache::CacheConfig as RedisConfig;
-use integrationos_domain::common::{
+use integrationos_domain::{
     claude::ClaudeConfig, database::DatabaseConfig, openai::OpenAiConfig, secrets::SecretsConfig,
 };
 
@@ -55,6 +55,11 @@ pub struct Config {
         default = "2thZ2UiOnsibmFtZSI6IlN0YXJ0dXBsa3NoamRma3NqZGhma3NqZGhma3NqZG5jhYtggfaP9ubmVjdGlvbnMiOjUwMDAwMCwibW9kdWxlcyI6NSwiZW5kcG9pbnRzIjo3b4e05e2-f050-401f-9822-44f43f71753c"
     )]
     pub jwt_secret: String,
+    #[envconfig(from = "BURST_RATE_LIMIT", default = "1")]
+    pub burst_rate_limit: u64,
+    /// Burst size limit
+    #[envconfig(from = "BURST_SIZE_LIMIT", default = "30")]
+    pub burst_size: u32,
     #[envconfig(from = "API_VERSION", default = "v1")]
     pub api_version: String,
     #[envconfig(from = "MOCK_LLM", default = "false")]

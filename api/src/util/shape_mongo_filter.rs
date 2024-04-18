@@ -1,6 +1,6 @@
 use axum::extract::Query;
 use http::HeaderMap;
-use integrationos_domain::common::event_access::EventAccess;
+use integrationos_domain::event_access::EventAccess;
 use mongodb::bson::{doc, Document};
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -72,14 +72,14 @@ mod test {
     use axum::extract::Query;
     use http::HeaderMap;
     use integrationos_domain::{
-        common::{
+        id::{prefix::IdPrefix, Id},
+        {
             connection_definition::{ConnectionDefinitionType, Paths},
             environment::Environment,
             event_access::EventAccess,
             ownership::Ownership,
             record_metadata::RecordMetadata,
         },
-        id::{prefix::IdPrefix, Id},
     };
 
     use crate::util::shape_mongo_filter::{

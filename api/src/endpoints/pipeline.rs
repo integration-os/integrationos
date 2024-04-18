@@ -4,12 +4,15 @@ use axum::{routing::post, Router};
 use bson::doc;
 use integrationos_domain::{
     algebra::MongoStore,
-    common::{
-        configuration::pipeline::PipelineConfig, destination::Destination,
-        event_access::EventAccess, middleware::Middleware, record_metadata::RecordMetadata,
-        signature::Signature, source::Source, Pipeline,
-    },
+    configuration::pipeline::PipelineConfig,
+    destination::Destination,
+    event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
+    middleware::Middleware,
+    record_metadata::RecordMetadata,
+    signature::Signature,
+    source::Source,
+    Pipeline,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -44,29 +47,24 @@ impl CrudHook<Pipeline> for CreatePipelineRequest {}
 
 impl CrudRequest for CreatePipelineRequest {
     type Output = Pipeline;
-    type Error = ();
 
-    fn into_public(self) -> anyhow::Result<Self::Output, Self::Error> {
-        unimplemented!()
-    }
-
-    fn into_with_event_access(self, event_access: Arc<EventAccess>) -> Self::Output {
-        Self::Output {
+    fn event_access(&self, event_access: Arc<EventAccess>) -> Option<Self::Output> {
+        Some(Self::Output {
             id: Id::now(IdPrefix::Pipeline).to_string(),
             environment: event_access.environment,
-            name: self.name,
-            key: self.key,
-            source: self.source,
-            destination: self.destination,
-            middleware: self.middleware,
+            name: self.name.clone(),
+            key: self.key.clone(),
+            source: self.source.clone(),
+            destination: self.destination.clone(),
+            middleware: self.middleware.clone(),
             ownership: event_access.ownership.clone(),
-            signature: self.signature,
-            config: Some(self.config),
+            signature: self.signature.clone(),
+            config: Some(self.config.clone()),
             record_metadata: RecordMetadata::default(),
-        }
+        })
     }
 
-    fn update(self, record: &mut Self::Output) {
+    fn update(&self, record: &mut Self::Output) {
         let CreatePipelineRequest {
             name,
             key,
@@ -77,13 +75,13 @@ impl CrudRequest for CreatePipelineRequest {
             config,
         } = self;
 
-        record.name = name;
-        record.key = key;
-        record.source = source;
-        record.destination = destination;
-        record.middleware = middleware;
-        record.signature = signature;
-        record.config = Some(config);
+        record.name = name.into();
+        record.key = key.into();
+        record.source = source.clone();
+        record.destination = destination.clone();
+        record.middleware = middleware.clone();
+        record.signature = signature.clone();
+        record.config = Some(config.clone());
         record.record_metadata.mark_updated(&record.ownership.id);
     }
 

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use integrationos_domain::common::{encrypted_access_key::EncryptedAccessKey, Event};
+use integrationos_domain::{encrypted_access_key::EncryptedAccessKey, Event};
 
 #[async_trait]
 pub trait FinalizeEvent {

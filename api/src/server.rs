@@ -11,27 +11,23 @@ use anyhow::{anyhow, Context, Result};
 use axum::Router;
 use http::HeaderValue;
 use integrationos_domain::{
-    algebra::{CryptoExt, MongoStore},
-    common::{
-        common_model::CommonModel,
-        connection_definition::ConnectionDefinition,
-        connection_model_definition::ConnectionModelDefinition,
-        connection_model_schema::{ConnectionModelSchema, PublicConnectionModelSchema},
-        connection_oauth_definition::{ConnectionOAuthDefinition, Settings},
-        cursor::Cursor,
-        event_access::EventAccess,
-        stage::Stage,
-        Connection, Event, Pipeline, Store, Transaction,
-    },
-    common_model::CommonEnum,
-    connection_definition::PublicConnectionDetails,
-    service::unified_destination::UnifiedDestination,
+    algebra::{CryptoExt, DefaultTemplate, MongoStore},
+    client::unified_destination_client::UnifiedDestination,
+    common_model::{CommonEnum, CommonModel},
+    connection_definition::{ConnectionDefinition, PublicConnectionDetails},
+    connection_model_definition::ConnectionModelDefinition,
+    connection_model_schema::{ConnectionModelSchema, PublicConnectionModelSchema},
+    connection_oauth_definition::{ConnectionOAuthDefinition, Settings},
+    cursor::Cursor,
+    event_access::EventAccess,
+    stage::Stage,
+    Connection, Event, Pipeline, Store, Transaction,
 };
 use moka::future::Cache;
 use mongodb::{options::UpdateOptions, Client, Database};
 use segment::{AutoBatcher, Batcher, HttpClient};
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
-use tokio::{sync::mpsc::Sender, time::timeout, try_join};
+use tokio::{net::TcpListener, sync::mpsc::Sender, time::timeout, try_join};
 use tracing::{error, info, trace, warn};
 
 #[derive(Clone)]
@@ -76,6 +72,7 @@ pub struct AppState {
     pub extractor_caller: UnifiedDestination,
     pub event_tx: Sender<Event>,
     pub metric_tx: Sender<Metric>,
+    pub template: DefaultTemplate,
 }
 
 #[derive(Clone)]
@@ -202,6 +199,7 @@ impl Server {
         // Update metrics in separate thread
         let client = HttpClient::default();
         let batcher = Batcher::new(None);
+        let template = DefaultTemplate::default();
         let mut batcher = config
             .segment_write_key
             .as_ref()
@@ -278,6 +276,7 @@ impl Server {
                 extractor_caller,
                 event_tx,
                 metric_tx,
+                template,
             }),
         })
     }
@@ -289,8 +288,9 @@ impl Server {
 
         info!("Api server listening on {}", self.state.config.address);
 
-        axum::Server::bind(&self.state.config.address)
-            .serve(app.into_make_service())
+        let tcp_listener = TcpListener::bind(&self.state.config.address).await?;
+
+        axum::serve(tcp_listener, app.into_make_service())
             .await
             .map_err(|e| anyhow!("Server error: {}", e))
     }

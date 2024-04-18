@@ -9,11 +9,11 @@ use axum::{
 use http::{header::CONTENT_LENGTH, HeaderMap, HeaderName, Method, Uri};
 use hyper::body::Bytes;
 use integrationos_domain::{
-    common::{
+    ApplicationError, InternalError,
+    {
         destination::{Action, Destination},
         event_access::EventAccess,
     },
-    ApplicationError, InternalError,
 };
 use std::{collections::HashMap, sync::Arc};
 use tracing::error;

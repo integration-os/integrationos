@@ -3,7 +3,7 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use integrationos_domain::{
     algebra::{MongoStore, RedisCache, StoreExt},
-    common::{
+    {
         encrypted_access_key::EncryptedAccessKey, event_with_context::EventWithContext, Event,
         RootContext, Store,
     },

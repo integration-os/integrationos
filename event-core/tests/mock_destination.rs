@@ -12,7 +12,11 @@ use fake::{
 use http::Method;
 use integrationos_domain::{
     algebra::CryptoExt,
-    common::{
+    create_secret_response::CreateSecretResponse,
+    get_secret_request::GetSecretRequest,
+    id::{prefix::IdPrefix, Id},
+    IntegrationOSError,
+    {
         api_model_config::{ApiModelConfig, AuthMethod, SamplesInput, SchemasInput},
         connection_model_definition::{
             ConnectionModelDefinition, CrudAction, PlatformInfo, TestConnection,
@@ -24,10 +28,6 @@ use integrationos_domain::{
         settings::Settings,
         Connection, ConnectionType, Pipeline, Throughput,
     },
-    create_secret_response::CreateSecretResponse,
-    get_secret_request::GetSecretRequest,
-    id::{prefix::IdPrefix, Id},
-    IntegrationOSError,
 };
 use mockito::Server;
 use mongodb::Client;

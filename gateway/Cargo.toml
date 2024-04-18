@@ -6,11 +6,11 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-axum-macros.workspace = true
-axum-prometheus = "0.4.0"
+axum-prometheus = "0.6.1"
 axum.workspace = true
 dotenvy.workspace = true
 envconfig.workspace = true
+futures.workspace = true
 http-serde-ext.workspace = true
 http.workspace = true
 integrationos-domain.workspace = true
@@ -26,6 +26,7 @@ tracing.workspace = true
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["async_tokio"] }
+http-body-util = "0.1.1"
 tower = { version = "0.4", features = ["util"] }
 
 [[bench]]

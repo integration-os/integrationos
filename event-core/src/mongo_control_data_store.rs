@@ -10,13 +10,14 @@ use handlebars::Handlebars;
 use http::header::AUTHORIZATION;
 use integrationos_domain::{
     algebra::{CryptoExt, FecherExt, GoogleTokenFetcher, MongoStore, StoreExt},
-    common::{
-        duplicates::Duplicates, encrypted_access_key::EncryptedAccessKey,
-        event_access::EventAccess, extractor::HttpExtractor, middleware::Middleware, Connection,
-        Event, Pipeline, Store,
-    },
+    client::unified_destination_client::UnifiedDestination,
+    duplicates::Duplicates,
+    encrypted_access_key::EncryptedAccessKey,
+    event_access::EventAccess,
+    extractor::HttpExtractor,
     id::Id,
-    service::unified_destination::UnifiedDestination,
+    middleware::Middleware,
+    Connection, Event, Pipeline, Store,
 };
 use moka::future::Cache;
 use mongodb::{options::ClientOptions, Client};

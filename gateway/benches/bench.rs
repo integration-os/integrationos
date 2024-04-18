@@ -1,7 +1,7 @@
 use axum::{body::Bytes, http::HeaderMap};
 use criterion::{criterion_group, criterion_main, Criterion};
 use gateway::{config::Config, mock_finalizer::MockFinalizer, server::Server, state::AppState};
-use integrationos_domain::common::{
+use integrationos_domain::{
     encrypted_access_key::EncryptedAccessKey, encrypted_data::PASSWORD_LENGTH, AccessKey, Event,
 };
 use std::{collections::HashMap, hint::black_box, sync::Arc};

@@ -1,5 +1,5 @@
 use super::{
-    create, delete, update, ApiResult, CachedRequest, CrudHook, CrudRequest, ReadResponse,
+    create, delete, update, ApiResult, CachedRequest, CrudHook, CrudRequest, ReadResponse, Unit,
 };
 use crate::{
     internal_server_error, not_found,
@@ -12,19 +12,16 @@ use axum::{
 };
 use integrationos_domain::{
     algebra::{MongoStore, StoreExt},
-    common::{
-        api_model_config::AuthMethod,
-        connection_definition::{
-            AuthSecret, ConnectionDefinition, ConnectionDefinitionType, ConnectionForm,
-            FormDataItem, Frontend, Paths, Spec,
-        },
-        event_access::EventAccess,
-        record_metadata::RecordMetadata,
-        settings::Settings,
-    },
+    api_model_config::AuthMethod,
     connection_definition::ConnectionStatus,
+    connection_definition::{
+        AuthSecret, ConnectionDefinition, ConnectionDefinitionType, ConnectionForm, FormDataItem,
+        Frontend, Paths, Spec,
+    },
     connection_model_definition::{ConnectionModelDefinition, CrudAction},
     id::{prefix::IdPrefix, Id},
+    record_metadata::RecordMetadata,
+    settings::Settings,
 };
 use moka::future::Cache;
 use mongodb::bson::doc;
@@ -255,9 +252,8 @@ pub async fn public_get_connection_details(
 
 impl CrudRequest for CreateRequest {
     type Output = ConnectionDefinition;
-    type Error = ();
 
-    fn into_public(self) -> Result<Self::Output, Self::Error> {
+    fn output(&self) -> Option<Self::Output> {
         let auth_secrets: Vec<AuthSecret> = self
             .authentication
             .iter()
@@ -287,48 +283,44 @@ impl CrudRequest for CreateRequest {
 
         let mut record = Self::Output {
             id: Id::now(IdPrefix::ConnectionDefinition),
-            platform_version: self.platform_version,
+            platform_version: self.platform_version.clone(),
             platform: self.platform.clone(),
-            status: self.status,
-            r#type: self.r#type,
+            status: self.status.clone(),
+            r#type: self.r#type.clone(),
             name: self.name.clone(),
             key,
             frontend: Frontend {
                 spec: Spec {
-                    title: self.name,
-                    description: self.description,
-                    platform: self.platform,
-                    category: self.category,
-                    image: self.image,
-                    tags: self.tags,
+                    title: self.name.clone(),
+                    description: self.description.clone(),
+                    platform: self.platform.clone(),
+                    category: self.category.clone(),
+                    image: self.image.clone(),
+                    tags: self.tags.clone(),
                 },
                 connection_form,
             },
             test_connection: self.test_connection,
             auth_secrets,
-            auth_method: self.auth_method,
-            paths: self.paths,
-            settings: self.settings,
+            auth_method: self.auth_method.clone(),
+            paths: self.paths.clone(),
+            settings: self.settings.clone(),
             hidden: false,
             record_metadata: RecordMetadata::default(),
         };
 
         record.record_metadata.active = self.active;
-        Ok(record)
+        Some(record)
     }
 
-    fn into_with_event_access(self, _event_access: Arc<EventAccess>) -> Self::Output {
-        unimplemented!()
-    }
-
-    fn update(self, record: &mut Self::Output) {
-        record.name = self.name;
-        record.frontend.spec.description = self.description;
-        record.frontend.spec.category = self.category;
-        record.frontend.spec.image = self.image;
-        record.frontend.spec.tags = self.tags;
+    fn update(&self, record: &mut Self::Output) -> Unit {
+        record.name = self.name.clone();
+        record.frontend.spec.description = self.description.clone();
+        record.frontend.spec.category = self.category.clone();
+        record.frontend.spec.image = self.image.clone();
+        record.frontend.spec.tags = self.tags.clone();
         record.test_connection = self.test_connection;
-        record.platform = self.platform;
+        record.platform = self.platform.clone();
         record.record_metadata.active = self.active;
     }
 

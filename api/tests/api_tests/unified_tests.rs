@@ -12,14 +12,14 @@ use http::{
     Method, StatusCode,
 };
 use integrationos_domain::{
-    common::{
+    id::{prefix::IdPrefix, Id},
+    {
         api_model_config::{AuthMethod, SamplesInput, SchemasInput},
         connection_model_definition::{ConnectionModelDefinition, CrudAction, CrudMapping},
         connection_model_schema::{ConnectionModelSchema, Mappings},
         environment::Environment,
         Connection,
     },
-    id::{prefix::IdPrefix, Id},
 };
 use mockito::Mock;
 use serde_json::Value;

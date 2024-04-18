@@ -3,7 +3,7 @@ use std::time::Duration;
 use api::endpoints::{pipeline::CreatePipelineRequest, ReadResponse};
 use fake::{Fake, Faker};
 use http::{Method, StatusCode};
-use integrationos_domain::common::Pipeline;
+use integrationos_domain::Pipeline;
 use serde_json::Value;
 use tokio::time::sleep;
 

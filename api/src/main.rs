@@ -1,24 +1,23 @@
-use std::sync::Arc;
-
 use anyhow::Result;
 use api::{config::Config, server::Server};
 use dotenvy::dotenv;
 use envconfig::Envconfig;
-use integrationos_domain::service::secrets_client::SecretsClient;
+use integrationos_domain::client::secrets_client::SecretsClient;
+use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
+use std::sync::Arc;
 use tracing::info;
-use tracing_subscriber::filter::LevelFilter;
-use tracing_subscriber::EnvFilter;
 
 fn main() -> Result<()> {
     dotenv().ok();
-
-    let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
-        .from_env_lossy();
-
-    tracing_subscriber::fmt().with_env_filter(filter).init();
-
     let config = Config::init_from_env()?;
+    let name = if config.is_admin {
+        "admin-api"
+    } else {
+        "event-api"
+    };
+
+    let subscriber = get_subscriber(name.into(), "info".into(), std::io::stdout);
+    init_subscriber(subscriber);
 
     info!("Starting API with config:\n{config}");
 
