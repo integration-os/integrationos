@@ -1,17 +1,12 @@
 [workspace]
 resolver = "2"
-members = [
-    "api",
-    "event-core",
-    "gateway",
-    "watchdog",
-]
+members = ["api", "event-core", "gateway", "watchdog"]
 
 [workspace.dependencies]
 anyhow = "1.0.75"
 async-recursion = "1.0.5"
 async-trait = "0.1.74"
-axum = {version = "0.7", features = ["macros"]}
+axum = { version = "0.7", features = ["macros"] }
 base64 = "0.21.5"
 base64ct = { version = "1.6.0", features = ["alloc"] }
 bson = "2.7.0"
@@ -34,7 +29,7 @@ futures-util = "0.3.28"
 handlebars = "4.4.0"
 http = "1.1.0"
 http-serde-ext = "1.0.2"
-integrationos-domain = "3.0.0"
+integrationos-domain = "3.0.1"
 js-sandbox-ios = "0.1.0"
 jsonpath_lib = "0.3.0"
 jsonwebtoken = "8.3.0"
