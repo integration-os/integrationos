@@ -18,7 +18,7 @@ macro_rules! test_crud {
     ($test:ident, $model:ty, $path:ident, $endpoint:expr) => {
         #[tokio::test]
         async fn $test() {
-            let server = TestServer::new(true, None).await;
+            let server = TestServer::new(None).await;
 
             let payload: $path::CreateRequest = Faker.fake();
             let payload = serde_json::to_value(&payload).unwrap();
@@ -104,7 +104,7 @@ test_crud!(
 
 #[tokio::test]
 async fn test_common_model_crud() {
-    let server = TestServer::new(true, None).await;
+    let server = TestServer::new(None).await;
 
     let payload: common_model::CreateRequest = Faker.fake();
     let payload = serde_json::to_value(&payload).unwrap();

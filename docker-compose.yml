@@ -13,7 +13,6 @@ services:
       - CONTROL_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
       - EVENT_ACCESS_PASSWORD=${EVENT_ACCESS_PASSWORD}
       - INTERNAL_SERVER_ADDRESS=0.0.0.0:3004
-      - IS_ADMIN=true
       - OPENAI_API_KEY=
       - RUST_LOG=api=info,tower_http=info,udm=info
       - SECRETS_SERVICE_BASE_URL=http://secrets-service:3006/

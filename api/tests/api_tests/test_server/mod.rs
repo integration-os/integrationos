@@ -126,7 +126,7 @@ pub struct ApiResponse<T: DeserializeOwned = Value> {
 }
 
 impl TestServer {
-    pub async fn new(is_admin: bool, dn_name: Option<String>) -> Self {
+    pub async fn new(dn_name: Option<String>) -> Self {
         // init tracing once
         TRACING.get_or_init(|| {
             let filter = EnvFilter::builder()
@@ -168,7 +168,6 @@ impl TestServer {
                 "INTERNAL_SERVER_ADDRESS".to_string(),
                 format!("0.0.0.0:{port}"),
             ),
-            ("IS_ADMIN".to_string(), is_admin.to_string()),
             ("CLAUDE_API_KEY".to_string(), "".to_string()),
             ("OPENAI_API_KEY".to_string(), "".to_string()),
             ("MOCK_LLM".to_string(), "true".to_string()),
@@ -311,8 +310,7 @@ impl TestServer {
             Environment::Production => (self.live_key.as_ref(), &self.live_access_key),
         };
 
-        let admin_server =
-            TestServer::new(true, Some(self.config.db_config.control_db_name.clone())).await;
+        let server = TestServer::new(None).await;
 
         let bearer_key: String = Faker.fake();
         let template: String = Faker.fake();
@@ -327,7 +325,7 @@ impl TestServer {
         };
         test_connection.http_method = Method::GET;
 
-        let res = admin_server
+        let res = server
             .send_request::<CreateConnectionModelDefinitionRequest, ConnectionModelDefinition>(
                 "v1/connection-model-definitions",
                 http::Method::POST,
@@ -385,7 +383,7 @@ impl TestServer {
 
         let payload = to_value(&connection_def).unwrap();
 
-        let res = admin_server
+        let res = server
             .send_request::<Value, Value>(
                 "v1/connection-definitions",
                 http::Method::POST,
@@ -482,7 +480,7 @@ impl TestServer {
             }),
         };
 
-        let res = admin_server
+        let res = server
             .send_request::<CreateConnectionModelDefinitionRequest, ConnectionModelDefinition>(
                 "v1/connection-model-definitions",
                 http::Method::POST,

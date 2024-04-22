@@ -11,7 +11,7 @@ use crate::test_server::TestServer;
 
 #[tokio::test]
 async fn test_pagination() {
-    let server = TestServer::new(false, None).await;
+    let server = TestServer::new(None).await;
 
     let mut pipelines = vec![];
     for _ in 0..10 {

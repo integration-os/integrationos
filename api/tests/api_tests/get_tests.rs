@@ -13,7 +13,7 @@ use crate::test_server::{test_gateway::TestGateway, TestServer};
 
 #[tokio::test]
 async fn test_get_events() {
-    let server = TestServer::new(false, None).await;
+    let server = TestServer::new(None).await;
 
     let gateway = TestGateway::new(&server.config).await;
 
@@ -39,7 +39,7 @@ async fn test_get_events() {
 
 #[tokio::test]
 async fn test_get_expanded_common_model() {
-    let server = TestServer::new(true, None).await;
+    let server = TestServer::new(None).await;
 
     let reference: String = Faker.fake();
 

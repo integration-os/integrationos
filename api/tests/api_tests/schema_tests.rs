@@ -15,9 +15,7 @@ use crate::test_server::TestServer;
 
 #[tokio::test]
 async fn test_connection_model_schema_api() {
-    let mut server = TestServer::new(false, None).await;
-    let admin_server =
-        TestServer::new(true, Some(server.config.db_config.control_db_name.clone())).await;
+    let mut server = TestServer::new(None).await;
 
     let (_connection, conn_def) = server.create_connection(Environment::Live).await;
 
@@ -33,7 +31,7 @@ async fn test_connection_model_schema_api() {
         unmapped_fields: JsonSchema::default(),
     });
 
-    let create_response = admin_server
+    let create_response = server
         .send_request::<CreateRequest, ConnectionModelSchema>(
             "v1/connection-model-schemas",
             Method::POST,
@@ -89,7 +87,7 @@ async fn test_connection_model_schema_api() {
 
 #[tokio::test]
 async fn test_connection_oauth_definition_schema_api() {
-    let server = TestServer::new(false, None).await;
+    let server = TestServer::new(None).await;
     let res = server
         .send_request::<Value, Value>(
             "v1/public/connection-oauth-definition-schema",

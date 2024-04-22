@@ -10,13 +10,8 @@ use tracing::info;
 fn main() -> Result<()> {
     dotenv().ok();
     let config = Config::init_from_env()?;
-    let name = if config.is_admin {
-        "admin-api"
-    } else {
-        "event-api"
-    };
 
-    let subscriber = get_subscriber(name.into(), "info".into(), std::io::stdout);
+    let subscriber = get_subscriber("connections-api".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
 
     info!("Starting API with config:\n{config}");

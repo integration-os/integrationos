@@ -16,10 +16,7 @@ use crate::test_server::TestServer;
 
 #[tokio::test]
 async fn test_passthrough_api() {
-    let mut server = TestServer::new(false, None).await;
-    let admin_server =
-        TestServer::new(true, Some(server.config.db_config.control_db_name.clone())).await;
-
+    let mut server = TestServer::new(None).await;
     let (connection, conn_def) = server.create_connection(Environment::Live).await;
 
     let mut mock_server = Server::new_async().await;
@@ -75,7 +72,7 @@ async fn test_passthrough_api() {
         mapping: None,
     };
 
-    let create_model_definition_response = admin_server
+    let create_model_definition_response = server
         .send_request::<Value, Value>(
             "v1/connection-model-definitions",
             Method::POST,
