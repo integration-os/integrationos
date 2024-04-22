@@ -1,4 +1,3 @@
-pub mod admin;
 pub mod protected;
 pub mod public;
 
@@ -14,7 +13,6 @@ use tower_http::cors::CorsLayer;
 pub fn get_admin_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let path = format!("/{}", state.config.api_version);
     Router::new()
-        .nest(&path, admin::get_router())
         .nest(&path, public::get_router(state))
         .route("/", get(get_root))
         .fallback(not_found_handler)

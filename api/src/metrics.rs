@@ -1,11 +1,10 @@
-use std::sync::Arc;
-
 use chrono::{DateTime, Datelike, Utc};
 use http::HeaderValue;
 use integrationos_domain::{event_access::EventAccess, ownership::Ownership, Connection};
 use segment::message::{Track, User};
 use serde::Deserialize;
 use serde_json::json;
+use std::sync::Arc;
 
 pub const TOTAL_KEY: &str = "total";
 pub const DAILY_KEY: &str = "daily";

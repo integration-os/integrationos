@@ -1,9 +1,10 @@
 use crate::{
     endpoints::{
-        connection,
-        connection_model_definition::test_connection_model_definition,
+        common_model, connection, connection_definition,
+        connection_model_definition::{self, test_connection_model_definition},
         connection_model_schema::{self, public_get_connection_model_schema},
-        event_access, events, oauth, passthrough, pipeline, transactions, unified,
+        connection_oauth_definition, event_access, events, metrics, oauth, openapi, passthrough,
+        pipeline, transactions, unified,
     },
     middleware::{
         auth,
@@ -44,7 +45,27 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         .nest("/event-access", event_access::get_router())
         .nest("/passthrough", passthrough::get_router())
         .nest("/oauth", oauth::get_router())
-        .nest("/unified", unified::get_router());
+        .nest("/unified", unified::get_router())
+        .nest(
+            "/connection-definitions",
+            connection_definition::get_router(),
+        )
+        .nest(
+            "/connection-oauth-definitions",
+            connection_oauth_definition::get_router(),
+        )
+        .nest(
+            "/connection-model-definitions",
+            connection_model_definition::get_router(),
+        )
+        .route("/openapi", post(openapi::refresh_openapi))
+        .nest(
+            "/connection-model-schemas",
+            connection_model_schema::get_router(),
+        )
+        .nest("/common-models", common_model::get_router())
+        .layer(TraceLayer::new_for_http())
+        .nest("/metrics", metrics::get_router());
 
     let config = Box::new(
         GovernorConfigBuilder::default()
