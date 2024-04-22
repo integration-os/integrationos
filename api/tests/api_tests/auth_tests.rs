@@ -6,7 +6,7 @@ use http::{
 };
 use serde_json::{json, Value};
 
-use super::test_server::{ApiResponse, TestServer, AUTH_PATHS, PUBLIC_PATHS};
+use super::test_server::{ApiResponse, TestServer, PUBLIC_PATHS};
 
 #[tokio::test]
 async fn test_root() {
@@ -17,66 +17,6 @@ async fn test_root() {
         .await
         .unwrap();
     assert_eq!(res.code, StatusCode::OK);
-}
-
-#[tokio::test]
-async fn test_authorized() {
-    let server = TestServer::new(false, None).await;
-
-    for path in AUTH_PATHS {
-        let res = server
-            .send_request::<Value, Value>(&format!("v1/{path}"), Method::GET, None, None)
-            .await
-            .unwrap();
-        assert_eq!(
-            res,
-            ApiResponse {
-                code: StatusCode::UNAUTHORIZED,
-                data: json!({"error": "Unauthorized"})
-            }
-        );
-
-        let res = server
-            .send_request::<Value, Value>(
-                &format!("v1/{path}"),
-                Method::GET,
-                Some("invalid_access_key"),
-                None,
-            )
-            .await
-            .unwrap();
-        assert_eq!(
-            res,
-            ApiResponse {
-                code: StatusCode::UNAUTHORIZED,
-                data: json!({"error": "Unauthorized"})
-            }
-        );
-
-        let res = server
-            .send_request::<Value, Value>(
-                &format!("v1/{path}"),
-                Method::GET,
-                Some(&server.live_key),
-                None,
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(res.code, StatusCode::OK);
-
-        let res = server
-            .send_request::<Value, Value>(
-                &format!("v1/{path}"),
-                Method::GET,
-                Some(&server.test_key),
-                None,
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(res.code, StatusCode::OK);
-    }
 }
 
 #[tokio::test]

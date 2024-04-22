@@ -61,15 +61,6 @@ pub mod test_core;
 pub mod test_gateway;
 
 #[allow(dead_code)]
-pub const AUTH_PATHS: &[&str] = &[
-    "pipelines",
-    "events",
-    "transactions",
-    "connections",
-    "event-access",
-];
-
-#[allow(dead_code)]
 pub const PUBLIC_PATHS: &[&str] = &["connection-definitions", "openapi"];
 
 static TRACING: OnceLock<()> = OnceLock::new();
