@@ -1,15 +1,8 @@
 use crate::test_server::TestServer;
-use api::endpoints::{connection_model_schema::CreateRequest, ReadResponse};
-use fake::{Fake, Faker};
+
+
 use http::{Method, StatusCode};
-use integrationos_domain::{
-    id::{prefix::IdPrefix, Id},
-    {
-        connection_model_schema::{ConnectionModelSchema, Mappings},
-        environment::Environment,
-        json_schema::JsonSchema,
-    },
-};
+
 use serde_json::Value;
 
 #[tokio::test]
