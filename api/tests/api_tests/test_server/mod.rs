@@ -168,7 +168,6 @@ impl TestServer {
                 "INTERNAL_SERVER_ADDRESS".to_string(),
                 format!("0.0.0.0:{port}"),
             ),
-            ("CLAUDE_API_KEY".to_string(), "".to_string()),
             ("OPENAI_API_KEY".to_string(), "".to_string()),
             ("MOCK_LLM".to_string(), "true".to_string()),
             ("CACHE_SIZE".to_string(), "0".to_string()),

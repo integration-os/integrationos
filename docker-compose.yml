@@ -1,23 +1,6 @@
 version: "3.8"
 
 services:
-  admin-api:
-    platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/api:1.0.0
-    ports:
-      - 3004:3004
-    environment:
-      - CACHE_SIZE=0
-      - CLAUDE_API_KEY=
-      - CONTROL_DATABASE_NAME=events-service
-      - CONTROL_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
-      - EVENT_ACCESS_PASSWORD=${EVENT_ACCESS_PASSWORD}
-      - INTERNAL_SERVER_ADDRESS=0.0.0.0:3004
-      - OPENAI_API_KEY=
-      - RUST_LOG=api=info,tower_http=info,udm=info
-      - SECRETS_SERVICE_BASE_URL=http://secrets-service:3006/
-      - WORKER_THREADS=4
-
   typescript-services:
     platform: linux/amd64
     image: us-docker.pkg.dev/integrationos/docker-oss/typescript-services:1.0.0
@@ -52,7 +35,6 @@ services:
     environment:
       - ACCESS_KEY_WHITELIST_REFRESH_INTERVAL_SECS=30
       - CACHE_SIZE=1000
-      - CLAUDE_API_KEY=
       - CONTROL_DATABASE_NAME=events-service
       - CONTROL_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
       - DEBUG_MODE=false
@@ -60,7 +42,6 @@ services:
       - EVENT_ACCESS_PASSWORD=${EVENT_ACCESS_PASSWORD}
       - INTERNAL_SERVER_ADDRESS=0.0.0.0:3005
       - JWT_SECRET=${JWT_SECRET}
-      - OPENAI_API_KEY=
       - REDIS_URL=redis://redis:6379
       - RUST_LOG=api=info,tower_http=info,udm=info,integrationos_domain=info
       - SECRETS_SERVICE_BASE_URL=http://secrets-service:3006/

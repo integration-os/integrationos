@@ -2,9 +2,8 @@ use crate::{
     endpoints::{
         common_model, connection, connection_definition,
         connection_model_definition::{self, test_connection_model_definition},
-        connection_model_schema::{self, public_get_connection_model_schema},
-        connection_oauth_definition, event_access, events, metrics, oauth, openapi, passthrough,
-        pipeline, transactions, unified,
+        connection_model_schema, connection_oauth_definition, event_access, events, metrics, oauth,
+        openapi, passthrough, pipeline, transactions, unified,
     },
     middleware::{
         auth,
@@ -13,13 +12,8 @@ use crate::{
     },
     server::AppState,
 };
-use axum::{
-    error_handling::HandleErrorLayer,
-    routing::{get, post},
-    Router,
-};
+use axum::{error_handling::HandleErrorLayer, routing::post, Router};
 use http::HeaderName;
-use integrationos_domain::connection_model_schema::PublicConnectionModelSchema;
 use std::{iter::once, sync::Arc};
 use tower::{filter::FilterLayer, ServiceBuilder};
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
@@ -34,13 +28,6 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         .route(
             "/connection-model-definitions/test/:id",
             post(test_connection_model_definition),
-        )
-        .route(
-            "/connection-model-schemas",
-            get(public_get_connection_model_schema::<
-                connection_model_schema::PublicGetConnectionModelSchema,
-                PublicConnectionModelSchema,
-            >),
         )
         .nest("/event-access", event_access::get_router())
         .nest("/passthrough", passthrough::get_router())

@@ -1,3 +1,4 @@
+use super::test_server::{ApiResponse, TestServer, PUBLIC_PATHS};
 use api::endpoints::event_access::CreateEventAccessPayloadWithOwnership;
 use fake::{Fake, Faker};
 use http::{
@@ -5,8 +6,6 @@ use http::{
     Method, StatusCode,
 };
 use serde_json::{json, Value};
-
-use super::test_server::{ApiResponse, TestServer, PUBLIC_PATHS};
 
 #[tokio::test]
 async fn test_root() {
