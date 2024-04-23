@@ -1,3 +1,4 @@
+use crate::test_server::TestServer;
 use api::endpoints::connection_model_definition::CreateRequest as CreateConnectionModelDefinitionRequest;
 use fake::{faker::filesystem::raw::DirPath, locales::EN, Fake, Faker};
 use http::{
@@ -11,8 +12,6 @@ use integrationos_domain::{
 };
 use mockito::Server;
 use serde_json::Value;
-
-use crate::test_server::TestServer;
 
 #[tokio::test]
 async fn test_passthrough_api() {
