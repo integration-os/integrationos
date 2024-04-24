@@ -25,7 +25,6 @@ use serde_json::Value;
 use std::time::Duration;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "Ignored until the flow jwt -> event access is implemented for the test environment"]
 async fn test_unified_api_get_many() {
     let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
@@ -77,13 +76,14 @@ async fn test_unified_api_get_many() {
         .await
         .unwrap();
 
+    println!("{:?}", res);
+
     assert_eq!(res.code, StatusCode::OK);
 
     mock.assert_async().await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "Ignored until the flow jwt -> event access is implemented for the test environment"]
 async fn test_unified_api_get_one() {
     let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
@@ -142,7 +142,6 @@ async fn test_unified_api_get_one() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "Ignored until the flow jwt -> event access is implemented for the test environment"]
 async fn test_unified_api_get_count() {
     let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
@@ -199,7 +198,6 @@ async fn test_unified_api_get_count() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "Ignored until the flow jwt -> event access is implemented for the test environment"]
 async fn test_unified_api_update() {
     let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
@@ -260,7 +258,6 @@ async fn test_unified_api_update() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "Ignored until the flow jwt -> event access is implemented for the test environment"]
 async fn test_unified_api_delete() {
     let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
@@ -319,7 +316,6 @@ async fn test_unified_api_delete() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "Ignored until the flow jwt -> event access is implemented for the test environment"]
 async fn test_unified_api_create() {
     let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
@@ -378,7 +374,6 @@ async fn test_unified_api_create() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "Ignored until the flow jwt -> event access is implemented for the test environment"]
 async fn test_unified_metrics() {
     let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
@@ -425,10 +420,8 @@ async fn test_unified_metrics() {
 
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let server = TestServer::new(None).await;
-
     let res = server
-        .send_request::<(), MetricResponse>("v1/metrics", Method::GET, None, None)
+        .send_request::<(), MetricResponse>("v1/metrics", Method::GET, Some(&server.live_key), None)
         .await
         .unwrap();
 
@@ -462,7 +455,7 @@ async fn test_unified_metrics() {
         .send_request::<(), MetricResponse>(
             format!("v1/metrics/{}", connection.ownership.client_id).as_str(),
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await
@@ -485,7 +478,7 @@ async fn test_unified_metrics() {
             )
             .as_str(),
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await
@@ -501,7 +494,7 @@ async fn test_unified_metrics() {
             )
             .as_str(),
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await
@@ -513,7 +506,7 @@ async fn test_unified_metrics() {
         .send_request::<(), MetricResponse>(
             format!("v1/metrics?platform={}", connection.platform).as_str(),
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await
@@ -525,7 +518,7 @@ async fn test_unified_metrics() {
         .send_request::<(), MetricResponse>(
             "v1/metrics?apiType=passthrough",
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await
@@ -593,12 +586,11 @@ async fn create_connection_model_definition(
         mapping: Some(mapping.clone()),
     };
 
-    let server = TestServer::new(None).await;
     let create_model_definition_response = server
         .send_request::<CreateConnectionModelDefinitionRequest, ConnectionModelDefinition>(
             "v1/connection-model-definitions",
             Method::POST,
-            None,
+            Some(&server.live_key),
             Some(&create_model_definition_payload),
         )
         .await
@@ -620,7 +612,7 @@ async fn create_connection_model_definition(
         .send_request::<CreateConnectionModelSchemaRequest, ConnectionModelSchema>(
             "v1/connection-model-schemas",
             Method::POST,
-            None,
+            Some(&server.live_key),
             Some(&schema),
         )
         .await

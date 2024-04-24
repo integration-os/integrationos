@@ -178,6 +178,8 @@ impl TestServer {
         let secrets_client = Arc::new(MockSecretsClient::default());
 
         let data: AccessKeyData = Faker.fake();
+        // this is missing a setup part
+
         let ownership_id = data.id.clone();
         let prefix = AccessKeyPrefix {
             environment: Environment::Live,
@@ -300,16 +302,14 @@ impl TestServer {
     #[allow(dead_code)]
     pub async fn create_connection(
         &mut self,
-        env: Environment,
+        environment: Environment,
     ) -> (Connection, ConnectionModelDefinition) {
-        let (key, access_key) = match env {
+        let (key, access_key) = match environment {
             Environment::Live => (self.live_key.as_ref(), &self.live_access_key),
             Environment::Development => (self.live_key.as_ref(), &self.test_access_key),
             Environment::Test => (self.test_key.as_ref(), &self.test_access_key),
             Environment::Production => (self.live_key.as_ref(), &self.live_access_key),
         };
-
-        let server = TestServer::new(None).await;
 
         let bearer_key: String = Faker.fake();
         let template: String = Faker.fake();
@@ -324,11 +324,11 @@ impl TestServer {
         };
         test_connection.http_method = Method::GET;
 
-        let res = server
+        let res = self
             .send_request::<CreateConnectionModelDefinitionRequest, ConnectionModelDefinition>(
                 "v1/connection-model-definitions",
                 http::Method::POST,
-                Some(server.live_key.as_ref()),
+                Some(key),
                 Some(&test_connection),
             )
             .await
@@ -382,11 +382,11 @@ impl TestServer {
 
         let payload = to_value(&connection_def).unwrap();
 
-        let res = server
+        let res = self
             .send_request::<Value, Value>(
                 "v1/connection-definitions",
                 http::Method::POST,
-                None,
+                Some(key),
                 Some(&payload),
             )
             .await
@@ -479,11 +479,11 @@ impl TestServer {
             }),
         };
 
-        let res = server
+        let res = self
             .send_request::<CreateConnectionModelDefinitionRequest, ConnectionModelDefinition>(
                 "v1/connection-model-definitions",
                 http::Method::POST,
-                None,
+                Some(self.live_key.as_ref()),
                 Some(&model_def),
             )
             .await

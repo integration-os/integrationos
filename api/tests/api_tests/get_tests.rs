@@ -38,7 +38,6 @@ async fn test_get_events() {
 }
 
 #[tokio::test]
-#[ignore = "Ignored until the flow jwt -> event access is implemented for the test environment"]
 async fn test_get_expanded_common_model() {
     let server = TestServer::new(None).await;
 
@@ -85,7 +84,7 @@ async fn test_get_expanded_common_model() {
         .send_request::<Value, Value>(
             "v1/common-models",
             Method::POST,
-            None,
+            Some(&server.live_key),
             Some(&serde_json::to_value(expandable).unwrap()),
         )
         .await
@@ -98,7 +97,7 @@ async fn test_get_expanded_common_model() {
         .send_request::<Value, Value>(
             "v1/common-models",
             Method::POST,
-            None,
+            Some(&server.live_key),
             Some(&serde_json::to_value(base).unwrap()),
         )
         .await
@@ -122,7 +121,7 @@ async fn test_get_expanded_common_model() {
         .send_request::<Value, Value>(
             &format!("v1/common-models/{}/expand", base.id),
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await
@@ -169,7 +168,7 @@ async fn test_get_expanded_common_model() {
         .send_request::<Value, JsonSchema>(
             &format!("v1/common-models/{}/schema", base.id),
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await

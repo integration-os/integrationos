@@ -14,7 +14,6 @@ use mockito::Server;
 use serde_json::Value;
 
 #[tokio::test]
-#[ignore = "Ignored until the flow jwt -> event access is implemented for the test environment"]
 async fn test_passthrough_api() {
     let mut server = TestServer::new(None).await;
     let (connection, conn_def) = server.create_connection(Environment::Live).await;
@@ -76,7 +75,7 @@ async fn test_passthrough_api() {
         .send_request::<Value, Value>(
             "v1/connection-model-definitions",
             Method::POST,
-            None,
+            Some(&server.live_key),
             Some(&serde_json::to_value(&create_model_definition_payload).unwrap()),
         )
         .await

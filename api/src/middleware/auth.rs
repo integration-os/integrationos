@@ -1,6 +1,4 @@
-use crate::{
-    endpoints::ApiError, internal_server_error, not_found, server::AppState, unauthorized,
-};
+use crate::{endpoints::ApiError, internal_server_error, server::AppState, unauthorized};
 use axum::{body::Body, extract::State, middleware::Next, response::Response};
 use http::Request;
 use integrationos_domain::{algebra::StoreExt, ApplicationError, InternalError};

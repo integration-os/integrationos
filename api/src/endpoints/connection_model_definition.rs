@@ -303,6 +303,10 @@ impl CrudHook<ConnectionModelDefinition> for CreateRequest {}
 impl CrudRequest for CreateRequest {
     type Output = ConnectionModelDefinition;
 
+    fn filterable() -> bool {
+        false
+    }
+
     fn output(&self) -> Option<Self::Output> {
         let key = format!(
             "api::{}::{}::{}::{}::{}::{}",
