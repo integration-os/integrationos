@@ -12,6 +12,7 @@ use serde_json::{json, Value};
 use crate::test_server::{test_core::TestCore, test_gateway::TestGateway, TestServer};
 
 #[tokio::test]
+#[ignore = "Ignored until the flow jwt -> event access is implemented for the test environment"]
 async fn test_event_core() {
     let mut server = TestServer::new(None).await;
 

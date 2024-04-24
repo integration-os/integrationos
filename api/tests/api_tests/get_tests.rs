@@ -38,6 +38,7 @@ async fn test_get_events() {
 }
 
 #[tokio::test]
+#[ignore = "Ignored until the flow jwt -> event access is implemented for the test environment"]
 async fn test_get_expanded_common_model() {
     let server = TestServer::new(None).await;
 

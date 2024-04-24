@@ -89,10 +89,6 @@ pub async fn get_metrics(
     let query_params = query_params.unwrap_or_default();
 
     let metric_type = query_params.metric_type.unwrap_or(MetricType::Unified);
-    println!(
-        "metric type: {:?} - {}",
-        query_params.metric_type, metric_type
-    );
     let Ok(doc) = doc.get_document(metric_type.to_string()) else {
         return Ok(Json(MetricResponse { count: 0 }));
     };

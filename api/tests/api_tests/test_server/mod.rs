@@ -126,7 +126,7 @@ pub struct ApiResponse<T: DeserializeOwned = Value> {
 }
 
 impl TestServer {
-    pub async fn new(dn_name: Option<String>) -> Self {
+    pub async fn new(db_name: Option<String>) -> Self {
         // init tracing once
         TRACING.get_or_init(|| {
             let filter = EnvFilter::builder()
@@ -155,7 +155,7 @@ impl TestServer {
             .port();
 
         // Random database name
-        let db_name = dn_name.unwrap_or_else(|| Uuid::new_v4().to_string());
+        let db_name = db_name.unwrap_or_else(|| Uuid::new_v4().to_string());
 
         let config = Config::init_from_hashmap(&HashMap::from([
             ("CONTROL_DATABASE_URL".to_string(), db.clone()),
@@ -328,7 +328,7 @@ impl TestServer {
             .send_request::<CreateConnectionModelDefinitionRequest, ConnectionModelDefinition>(
                 "v1/connection-model-definitions",
                 http::Method::POST,
-                None,
+                Some(server.live_key.as_ref()),
                 Some(&test_connection),
             )
             .await

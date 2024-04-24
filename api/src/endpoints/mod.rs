@@ -20,7 +20,7 @@ use integrationos_domain::{
 use moka::future::Cache;
 use mongodb::options::FindOneOptions;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, fmt::Debug, sync::Arc};
 use tokio::try_join;
 use tracing::error;
 
@@ -118,18 +118,13 @@ pub async fn create<T, U>(
 ) -> ApiResult<U>
 where
     T: CrudRequest<Output = U> + CrudHook<U> + 'static,
-    U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
+    U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static + Debug,
 {
-    let output = if let Some(Extension(event_access)) = event_access {
-        req.event_access(event_access)
-    } else {
-        req.output()
-    };
-
-    let output = match output {
-        Some(output) => output,
-        None => return Err(not_found!("Record")),
-    };
+    let output = match event_access {
+        Some(event_access) => req.event_access(event_access.0),
+        None => req.output(),
+    }
+    .ok_or_else(|| not_found!("Record"))?;
 
     match T::get_store(state.app_stores.clone())
         .create_one(&output)

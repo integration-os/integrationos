@@ -23,7 +23,7 @@ pub async fn auth(
         // auth header value starts with either id_ or sk_ and then the environment
         // Make sure the environments match, or we return 404
         if conn_header.as_bytes()[..4] != auth_header.as_bytes()[3..7] {
-            return Err(not_found!("Connection"));
+            return Err(unauthorized!());
         }
     }
 

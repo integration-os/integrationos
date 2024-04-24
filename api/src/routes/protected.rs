@@ -12,7 +12,9 @@ use crate::{
     },
     server::AppState,
 };
-use axum::{error_handling::HandleErrorLayer, routing::post, Router};
+use axum::{
+    error_handling::HandleErrorLayer, middleware::from_fn_with_state, routing::post, Router,
+};
 use http::HeaderName;
 use std::{iter::once, sync::Arc};
 use tower::{filter::FilterLayer, ServiceBuilder};
@@ -68,10 +70,7 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         .layer(GovernorLayer {
             config: Box::leak(config),
         })
-        .layer(axum::middleware::from_fn_with_state(
-            state.clone(),
-            auth::auth,
-        ))
+        .layer(from_fn_with_state(state.clone(), auth::auth))
         .layer(TraceLayer::new_for_http())
         .layer(SetSensitiveRequestHeadersLayer::new(once(
             HeaderName::from_lowercase(state.config.headers.auth_header.as_bytes()).unwrap(),
