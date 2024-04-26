@@ -282,7 +282,7 @@ impl Server {
     }
 
     pub async fn run(&self) -> Result<()> {
-        let app = self.get_router().await;
+        let app = routes::get_router(&self.state).await;
 
         let app: Router<()> = app.with_state(self.state.clone());
 
@@ -293,13 +293,5 @@ impl Server {
         axum::serve(tcp_listener, app.into_make_service())
             .await
             .map_err(|e| anyhow!("Server error: {}", e))
-    }
-
-    async fn get_router(&self) -> Router<Arc<AppState>> {
-        if self.state.config.is_admin {
-            routes::get_admin_router(&self.state)
-        } else {
-            routes::get_public_router(&self.state).await
-        }
     }
 }

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::test_server::TestServer;
 use api::endpoints::{
     common_model, connection_definition, connection_model_definition, connection_model_schema,
@@ -13,12 +11,13 @@ use integrationos_domain::{
     connection_model_schema::ConnectionModelSchema,
 };
 use serde_json::Value;
+use std::collections::HashMap;
 
-macro_rules! test_crud {
-    ($test:ident, $model:ty, $path:ident, $endpoint:expr) => {
-        #[tokio::test]
+macro_rules! crud {
+    ($(#[$m:meta])*, $test:ident, $model:ty, $path:ident, $endpoint:expr) => {
+        $(#[$m])*
         async fn $test() {
-            let server = TestServer::new(true, None).await;
+            let server = TestServer::new(None).await;
 
             let payload: $path::CreateRequest = Faker.fake();
             let payload = serde_json::to_value(&payload).unwrap();
@@ -26,16 +25,16 @@ macro_rules! test_crud {
             const ENDPOINT: &str = $endpoint;
 
             let res = server
-                .send_request::<Value, Value>(ENDPOINT, Method::POST, None, Some(&payload))
+                .send_request::<Value, Value>(ENDPOINT, Method::POST, Some(&server.live_key), Some(&payload))
                 .await
                 .unwrap();
 
             assert_eq!(res.code, StatusCode::OK);
 
-            let model: $model = serde_json::from_value(res.data).unwrap();
+            let model: $model = serde_json::from_value(res.data).expect("Failed to deserialize model");
 
             let res = server
-                .send_request::<Value, Value>(ENDPOINT, Method::GET, None, None)
+                .send_request::<Value, Value>(ENDPOINT, Method::GET, Some(&server.live_key), None)
                 .await
                 .unwrap();
 
@@ -51,7 +50,7 @@ macro_rules! test_crud {
             let path = format!("{ENDPOINT}/{}", model.id);
 
             let res = server
-                .send_request::<Value, Value>(&path, Method::PATCH, None, Some(&payload))
+                .send_request::<Value, Value>(&path, Method::PATCH, Some(&server.live_key), Some(&payload))
                 .await;
 
             let res = res.unwrap();
@@ -59,7 +58,7 @@ macro_rules! test_crud {
             assert_eq!(res.code, StatusCode::OK);
 
             let res = server
-                .send_request::<Value, Value>(&path, Method::DELETE, None, None)
+                .send_request::<Value, Value>(&path, Method::DELETE, Some(&server.live_key), None)
                 .await
                 .unwrap();
 
@@ -69,7 +68,7 @@ macro_rules! test_crud {
             assert_eq!(deleted.id, model.id);
 
             let res = server
-                .send_request::<Value, Value>(ENDPOINT, Method::GET, None, None)
+                .send_request::<Value, Value>(ENDPOINT, Method::GET, Some(&server.live_key), None)
                 .await
                 .unwrap();
 
@@ -81,21 +80,24 @@ macro_rules! test_crud {
     };
 }
 
-test_crud!(
+crud!(
+    #[tokio::test],
     test_connection_definitions_crud,
     ConnectionDefinition,
     connection_definition,
     "v1/connection-definitions"
 );
 
-test_crud!(
+crud!(
+    #[tokio::test],
     test_connection_model_definitions_crud,
     ConnectionModelDefinition,
     connection_model_definition,
     "v1/connection-model-definitions"
 );
 
-test_crud!(
+crud!(
+    #[tokio::test],
     test_connection_model_schema_crud,
     ConnectionModelSchema,
     connection_model_schema,
@@ -104,7 +106,7 @@ test_crud!(
 
 #[tokio::test]
 async fn test_common_model_crud() {
-    let server = TestServer::new(true, None).await;
+    let server = TestServer::new(None).await;
 
     let payload: common_model::CreateRequest = Faker.fake();
     let payload = serde_json::to_value(&payload).unwrap();
@@ -112,7 +114,12 @@ async fn test_common_model_crud() {
     const ENDPOINT: &str = "v1/common-models";
 
     let res = server
-        .send_request::<Value, Value>(ENDPOINT, Method::POST, None, Some(&payload))
+        .send_request::<Value, Value>(
+            ENDPOINT,
+            Method::POST,
+            Some(&server.live_key),
+            Some(&payload),
+        )
         .await
         .unwrap();
 
@@ -122,7 +129,7 @@ async fn test_common_model_crud() {
     model.interface = HashMap::new();
 
     let res = server
-        .send_request::<Value, Value>(ENDPOINT, Method::GET, None, None)
+        .send_request::<Value, Value>(ENDPOINT, Method::GET, Some(&server.live_key), None)
         .await
         .unwrap();
 
@@ -143,7 +150,7 @@ async fn test_common_model_crud() {
     let path = format!("{ENDPOINT}/{}", model.id);
 
     let res = server
-        .send_request::<Value, Value>(&path, Method::PATCH, None, Some(&payload))
+        .send_request::<Value, Value>(&path, Method::PATCH, Some(&server.live_key), Some(&payload))
         .await;
 
     let res = res.unwrap();
@@ -151,7 +158,7 @@ async fn test_common_model_crud() {
     assert_eq!(res.code, StatusCode::OK);
 
     let res = server
-        .send_request::<Value, Value>(&path, Method::DELETE, None, None)
+        .send_request::<Value, Value>(&path, Method::DELETE, Some(&server.live_key), None)
         .await
         .unwrap();
 
@@ -163,7 +170,7 @@ async fn test_common_model_crud() {
     assert_eq!(deleted.id, model.id);
 
     let res = server
-        .send_request::<Value, Value>(ENDPOINT, Method::GET, None, None)
+        .send_request::<Value, Value>(ENDPOINT, Method::GET, Some(&server.live_key), None)
         .await
         .unwrap();
 

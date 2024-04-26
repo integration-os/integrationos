@@ -20,7 +20,7 @@ use integrationos_domain::{
 use moka::future::Cache;
 use mongodb::options::FindOneOptions;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, fmt::Debug, sync::Arc};
 use tokio::try_join;
 use tracing::error;
 
@@ -63,8 +63,15 @@ pub trait CrudRequest: Sized {
         None
     }
 
-    ///
+    /// Update the output of the request based on the input.
     fn update(&self, _: &mut Self::Output) -> Unit {}
+
+    /// Whether the Output can be filtered by the environment and ownership.
+    fn filterable() -> bool {
+        true
+    }
+
+    /// Get the store for the request.
     fn get_store(stores: AppStores) -> MongoStore<Self::Output>;
 }
 
@@ -118,18 +125,14 @@ pub async fn create<T, U>(
 ) -> ApiResult<U>
 where
     T: CrudRequest<Output = U> + CrudHook<U> + 'static,
-    U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
+    U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
 {
-    let output = if let Some(Extension(event_access)) = event_access {
-        req.event_access(event_access)
-    } else {
-        req.output()
-    };
-
-    let output = match output {
-        Some(output) => output,
-        None => return Err(not_found!("Record")),
-    };
+    let output = event_access
+        .map_or_else(
+            || req.output(),
+            |event_access| req.event_access(event_access.0).or(req.output()),
+        )
+        .ok_or_else(|| not_found!("Record"))?;
 
     match T::get_store(state.app_stores.clone())
         .create_one(&output)
@@ -168,7 +171,7 @@ pub async fn read<T, U>(
 ) -> Result<Json<ReadResponse<U>>, ApiError>
 where
     T: CrudRequest<Output = U> + 'static,
-    U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
+    U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
 {
     let query = shape_mongo_filter(
         query,
@@ -177,6 +180,7 @@ where
             e
         }),
         Some(headers),
+        T::filterable(),
     );
 
     let store = T::get_store(state.app_stores.clone());
@@ -198,6 +202,7 @@ where
         },
         Err(e) => {
             error!("Error reading from store: {e}");
+            println!("{:?}", e);
             return Err(internal_server_error!());
         }
     };
@@ -211,14 +216,15 @@ pub async fn read_cached<T, U>(
 ) -> Result<Json<Arc<ReadResponse<U>>>, ApiError>
 where
     T: CachedRequest<Output = U> + 'static,
-    U: Clone + Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
+    U: Clone + Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
 {
     let cache = T::get_cache(state.clone());
 
     let res = cache
         .try_get_with(query.as_ref().map(|q| q.0.clone()), async {
-            let query = shape_mongo_filter(query, None, None);
+            let query = shape_mongo_filter(query, None, None, T::filterable());
 
+            println!("{:?}", query);
             let store = T::get_store(state.app_stores.clone());
             let count = store.count(query.filter.clone(), None);
             let find = store.get_many(
@@ -230,12 +236,16 @@ where
             );
 
             let res = match try_join!(count, find) {
-                Ok((total, rows)) => Arc::new(ReadResponse {
-                    rows,
-                    skip: query.skip,
-                    limit: query.limit,
-                    total,
-                }),
+                Ok((total, rows)) => {
+                    println!("{:?}", total);
+
+                    Arc::new(ReadResponse {
+                        rows,
+                        skip: query.skip,
+                        limit: query.limit,
+                        total,
+                    })
+                }
                 Err(e) => {
                     error!("Error reading from store: {e}");
                     return Err(internal_server_error!());
@@ -272,6 +282,7 @@ where
             e
         }),
         None,
+        T::filterable(),
     );
     query.filter.insert("_id", id.clone());
 
@@ -337,6 +348,7 @@ where
             e
         }),
         None,
+        T::filterable(),
     );
     query.filter.insert("_id", id.clone());
 

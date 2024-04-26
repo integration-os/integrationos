@@ -1,6 +1,4 @@
-use crate::{
-    endpoints::ApiError, internal_server_error, not_found, server::AppState, unauthorized,
-};
+use crate::{endpoints::ApiError, internal_server_error, server::AppState, unauthorized};
 use axum::{body::Body, extract::State, middleware::Next, response::Response};
 use http::Request;
 use integrationos_domain::{algebra::StoreExt, ApplicationError, InternalError};
@@ -23,7 +21,7 @@ pub async fn auth(
         // auth header value starts with either id_ or sk_ and then the environment
         // Make sure the environments match, or we return 404
         if conn_header.as_bytes()[..4] != auth_header.as_bytes()[3..7] {
-            return Err(not_found!("Connection"));
+            return Err(unauthorized!());
         }
     }
 

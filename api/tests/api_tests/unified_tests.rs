@@ -1,5 +1,4 @@
-use std::time::Duration;
-
+use crate::test_server::TestServer;
 use api::endpoints::{
     connection_model_definition::CreateRequest as CreateConnectionModelDefinitionRequest,
     connection_model_schema::CreateRequest as CreateConnectionModelSchemaRequest,
@@ -23,12 +22,11 @@ use integrationos_domain::{
 };
 use mockito::Mock;
 use serde_json::Value;
-
-use crate::test_server::TestServer;
+use std::time::Duration;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_unified_api_get_many() {
-    let mut server = TestServer::new(false, None).await;
+    let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
 
     let name = "Model".to_string();
@@ -78,6 +76,8 @@ async fn test_unified_api_get_many() {
         .await
         .unwrap();
 
+    println!("{:?}", res);
+
     assert_eq!(res.code, StatusCode::OK);
 
     mock.assert_async().await;
@@ -85,7 +85,7 @@ async fn test_unified_api_get_many() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_unified_api_get_one() {
-    let mut server = TestServer::new(false, None).await;
+    let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
 
     let name = "Model".to_string();
@@ -143,7 +143,7 @@ async fn test_unified_api_get_one() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_unified_api_get_count() {
-    let mut server = TestServer::new(false, None).await;
+    let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
 
     let name = "Model".to_string();
@@ -199,7 +199,7 @@ async fn test_unified_api_get_count() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_unified_api_update() {
-    let mut server = TestServer::new(false, None).await;
+    let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
 
     let name = "Model".to_string();
@@ -259,7 +259,7 @@ async fn test_unified_api_update() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_unified_api_delete() {
-    let mut server = TestServer::new(false, None).await;
+    let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
 
     let name = "Model".to_string();
@@ -317,7 +317,7 @@ async fn test_unified_api_delete() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_unified_api_create() {
-    let mut server = TestServer::new(false, None).await;
+    let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
 
     let name = "Model".to_string();
@@ -375,7 +375,7 @@ async fn test_unified_api_create() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_unified_metrics() {
-    let mut server = TestServer::new(false, None).await;
+    let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
 
     let name = "Model".to_string();
@@ -420,11 +420,8 @@ async fn test_unified_metrics() {
 
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let admin_server =
-        TestServer::new(true, Some(server.config.db_config.control_db_name.clone())).await;
-
-    let res = admin_server
-        .send_request::<(), MetricResponse>("v1/metrics", Method::GET, None, None)
+    let res = server
+        .send_request::<(), MetricResponse>("v1/metrics", Method::GET, Some(&server.live_key), None)
         .await
         .unwrap();
 
@@ -454,11 +451,11 @@ async fn test_unified_metrics() {
 
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let res = admin_server
+    let res = server
         .send_request::<(), MetricResponse>(
             format!("v1/metrics/{}", connection.ownership.client_id).as_str(),
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await
@@ -473,7 +470,7 @@ async fn test_unified_metrics() {
     let daily_key = format!("{year}-{month:02}-{day:02}");
     let monthly_key = format!("{year}-{month:02}");
 
-    let res = admin_server
+    let res = server
         .send_request::<(), MetricResponse>(
             format!(
                 "v1/metrics/{}?day={daily_key}",
@@ -481,7 +478,7 @@ async fn test_unified_metrics() {
             )
             .as_str(),
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await
@@ -489,7 +486,7 @@ async fn test_unified_metrics() {
 
     assert_eq!(res.data.count, 2);
 
-    let res = admin_server
+    let res = server
         .send_request::<(), MetricResponse>(
             format!(
                 "v1/metrics/{}?month={monthly_key}&apiType=unified",
@@ -497,7 +494,7 @@ async fn test_unified_metrics() {
             )
             .as_str(),
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await
@@ -505,11 +502,11 @@ async fn test_unified_metrics() {
 
     assert_eq!(res.data.count, 2);
 
-    let res = admin_server
+    let res = server
         .send_request::<(), MetricResponse>(
             format!("v1/metrics?platform={}", connection.platform).as_str(),
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await
@@ -517,11 +514,11 @@ async fn test_unified_metrics() {
 
     assert_eq!(res.data.count, 2);
 
-    let res = admin_server
+    let res = server
         .send_request::<(), MetricResponse>(
             "v1/metrics?apiType=passthrough",
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await
@@ -589,13 +586,11 @@ async fn create_connection_model_definition(
         mapping: Some(mapping.clone()),
     };
 
-    let admin_server =
-        TestServer::new(true, Some(server.config.db_config.control_db_name.clone())).await;
-    let create_model_definition_response = admin_server
+    let create_model_definition_response = server
         .send_request::<CreateConnectionModelDefinitionRequest, ConnectionModelDefinition>(
             "v1/connection-model-definitions",
             Method::POST,
-            None,
+            Some(&server.live_key),
             Some(&create_model_definition_payload),
         )
         .await
@@ -613,11 +608,11 @@ async fn create_connection_model_definition(
         unmapped_fields: Default::default(),
     });
 
-    let res = admin_server
+    let res = server
         .send_request::<CreateConnectionModelSchemaRequest, ConnectionModelSchema>(
             "v1/connection-model-schemas",
             Method::POST,
-            None,
+            Some(&server.live_key),
             Some(&schema),
         )
         .await

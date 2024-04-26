@@ -24,8 +24,6 @@ pub struct Config {
     pub access_key_cache_ttl_secs: u64,
     #[envconfig(from = "ACCESS_KEY_WHITELIST_REFRESH_INTERVAL_SECS", default = "60")]
     pub access_key_whitelist_refresh_interval_secs: u64,
-    #[envconfig(from = "IS_ADMIN", default = "false")]
-    pub is_admin: bool,
     #[envconfig(from = "ENGINEERING_ACCOUNT_ID", default = "engineering_account")]
     pub engineering_account_id: String,
     #[envconfig(
@@ -94,7 +92,6 @@ impl Display for Config {
             "ACCESS_KEY_WHITELIST_REFRESH_INTERVAL_SECS: {}",
             self.access_key_whitelist_refresh_interval_secs
         )?;
-        writeln!(f, "IS_ADMIN: {}", self.is_admin)?;
         writeln!(f, "EVENT_ACCESS_PASSWORD: ***")?;
         writeln!(
             f,

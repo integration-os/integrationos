@@ -22,6 +22,7 @@ pub fn shape_mongo_filter(
     query: Option<Query<BTreeMap<String, String>>>,
     event_access: Option<Arc<EventAccess>>,
     headers: Option<HeaderMap>,
+    is_filterable: bool,
 ) -> MongoQuery {
     let mut filter = doc! {};
     let mut skip = 0;
@@ -45,9 +46,15 @@ pub fn shape_mongo_filter(
 
     filter.insert(DELETED_STR, false);
 
-    if let Some(event_access) = event_access {
-        filter.insert(OWNERSHIP_STR, event_access.ownership.id.to_string());
-        filter.insert(ENVIRONMENT_STR, event_access.environment.to_string());
+    if is_filterable && event_access.is_some() {
+        filter.insert(
+            OWNERSHIP_STR,
+            event_access.as_ref().unwrap().ownership.id.to_string(),
+        );
+        filter.insert(
+            ENVIRONMENT_STR,
+            event_access.as_ref().unwrap().environment.to_string(),
+        );
 
         if let Some(headers) = headers {
             if let Some(show_dual_envs) = headers.get(DUAL_ENVIRONMENT_HEADER) {
@@ -67,8 +74,11 @@ pub fn shape_mongo_filter(
 
 #[cfg(test)]
 mod test {
-    use std::{collections::BTreeMap, sync::Arc};
-
+    use super::shape_mongo_filter;
+    use crate::util::shape_mongo_filter::{
+        MongoQuery, DELETED_STR, DUAL_ENVIRONMENT_HEADER, ENVIRONMENT_STR, LIMIT_STR,
+        OWNERSHIP_STR, SKIP_STR,
+    };
     use axum::extract::Query;
     use http::HeaderMap;
     use integrationos_domain::{
@@ -81,13 +91,7 @@ mod test {
             record_metadata::RecordMetadata,
         },
     };
-
-    use crate::util::shape_mongo_filter::{
-        MongoQuery, DELETED_STR, DUAL_ENVIRONMENT_HEADER, ENVIRONMENT_STR, LIMIT_STR,
-        OWNERSHIP_STR, SKIP_STR,
-    };
-
-    use super::shape_mongo_filter;
+    use std::{collections::BTreeMap, sync::Arc};
 
     #[test]
     fn test_shape_mongo_filter() {
@@ -103,7 +107,7 @@ mod test {
             filter: mut doc,
             skip,
             limit,
-        } = shape_mongo_filter(Some(Query(params.clone())), None, None);
+        } = shape_mongo_filter(Some(Query(params.clone())), None, None, false);
         assert_eq!(doc.get_str(OWNERSHIP_STR).unwrap(), "foo");
         assert_eq!(doc.get_str(ENVIRONMENT_STR).unwrap(), "bar");
         assert!(!doc.get_bool(DELETED_STR).unwrap());
@@ -130,7 +134,7 @@ mod test {
         });
 
         let MongoQuery { filter: doc, .. } =
-            shape_mongo_filter(Some(Query(params)), Some(event_access), None);
+            shape_mongo_filter(Some(Query(params)), Some(event_access), None, true);
         assert_eq!(doc.get_str(OWNERSHIP_STR).unwrap(), "baz");
         assert_eq!(doc.get_str(ENVIRONMENT_STR).unwrap(), "test");
     }
@@ -166,6 +170,7 @@ mod test {
             Some(Query(params.clone())),
             Some(event_access),
             Some(headers),
+            true,
         );
 
         assert!(!doc.contains_key(ENVIRONMENT_STR));

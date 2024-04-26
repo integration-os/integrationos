@@ -67,6 +67,10 @@ fn default_separator() -> Option<String> {
 impl CrudRequest for CreateRequest {
     type Output = ConnectionOAuthDefinition;
 
+    fn filterable() -> bool {
+        false
+    }
+
     fn output(&self) -> Option<Self::Output> {
         Some(Self::Output {
             id: Id::new(IdPrefix::ConnectionOAuthDefinition, Utc::now()),

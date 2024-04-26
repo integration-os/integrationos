@@ -13,7 +13,7 @@ use crate::test_server::{test_gateway::TestGateway, TestServer};
 
 #[tokio::test]
 async fn test_get_events() {
-    let server = TestServer::new(false, None).await;
+    let server = TestServer::new(None).await;
 
     let gateway = TestGateway::new(&server.config).await;
 
@@ -39,7 +39,7 @@ async fn test_get_events() {
 
 #[tokio::test]
 async fn test_get_expanded_common_model() {
-    let server = TestServer::new(true, None).await;
+    let server = TestServer::new(None).await;
 
     let reference: String = Faker.fake();
 
@@ -84,7 +84,7 @@ async fn test_get_expanded_common_model() {
         .send_request::<Value, Value>(
             "v1/common-models",
             Method::POST,
-            None,
+            Some(&server.live_key),
             Some(&serde_json::to_value(expandable).unwrap()),
         )
         .await
@@ -97,7 +97,7 @@ async fn test_get_expanded_common_model() {
         .send_request::<Value, Value>(
             "v1/common-models",
             Method::POST,
-            None,
+            Some(&server.live_key),
             Some(&serde_json::to_value(base).unwrap()),
         )
         .await
@@ -121,7 +121,7 @@ async fn test_get_expanded_common_model() {
         .send_request::<Value, Value>(
             &format!("v1/common-models/{}/expand", base.id),
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await
@@ -168,7 +168,7 @@ async fn test_get_expanded_common_model() {
         .send_request::<Value, JsonSchema>(
             &format!("v1/common-models/{}/schema", base.id),
             Method::GET,
-            None,
+            Some(&server.live_key),
             None,
         )
         .await

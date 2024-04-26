@@ -1,5 +1,6 @@
 use super::{
-    create, delete, update, ApiResult, CachedRequest, CrudHook, CrudRequest, ReadResponse, Unit,
+    create, delete, read, update, ApiResult, CachedRequest, CrudHook, CrudRequest, ReadResponse,
+    Unit,
 };
 use crate::{
     internal_server_error, not_found,
@@ -31,7 +32,11 @@ use tracing::error;
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/", post(create::<CreateRequest, ConnectionDefinition>))
+        .route(
+            "/",
+            post(create::<CreateRequest, ConnectionDefinition>)
+                .get(read::<CreateRequest, ConnectionDefinition>),
+        )
         .route(
             "/:id",
             patch(update::<CreateRequest, ConnectionDefinition>)
@@ -253,6 +258,10 @@ pub async fn public_get_connection_details(
 
 impl CrudRequest for CreateRequest {
     type Output = ConnectionDefinition;
+
+    fn filterable() -> bool {
+        false
+    }
 
     fn output(&self) -> Option<Self::Output> {
         let auth_secrets: Vec<AuthSecret> = self

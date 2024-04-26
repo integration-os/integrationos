@@ -11,9 +11,10 @@ use serde_json::{json, Value};
 
 use crate::test_server::{test_core::TestCore, test_gateway::TestGateway, TestServer};
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "Prometheus GlobalRecorder conflicts with other tests. It passes when run individually."]
 async fn test_event_core() {
-    let mut server = TestServer::new(false, None).await;
+    let mut server = TestServer::new(None).await;
 
     let (connection, conn_def) = server.create_connection(Environment::Live).await;
 

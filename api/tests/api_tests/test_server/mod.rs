@@ -61,15 +61,6 @@ pub mod test_core;
 pub mod test_gateway;
 
 #[allow(dead_code)]
-pub const AUTH_PATHS: &[&str] = &[
-    "pipelines",
-    "events",
-    "transactions",
-    "connections",
-    "event-access",
-];
-
-#[allow(dead_code)]
 pub const PUBLIC_PATHS: &[&str] = &["connection-definitions", "openapi"];
 
 static TRACING: OnceLock<()> = OnceLock::new();
@@ -135,7 +126,7 @@ pub struct ApiResponse<T: DeserializeOwned = Value> {
 }
 
 impl TestServer {
-    pub async fn new(is_admin: bool, dn_name: Option<String>) -> Self {
+    pub async fn new(db_name: Option<String>) -> Self {
         // init tracing once
         TRACING.get_or_init(|| {
             let filter = EnvFilter::builder()
@@ -164,7 +155,7 @@ impl TestServer {
             .port();
 
         // Random database name
-        let db_name = dn_name.unwrap_or_else(|| Uuid::new_v4().to_string());
+        let db_name = db_name.unwrap_or_else(|| Uuid::new_v4().to_string());
 
         let config = Config::init_from_hashmap(&HashMap::from([
             ("CONTROL_DATABASE_URL".to_string(), db.clone()),
@@ -177,8 +168,6 @@ impl TestServer {
                 "INTERNAL_SERVER_ADDRESS".to_string(),
                 format!("0.0.0.0:{port}"),
             ),
-            ("IS_ADMIN".to_string(), is_admin.to_string()),
-            ("CLAUDE_API_KEY".to_string(), "".to_string()),
             ("OPENAI_API_KEY".to_string(), "".to_string()),
             ("MOCK_LLM".to_string(), "true".to_string()),
             ("CACHE_SIZE".to_string(), "0".to_string()),
@@ -189,6 +178,8 @@ impl TestServer {
         let secrets_client = Arc::new(MockSecretsClient::default());
 
         let data: AccessKeyData = Faker.fake();
+        // this is missing a setup part
+
         let ownership_id = data.id.clone();
         let prefix = AccessKeyPrefix {
             environment: Environment::Live,
@@ -311,17 +302,14 @@ impl TestServer {
     #[allow(dead_code)]
     pub async fn create_connection(
         &mut self,
-        env: Environment,
+        environment: Environment,
     ) -> (Connection, ConnectionModelDefinition) {
-        let (key, access_key) = match env {
+        let (key, access_key) = match environment {
             Environment::Live => (self.live_key.as_ref(), &self.live_access_key),
             Environment::Development => (self.live_key.as_ref(), &self.test_access_key),
             Environment::Test => (self.test_key.as_ref(), &self.test_access_key),
             Environment::Production => (self.live_key.as_ref(), &self.live_access_key),
         };
-
-        let admin_server =
-            TestServer::new(true, Some(self.config.db_config.control_db_name.clone())).await;
 
         let bearer_key: String = Faker.fake();
         let template: String = Faker.fake();
@@ -336,11 +324,11 @@ impl TestServer {
         };
         test_connection.http_method = Method::GET;
 
-        let res = admin_server
+        let res = self
             .send_request::<CreateConnectionModelDefinitionRequest, ConnectionModelDefinition>(
                 "v1/connection-model-definitions",
                 http::Method::POST,
-                None,
+                Some(key),
                 Some(&test_connection),
             )
             .await
@@ -394,11 +382,11 @@ impl TestServer {
 
         let payload = to_value(&connection_def).unwrap();
 
-        let res = admin_server
+        let res = self
             .send_request::<Value, Value>(
                 "v1/connection-definitions",
                 http::Method::POST,
-                None,
+                Some(key),
                 Some(&payload),
             )
             .await
@@ -491,11 +479,11 @@ impl TestServer {
             }),
         };
 
-        let res = admin_server
+        let res = self
             .send_request::<CreateConnectionModelDefinitionRequest, ConnectionModelDefinition>(
                 "v1/connection-model-definitions",
                 http::Method::POST,
-                None,
+                Some(self.live_key.as_ref()),
                 Some(&model_def),
             )
             .await

@@ -1,4 +1,3 @@
-pub mod admin;
 pub mod protected;
 pub mod public;
 
@@ -11,17 +10,7 @@ use http::StatusCode;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
-pub fn get_admin_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
-    let path = format!("/{}", state.config.api_version);
-    Router::new()
-        .nest(&path, admin::get_router())
-        .nest(&path, public::get_router(state))
-        .route("/", get(get_root))
-        .fallback(not_found_handler)
-        .layer(CorsLayer::permissive())
-}
-
-pub async fn get_public_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
+pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let path = format!("/{}", state.config.api_version);
     let public_path = format!("{path}/public");
     Router::new()
