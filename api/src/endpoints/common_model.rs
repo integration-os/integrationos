@@ -81,10 +81,6 @@ impl CrudHook<CommonModel> for CreateRequest {
 impl CrudRequest for CreateRequest {
     type Output = CommonModel;
 
-    fn filterable() -> bool {
-        false
-    }
-
     fn output(&self) -> Option<Self::Output> {
         let mut record = Self::Output {
             id: Id::now(IdPrefix::CommonModel),

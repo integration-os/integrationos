@@ -14,7 +14,7 @@ pub async fn read(
     query: Option<Query<BTreeMap<String, String>>>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ReadResponse<CommonEnum>>, ApiError> {
-    let mut query = shape_mongo_filter(query, None, None, false);
+    let mut query = shape_mongo_filter(query, None, None);
     query.filter.remove(DELETED_STR);
 
     let store = &state.app_stores.common_enum;

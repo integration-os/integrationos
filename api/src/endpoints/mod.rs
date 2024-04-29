@@ -66,11 +66,6 @@ pub trait CrudRequest: Sized {
     /// Update the output of the request based on the input.
     fn update(&self, _: &mut Self::Output) -> Unit {}
 
-    /// Whether the Output can be filtered by the environment and ownership.
-    fn filterable() -> bool {
-        true
-    }
-
     /// Get the store for the request.
     fn get_store(stores: AppStores) -> MongoStore<Self::Output>;
 }
@@ -180,7 +175,6 @@ where
             e
         }),
         Some(headers),
-        T::filterable(),
     );
 
     let store = T::get_store(state.app_stores.clone());
@@ -222,7 +216,7 @@ where
 
     let res = cache
         .try_get_with(query.as_ref().map(|q| q.0.clone()), async {
-            let query = shape_mongo_filter(query, None, None, T::filterable());
+            let query = shape_mongo_filter(query, None, None);
 
             println!("{:?}", query);
             let store = T::get_store(state.app_stores.clone());
@@ -282,7 +276,6 @@ where
             e
         }),
         None,
-        T::filterable(),
     );
     query.filter.insert("_id", id.clone());
 
@@ -348,7 +341,6 @@ where
             e
         }),
         None,
-        T::filterable(),
     );
     query.filter.insert("_id", id.clone());
 

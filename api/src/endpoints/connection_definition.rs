@@ -259,10 +259,6 @@ pub async fn public_get_connection_details(
 impl CrudRequest for CreateRequest {
     type Output = ConnectionDefinition;
 
-    fn filterable() -> bool {
-        false
-    }
-
     fn output(&self) -> Option<Self::Output> {
         let auth_secrets: Vec<AuthSecret> = self
             .authentication
