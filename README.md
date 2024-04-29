@@ -87,12 +87,12 @@ app.post("/authkit-token", async (request, response) => {
 
 Next, we'll add the AuthKit component to your frontend application.
 
-### Install the React SDK
+### Install the SDK
 
-In the same fashion, IntegrationOS offers native frontend SDKs in several popular frameworks. This guide will use the popular AuthKit SDK for React.
+In the same fashion, IntegrationOS offers native frontend SDKs in several popular frameworks. Compatible with React, Next.js, Vue, Svelte and more.
 
 ```shell npm
-npm install @integrationos/authkit-react
+npm install @integrationos/authkit
 ```
 
 ### Use the AuthKit Component
@@ -100,14 +100,14 @@ npm install @integrationos/authkit-react
 Next, we need to add the AuthKit component and replace the token URL with the URL of the token endpoint URL you created in Step 1 of this guide.
 
 ```javascript
-import { useAuthKit } from "@integrationos/authkit-react";
+import { useAuthKit } from "@integrationos/authkit";
 
 const { open } = useAuthKit({
   token: {
     url: "https://api.your-company-name.com/authkit-token",
     headers: {},
   },
-  onSuccess: (connections) => {},
+  onSuccess: (connection) => {},
   onError: (error) => {},
   onClose: () => {},
 });
