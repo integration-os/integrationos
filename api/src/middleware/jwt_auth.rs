@@ -1,6 +1,6 @@
-use crate::{api_payloads::ErrorResponse, server::AppState, unauthorized};
-use axum::{body::Body, extract::State, middleware::Next, response::Response, Json};
-use http::{Request, StatusCode};
+use crate::{endpoints::ApiError, server::AppState, unauthorized};
+use axum::{body::Body, extract::State, middleware::Next, response::Response};
+use http::Request;
 use integrationos_domain::Claims;
 use jsonwebtoken::{DecodingKey, Validation};
 use std::sync::Arc;
@@ -27,7 +27,7 @@ pub async fn jwt_auth(
     State(state): State<Arc<JwtState>>,
     mut req: Request<Body>,
     next: Next,
-) -> Result<Response, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Response, ApiError> {
     let Some(auth_header) = req.headers().get(http::header::AUTHORIZATION) else {
         info!("missing authorization header");
         return Err(unauthorized!());
