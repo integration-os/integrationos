@@ -10,9 +10,7 @@ use crate::{
     },
     server::AppState,
 };
-use axum::{
-    error_handling::HandleErrorLayer, middleware::from_fn_with_state, Router,
-};
+use axum::{error_handling::HandleErrorLayer, middleware::from_fn_with_state, Router};
 use http::HeaderName;
 use std::{iter::once, sync::Arc};
 use tower::{filter::FilterLayer, ServiceBuilder};

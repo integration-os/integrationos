@@ -1659,9 +1659,9 @@ dependencies = [
 
 [[package]]
 name = "integrationos-domain"
-version = "3.0.2"
+version = "3.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10979a5f9f49b10ac4cf02c88e11a9e795aebb9fb9d5926d1dd7d4f7e44f9823"
+checksum = "f9a6bebef0d5aa4e358110a038a839ef39f26e25cc3e21b773a147c396550dfb"
 dependencies = [
  "aes",
  "anyhow",

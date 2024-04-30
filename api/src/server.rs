@@ -21,7 +21,7 @@ use integrationos_domain::{
     cursor::Cursor,
     event_access::EventAccess,
     stage::Stage,
-    Connection, Event, Pipeline, Store, Transaction,
+    Connection, Event, Pipeline, PlatformData, Store, Transaction,
 };
 use moka::future::Cache;
 use mongodb::{options::UpdateOptions, Client, Database};
@@ -42,6 +42,7 @@ pub struct AppStores {
     pub common_enum: MongoStore<CommonEnum>,
     pub connection: MongoStore<Connection>,
     pub public_connection_details: MongoStore<PublicConnectionDetails>,
+    pub platform: MongoStore<PlatformData>,
     pub settings: MongoStore<Settings>,
     pub connection_config: MongoStore<ConnectionDefinition>,
     pub pipeline: MongoStore<Pipeline>,
@@ -101,6 +102,7 @@ impl Server {
         let common_model = MongoStore::new(&db, &Store::CommonModels).await?;
         let common_enum = MongoStore::new(&db, &Store::CommonEnums).await?;
         let connection = MongoStore::new(&db, &Store::Connections).await?;
+        let platform = MongoStore::new(&db, &Store::Platforms).await?;
         let public_connection_details =
             MongoStore::new(&db, &Store::PublicConnectionDetails).await?;
         let settings = MongoStore::new(&db, &Store::Settings).await?;
@@ -127,6 +129,7 @@ impl Server {
             frontend_oauth_config,
             model_schema,
             public_model_schema,
+            platform,
             settings,
             common_model,
             common_enum,

@@ -38,6 +38,7 @@ pub mod oauth;
 pub mod openapi;
 pub mod passthrough;
 pub mod pipeline;
+pub mod platform;
 pub mod transactions;
 pub mod unified;
 

@@ -2,7 +2,7 @@ use crate::{
     endpoints::{
         common_model, connection_definition,
         connection_model_definition::{self, test_connection_model_definition},
-        connection_model_schema, connection_oauth_definition, openapi,
+        connection_model_schema, connection_oauth_definition, openapi, platform,
     },
     middleware::jwt_auth::{self, JwtState},
     server::AppState,
@@ -34,6 +34,7 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             "/connection-model-schemas",
             connection_model_schema::get_router(),
         )
+        .nest("/platforms", platform::get_router())
         .nest("/common-models", common_model::get_router());
 
     routes
