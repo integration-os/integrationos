@@ -8,7 +8,7 @@ use axum::{
     routing::{patch, post},
     Extension, Json, Router,
 };
-use convert_case::Case;
+use convert_case::{Case, Casing};
 use integrationos_domain::{
     algebra::{MongoStore, StoreExt},
     event_access::EventAccess,
@@ -61,9 +61,9 @@ pub async fn create_platform_page(
     Json(req): Json<CreateRequest>,
 ) -> ApiResult<PlatformPage> {
     let output = if let Some(Extension(event_access)) = event_access {
-        req.clone().access(event_access)
+        req.clone().event_access(event_access)
     } else {
-        req.clone().from()
+        req.clone().output()
     };
 
     let mut output = match output {
@@ -113,6 +113,7 @@ impl CrudRequest for CreateRequest {
             hashed_content: hashed.into_inner(),
             ownership: self.ownership.clone(),
             analyzed: self.analyzed,
+            job_started: false,
             record_metadata: Default::default(),
         })
     }
