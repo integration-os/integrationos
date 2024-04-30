@@ -39,6 +39,7 @@ pub mod openapi;
 pub mod passthrough;
 pub mod pipeline;
 pub mod platform;
+pub mod platform_page;
 pub mod transactions;
 pub mod unified;
 
