@@ -1,4 +1,4 @@
-use super::{delete, read, CrudRequest};
+use super::{delete, read, RequestExt};
 use crate::{
     api_payloads::ErrorResponse,
     bad_request,
@@ -57,7 +57,7 @@ pub struct CreateEventAccessRequest {
     pub paths: Paths,
 }
 
-impl CrudRequest for CreateEventAccessRequest {
+impl RequestExt for CreateEventAccessRequest {
     type Output = EventAccess;
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {

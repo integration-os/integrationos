@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, CrudHook, CrudRequest};
+use super::{create, delete, read, update, HookExt, RequestExt};
 use crate::server::{AppState, AppStores};
 use axum::{routing::post, Router};
 use bson::doc;
@@ -43,12 +43,12 @@ pub struct CreatePipelineRequest {
     pub config: PipelineConfig,
 }
 
-impl CrudHook<Pipeline> for CreatePipelineRequest {}
+impl HookExt<Pipeline> for CreatePipelineRequest {}
 
-impl CrudRequest for CreatePipelineRequest {
+impl RequestExt for CreatePipelineRequest {
     type Output = Pipeline;
 
-    fn event_access(&self, event_access: Arc<EventAccess>) -> Option<Self::Output> {
+    fn access(&self, event_access: Arc<EventAccess>) -> Option<Self::Output> {
         Some(Self::Output {
             id: Id::now(IdPrefix::Pipeline).to_string(),
             environment: event_access.environment,

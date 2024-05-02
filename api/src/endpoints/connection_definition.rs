@@ -1,6 +1,5 @@
 use super::{
-    create, delete, read, update, ApiResult, CachedRequest, CrudHook, CrudRequest, ReadResponse,
-    Unit,
+    create, delete, read, update, ApiResult, CachedRequest, HookExt, ReadResponse, RequestExt, Unit,
 };
 use crate::{
     internal_server_error, not_found,
@@ -67,7 +66,7 @@ pub struct CreateRequest {
     pub active: bool,
 }
 
-impl CrudHook<ConnectionDefinition> for CreateRequest {}
+impl HookExt<ConnectionDefinition> for CreateRequest {}
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
@@ -256,14 +255,10 @@ pub async fn public_get_connection_details(
     }))
 }
 
-impl CrudRequest for CreateRequest {
+impl RequestExt for CreateRequest {
     type Output = ConnectionDefinition;
 
-    fn filterable() -> bool {
-        false
-    }
-
-    fn output(&self) -> Option<Self::Output> {
+    fn from(&self) -> Option<Self::Output> {
         let auth_secrets: Vec<AuthSecret> = self
             .authentication
             .iter()

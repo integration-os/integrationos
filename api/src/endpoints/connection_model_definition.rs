@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, CrudHook, CrudRequest, Unit};
+use super::{create, delete, read, update, HookExt, RequestExt, Unit};
 use crate::{
     api_payloads::ErrorResponse,
     internal_server_error, not_found,
@@ -298,16 +298,12 @@ pub struct CreateRequest {
     pub paths: Option<ModelPaths>,
 }
 
-impl CrudHook<ConnectionModelDefinition> for CreateRequest {}
+impl HookExt<ConnectionModelDefinition> for CreateRequest {}
 
-impl CrudRequest for CreateRequest {
+impl RequestExt for CreateRequest {
     type Output = ConnectionModelDefinition;
 
-    fn filterable() -> bool {
-        false
-    }
-
-    fn output(&self) -> Option<Self::Output> {
+    fn from(&self) -> Option<Self::Output> {
         let key = format!(
             "api::{}::{}::{}::{}::{}::{}",
             self.connection_platform,

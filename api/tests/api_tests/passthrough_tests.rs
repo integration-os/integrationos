@@ -14,6 +14,7 @@ use mockito::Server;
 use serde_json::Value;
 
 #[tokio::test]
+#[ignore = "Until we have a JWT token generated we can not test this"]
 async fn test_passthrough_api() {
     let mut server = TestServer::new(None).await;
     let (connection, conn_def) = server.create_connection(Environment::Live).await;

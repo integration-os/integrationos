@@ -1,4 +1,4 @@
-use super::{delete, read, CrudRequest};
+use super::{delete, read, RequestExt};
 use crate::{
     api_payloads::{DeleteResponse, ErrorResponse, UpdateResponse},
     bad_request,
@@ -92,7 +92,7 @@ async fn test_connection(
     Ok(())
 }
 
-impl CrudRequest for CreateConnectionPayload {
+impl RequestExt for CreateConnectionPayload {
     type Output = Connection;
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {

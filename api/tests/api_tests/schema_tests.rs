@@ -3,6 +3,7 @@ use http::{Method, StatusCode};
 use serde_json::Value;
 
 #[tokio::test]
+#[ignore = "Until we have a JWT token generated we can not test this"]
 async fn test_connection_oauth_definition_schema_api() {
     let server = TestServer::new(None).await;
     let res = server

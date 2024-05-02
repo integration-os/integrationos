@@ -7,6 +7,8 @@ The following CRUD endopints are implemented for
 - [`connection-model-schemas`](#v1connection-model-schemas-connection-model-schemas)
 - [`connection-oauth-definitions`](#v1connection-oauth-definitions-connection-oauth-definitions)
 - [`common-models`](#v1common-models-common-models)
+- [`platform-pages`](#v1platform-pages-platform-pages)
+- [`platforms`](#v1platforms-platforms)
 
 ### `GET` Requests
 
@@ -753,5 +755,83 @@ The response will have a format similar to the following:
   "tags": [],
   "active": true,
   "deprecated": false
+}
+```
+
+### `/v1/platform-pages` Platform Pages
+
+The `GET`, `DELETE`, and `POST` responses have the format:
+
+```json
+{
+  "platformId": "tx::5JOk3Ptuwsc::4FIiZNdGt11VaSRvi6HKzg",
+  "connectionDefinitionId": "crs::0UO2FOIhQvI::UcHIZjMQI_rlDtM9n18Vbw",
+  "platformName": "ryVRWXi",
+  "type": "actionUngenerated",
+  "connectionModelSchemaId": "conn_def::TBCRnVANRc0::KB2OmzcJGR6621_E3vMDdQ",
+  "url": "zOxoIA",
+  "modelName": "nKtwljKNHtNIw",
+  "content": "PPtBI",
+  "ownership": {
+    "type": "user",
+    "buildableId": "5dij4k0gGudZ",
+    "clientId": "DgS3fOmJxUszR8",
+    "organizationId": null,
+    "projectId": "hBjvkzc9Qx",
+    "userId": null
+  },
+  "analyzed": false
+}
+```
+
+The `POST` and `PATCH` payloads have the format:
+
+```json
+{
+  "_id": "plf_pg::F5CKoR4XcxA::BrkeW5YFRxaXL1TPSdxawg",
+  "platformId": "tx::5JOk3Ptuwsc::4FIiZNdGt11VaSRvi6HKzg",
+  "platformName": "ryVRWXi",
+  "connectionDefinitionId": "crs::0UO2FOIhQvI::UcHIZjMQI_rlDtM9n18Vbw",
+  "type": "actionUngenerated",
+  "connectionModelSchemaId": "conn_def::TBCRnVANRc0::KB2OmzcJGR6621_E3vMDdQ",
+  "url": "zOxoIA",
+  "modelName": "nKtwljKNHtNIw",
+  "content": "PPtBI",
+  "createdAt": 1698009484117,
+  "updatedAt": 1698009484117,
+  "updated": false,
+  "version": "1.0.0",
+  "lastModifiedBy": "system",
+  "deleted": false,
+  "changeLog": {},
+  "tags": [],
+  "active": true,
+  "deprecated": false,
+  "ownership": {
+    "type": "user",
+    "buildableId": "5dij4k0gGudZ",
+    "clientId": "DgS3fOmJxUszR8",
+    "organizationId": null,
+    "projectId": "hBjvkzc9Qx",
+    "userId": null
+  },
+  "analyzed": false
+}
+```
+
+The `POST` and `PATCH` payloads have the format:
+
+```json
+{
+  "connectionDefinitionId": null,
+  "name": "djp3rK",
+  "url": "yEYQqCm85rV",
+  "version": "6.18.17",
+  "ownership": {
+    "type": "system",
+    "entity": "KycF9dwCsnv",
+    "isInternal": true
+  },
+  "analyzed": false
 }
 ```

@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, ApiResult, CrudHook, CrudRequest};
+use super::{create, delete, read, update, ApiResult, HookExt, RequestExt};
 use crate::{
     internal_server_error, not_found,
     server::{AppState, AppStores},
@@ -52,7 +52,7 @@ pub struct CreateRequest {
 }
 
 #[async_trait]
-impl CrudHook<CommonModel> for CreateRequest {
+impl HookExt<CommonModel> for CreateRequest {
     async fn after_create_hook(
         record: &CommonModel,
         stores: &AppStores,
@@ -78,14 +78,10 @@ impl CrudHook<CommonModel> for CreateRequest {
     }
 }
 
-impl CrudRequest for CreateRequest {
+impl RequestExt for CreateRequest {
     type Output = CommonModel;
 
-    fn filterable() -> bool {
-        false
-    }
-
-    fn output(&self) -> Option<Self::Output> {
+    fn from(&self) -> Option<Self::Output> {
         let mut record = Self::Output {
             id: Id::now(IdPrefix::CommonModel),
             name: self.name.clone(),
