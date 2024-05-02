@@ -1,4 +1,4 @@
-pub mod private;
+pub mod authenticated;
 pub mod protected;
 pub mod public;
 
@@ -17,7 +17,7 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     Router::new()
         .nest(&path, protected::get_router(state).await)
         .nest(&public_path, public::get_router(state))
-        .nest(&path, private::get_router(state).await)
+        .nest(&path, authenticated::get_router(state).await)
         .route("/", get(get_root))
         .fallback(not_found_handler)
         .layer(CorsLayer::permissive())

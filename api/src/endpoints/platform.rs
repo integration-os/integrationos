@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, CrudHook, CrudRequest};
+use super::{create, delete, read, update, HookExt, RequestExt};
 use crate::server::{AppState, AppStores};
 use axum::{
     routing::{patch, post},
@@ -39,12 +39,12 @@ pub struct CreateRequest {
     pub analyzed: bool,
 }
 
-impl CrudHook<PlatformData> for CreateRequest {}
+impl HookExt<PlatformData> for CreateRequest {}
 
-impl CrudRequest for CreateRequest {
+impl RequestExt for CreateRequest {
     type Output = PlatformData;
 
-    fn output(&self) -> Option<Self::Output> {
+    fn from(&self) -> Option<Self::Output> {
         Some(Self::Output {
             id: Id::now(IdPrefix::Platform),
             connection_definition_id: self.connection_definition_id,

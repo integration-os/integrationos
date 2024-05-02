@@ -1,6 +1,4 @@
-use super::{
-    create, delete, read, update, CachedRequest, CrudHook, CrudRequest, ReadResponse, Unit,
-};
+use super::{create, delete, read, update, CachedRequest, HookExt, ReadResponse, RequestExt, Unit};
 use crate::server::{AppState, AppStores};
 use axum::{
     routing::{patch, post},
@@ -49,7 +47,7 @@ pub struct CreateRequest {
     pub is_full_template_enabled: bool,
 }
 
-impl CrudHook<ConnectionOAuthDefinition> for CreateRequest {}
+impl HookExt<ConnectionOAuthDefinition> for CreateRequest {}
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,10 +62,10 @@ fn default_separator() -> Option<String> {
     Some(" ".to_string())
 }
 
-impl CrudRequest for CreateRequest {
+impl RequestExt for CreateRequest {
     type Output = ConnectionOAuthDefinition;
 
-    fn output(&self) -> Option<Self::Output> {
+    fn from(&self) -> Option<Self::Output> {
         Some(Self::Output {
             id: Id::new(IdPrefix::ConnectionOAuthDefinition, Utc::now()),
             connection_platform: self.connection_platform.clone(),
@@ -200,7 +198,7 @@ pub struct FrontendOauthConnectionDefinition {
     pub record_metadata: RecordMetadata,
 }
 
-impl CrudRequest for FrontendOauthConnectionDefinition {
+impl RequestExt for FrontendOauthConnectionDefinition {
     type Output = FrontendOauthConnectionDefinition;
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {

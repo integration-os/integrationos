@@ -46,22 +46,26 @@ pub mod unified;
 const INTEGRATION_OS_PASSTHROUGH_HEADER: &str = "x-integrationos-passthrough";
 
 pub type Unit = ();
-pub trait CrudRequest: Sized {
+
+pub type InMemoryCache<T> = Arc<Cache<Option<BTreeMap<String, String>>, Arc<T>>>;
+
+pub trait RequestExt: Sized {
     type Output: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static;
 
-    /// Generate the output of the request based on the input and the event access.
+    /// Generate `Self::Output` of the request based on the given payload.
+    ///
+    /// @param self
+    /// @return Result<Option<Self::Output>, Self::Error>
+    fn from(&self) -> Option<Self::Output> {
+        None
+    }
+
+    /// Generate `Self::Output` of the request based on the passed event access.
     ///
     /// @param self
     /// @param event_access
     /// @return Option<Self::Output>
-    fn event_access(&self, _: Arc<EventAccess>) -> Option<Self::Output> {
-        None
-    }
-
-    /// Generate the output of the request based on the input.
-    /// @param self
-    /// @return Result<Option<Self::Output>, Self::Error>
-    fn output(&self) -> Option<Self::Output> {
+    fn access(&self, _: Arc<EventAccess>) -> Option<Self::Output> {
         None
     }
 
@@ -72,17 +76,15 @@ pub trait CrudRequest: Sized {
     fn get_store(stores: AppStores) -> MongoStore<Self::Output>;
 }
 
-pub trait CachedRequest: CrudRequest {
-    fn get_cache(
-        state: Arc<AppState>,
-    ) -> Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<Self::Output>>>>;
+pub trait CachedRequest: RequestExt {
+    fn get_cache(state: Arc<AppState>) -> InMemoryCache<ReadResponse<Self::Output>>;
 }
 
 pub type ApiError = (StatusCode, Json<ErrorResponse>);
 pub type ApiResult<T> = Result<Json<T>, ApiError>;
 
 #[async_trait]
-pub trait CrudHook<Input>
+pub trait HookExt<Input>
 where
     Input: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
 {
@@ -121,13 +123,13 @@ pub async fn create<T, U>(
     Json(req): Json<T>,
 ) -> ApiResult<U>
 where
-    T: CrudRequest<Output = U> + CrudHook<U> + 'static,
+    T: RequestExt<Output = U> + HookExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
 {
     let output = event_access
         .map_or_else(
-            || req.output(),
-            |event_access| req.event_access(event_access.0).or(req.output()),
+            || req.from(),
+            |event_access| req.access(event_access.0).or(req.from()),
         )
         .ok_or_else(|| not_found!("Record"))?;
 
@@ -167,7 +169,7 @@ pub async fn read<T, U>(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ReadResponse<U>>, ApiError>
 where
-    T: CrudRequest<Output = U> + 'static,
+    T: RequestExt<Output = U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
 {
     let query = shape_mongo_filter(
@@ -268,7 +270,7 @@ pub async fn update<T, U>(
     Json(req): Json<T>,
 ) -> Result<Json<SuccessResponse>, ApiError>
 where
-    T: CrudRequest<Output = U> + CrudHook<U> + 'static,
+    T: RequestExt<Output = U> + HookExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
 {
     let mut query = shape_mongo_filter(
@@ -331,7 +333,7 @@ pub async fn delete<T, U>(
     State(state): State<Arc<AppState>>,
 ) -> ApiResult<U>
 where
-    T: CrudRequest<Output = U> + 'static,
+    T: RequestExt<Output = U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
 {
     let store = T::get_store(state.app_stores.clone());

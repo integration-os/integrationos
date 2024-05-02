@@ -1,4 +1,4 @@
-use super::{delete, read, update, ApiResult, CrudHook, CrudRequest};
+use super::{delete, read, update, ApiResult, HookExt, RequestExt};
 use crate::{
     bad_request, internal_server_error,
     server::{AppState, AppStores},
@@ -53,7 +53,7 @@ pub struct CreateRequest {
     pub analyzed: bool,
 }
 
-impl CrudHook<PlatformPage> for CreateRequest {}
+impl HookExt<PlatformPage> for CreateRequest {}
 
 pub async fn create_platform_page(
     event_access: Option<Extension<Arc<EventAccess>>>,
@@ -61,9 +61,9 @@ pub async fn create_platform_page(
     Json(req): Json<CreateRequest>,
 ) -> ApiResult<PlatformPage> {
     let output = if let Some(Extension(event_access)) = event_access {
-        req.clone().event_access(event_access)
+        req.clone().access(event_access)
     } else {
-        req.clone().output()
+        req.clone().from()
     };
 
     let mut output = match output {
@@ -87,10 +87,10 @@ pub async fn create_platform_page(
     Ok(res)
 }
 
-impl CrudRequest for CreateRequest {
+impl RequestExt for CreateRequest {
     type Output = PlatformPage;
 
-    fn output(&self) -> Option<Self::Output> {
+    fn from(&self) -> Option<Self::Output> {
         let hash_value = json!({
             "platform_id": self.platform_id,
             "platform_name": self.platform_name,

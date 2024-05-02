@@ -11,7 +11,18 @@ use anyhow::{anyhow, Context, Result};
 use axum::Router;
 use http::HeaderValue;
 use integrationos_domain::{
-    algebra::{CryptoExt, DefaultTemplate, MongoStore}, client::unified_destination_client::UnifiedDestination, common_model::{CommonEnum, CommonModel}, connection_definition::{ConnectionDefinition, PublicConnectionDetails}, connection_model_definition::ConnectionModelDefinition, connection_model_schema::{ConnectionModelSchema, PublicConnectionModelSchema}, connection_oauth_definition::{ConnectionOAuthDefinition, Settings}, cursor::Cursor, event_access::EventAccess, page::PlatformPage, stage::Stage, Connection, Event, Pipeline, PlatformData, Store, Transaction
+    algebra::{CryptoExt, DefaultTemplate, MongoStore},
+    client::unified_destination_client::UnifiedDestination,
+    common_model::{CommonEnum, CommonModel},
+    connection_definition::{ConnectionDefinition, PublicConnectionDetails},
+    connection_model_definition::ConnectionModelDefinition,
+    connection_model_schema::{ConnectionModelSchema, PublicConnectionModelSchema},
+    connection_oauth_definition::{ConnectionOAuthDefinition, Settings},
+    cursor::Cursor,
+    event_access::EventAccess,
+    page::PlatformPage,
+    stage::Stage,
+    Connection, Event, Pipeline, PlatformData, Store, Transaction,
 };
 use moka::future::Cache;
 use mongodb::{options::UpdateOptions, Client, Database};

@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, ApiResult, CrudHook, CrudRequest};
+use super::{create, delete, read, update, ApiResult, HookExt, RequestExt};
 use crate::{
     internal_server_error,
     server::{AppState, AppStores},
@@ -83,12 +83,12 @@ pub struct CreateRequest {
     pub mapping: Option<Mappings>,
 }
 
-impl CrudHook<ConnectionModelSchema> for CreateRequest {}
+impl HookExt<ConnectionModelSchema> for CreateRequest {}
 
-impl CrudRequest for CreateRequest {
+impl RequestExt for CreateRequest {
     type Output = ConnectionModelSchema;
 
-    fn output(&self) -> Option<Self::Output> {
+    fn from(&self) -> Option<Self::Output> {
         let key = format!(
             "api::{}::{}::{}",
             self.connection_platform, self.platform_version, self.model_name
