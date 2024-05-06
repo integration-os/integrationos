@@ -1,4 +1,4 @@
-use super::{delete, read, update, ApiResult, HookExt, RequestExt};
+use super::{delete, read, update, ApiResult, HookExt, PublicExt, RequestExt};
 use crate::{
     bad_request, internal_server_error,
     server::{AppState, AppStores},
@@ -54,6 +54,7 @@ pub struct CreateRequest {
 }
 
 impl HookExt<PlatformPage> for CreateRequest {}
+impl PublicExt<PlatformPage> for CreateRequest {}
 
 pub async fn create_platform_page(
     event_access: Option<Extension<Arc<EventAccess>>>,

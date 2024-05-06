@@ -1,4 +1,4 @@
-use super::{delete, read, RequestExt};
+use super::{delete, read, PublicExt, RequestExt};
 use crate::{
     api_payloads::{DeleteResponse, ErrorResponse, UpdateResponse},
     bad_request,
@@ -19,6 +19,7 @@ use http::HeaderMap;
 use integrationos_domain::{
     algebra::{MongoStore, StoreExt},
     connection_definition::ConnectionDefinition,
+    domain::connection::SanitizedConnection,
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
@@ -92,6 +93,29 @@ async fn test_connection(
     Ok(())
 }
 
+impl PublicExt<Connection> for CreateConnectionPayload {
+    fn public(input: Connection) -> Value {
+        SanitizedConnection {
+            id: input.id,
+            platform_version: input.platform_version,
+            connection_definition_id: input.connection_definition_id,
+            r#type: input.r#type,
+            name: input.name,
+            key: input.key,
+            group: input.group,
+            environment: input.environment,
+            platform: input.platform,
+            secrets_service_id: input.secrets_service_id,
+            event_access_id: input.event_access_id,
+            settings: input.settings,
+            throughput: input.throughput,
+            ownership: input.ownership,
+            oauth: input.oauth,
+            record_metadata: input.record_metadata,
+        }
+        .to_value()
+    }
+}
 impl RequestExt for CreateConnectionPayload {
     type Output = Connection;
 

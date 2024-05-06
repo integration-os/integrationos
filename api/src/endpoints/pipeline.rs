@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, HookExt, RequestExt};
+use super::{create, delete, read, update, HookExt, PublicExt, RequestExt};
 use crate::server::{AppState, AppStores};
 use axum::{routing::post, Router};
 use bson::doc;
@@ -44,6 +44,7 @@ pub struct CreatePipelineRequest {
 }
 
 impl HookExt<Pipeline> for CreatePipelineRequest {}
+impl PublicExt<Pipeline> for CreatePipelineRequest {}
 
 impl RequestExt for CreatePipelineRequest {
     type Output = Pipeline;

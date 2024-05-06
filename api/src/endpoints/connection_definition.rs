@@ -1,5 +1,6 @@
 use super::{
-    create, delete, read, update, ApiResult, CachedRequest, HookExt, ReadResponse, RequestExt,
+    create, delete, read, update, ApiResult, CachedRequest, HookExt, PublicExt, ReadResponse,
+    RequestExt,
 };
 use crate::{
     internal_server_error, not_found,
@@ -67,6 +68,7 @@ pub struct CreateRequest {
 }
 
 impl HookExt<ConnectionDefinition> for CreateRequest {}
+impl PublicExt<ConnectionDefinition> for CreateRequest {}
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
