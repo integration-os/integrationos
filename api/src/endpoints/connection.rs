@@ -393,16 +393,21 @@ pub async fn delete_connection(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<DeleteResponse>, (StatusCode, Json<ErrorResponse>)> {
-    let Json(found_connection) = delete::<CreateConnectionPayload, Connection>(
+    let response = delete::<CreateConnectionPayload, Connection>(
         Some(Extension(user_event_access.clone())),
         Path(id.clone()),
         State(state.clone()),
     )
     .await?;
 
+    let connection = serde_json::from_value::<Connection>(response.0.clone()).map_err(|e| {
+        error!("Error deserializing connection in delete: {:?}", e);
+        bad_request!("Invalid connection")
+    })?;
+
     let partial_cursor_key = format!(
         "{}::{}::{}",
-        user_event_access.ownership.id, id, found_connection.key
+        user_event_access.ownership.id, id, connection.key
     );
 
     let mongo_regex = Regex {

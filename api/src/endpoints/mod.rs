@@ -130,7 +130,7 @@ pub async fn create<T, U>(
     event_access: Option<Extension<Arc<EventAccess>>>,
     State(state): State<Arc<AppState>>,
     Json(req): Json<T>,
-) -> ApiResult<U>
+) -> Result<Json<Value>, ApiError>
 where
     T: RequestExt<Output = U> + HookExt<U> + PublicExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
@@ -154,7 +154,7 @@ where
                 })
                 .ok();
 
-            Ok(Json(output))
+            Ok(Json(T::public(output)))
         }
         Err(e) => {
             error!("Error creating object: {e}");
@@ -176,7 +176,7 @@ pub async fn read<T, U>(
     event_access: Option<Extension<Arc<EventAccess>>>,
     query: Option<Query<BTreeMap<String, String>>>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<ReadResponse<U>>, ApiError>
+) -> Result<Json<ReadResponse<Value>>, ApiError>
 where
     T: RequestExt<Output = U> + PublicExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
@@ -202,7 +202,7 @@ where
 
     let res = match try_join!(count, find) {
         Ok((total, rows)) => ReadResponse {
-            rows,
+            rows: rows.into_iter().map(T::public).collect(),
             skip: query.skip,
             limit: query.limit,
             total,
@@ -340,7 +340,7 @@ pub async fn delete<T, U>(
     event_access: Option<Extension<Arc<EventAccess>>>,
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
-) -> ApiResult<U>
+) -> Result<Json<Value>, ApiError>
 where
     T: RequestExt<Output = U> + PublicExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
@@ -378,7 +378,7 @@ where
         )
         .await
     {
-        Ok(_) => Ok(Json(res)),
+        Ok(_) => Ok(Json(T::public(res))),
         Err(e) => {
             error!("Could not update record in store: {e}");
             Err(internal_server_error!())
