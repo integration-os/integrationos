@@ -1,7 +1,7 @@
 use crate::{
     endpoints::{
         common_model, connection_definition,
-        connection_model_definition::{self, test_connection_model_definition},
+        connection_model_definition::{self},
         connection_model_schema, connection_oauth_definition, openapi, platform, platform_page,
     },
     middleware::jwt_auth::{self, JwtState},
@@ -13,10 +13,6 @@ use tower_http::trace::TraceLayer;
 
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let routes = Router::new()
-        .route(
-            "/connection-model-definitions/test/:id",
-            post(test_connection_model_definition),
-        )
         .nest(
             "/connection-definitions",
             connection_definition::get_router(),
