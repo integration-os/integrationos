@@ -1,7 +1,7 @@
 use crate::{
     endpoints::{
-        connection, event_access, events, metrics, oauth, passthrough, pipeline, transactions,
-        unified,
+        connection, connection_model_definition::test_connection_model_definition, event_access,
+        events, metrics, oauth, passthrough, pipeline, transactions, unified,
     },
     middleware::{
         auth,
@@ -10,7 +10,7 @@ use crate::{
     },
     server::AppState,
 };
-use axum::{error_handling::HandleErrorLayer, middleware::from_fn_with_state, Router};
+use axum::{error_handling::HandleErrorLayer, middleware::from_fn_with_state, routing::post, Router};
 use http::HeaderName;
 use std::{iter::once, sync::Arc};
 use tower::{filter::FilterLayer, ServiceBuilder};
@@ -25,6 +25,10 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         .nest("/connections", connection::get_router())
         .nest("/event-access", event_access::get_router())
         .nest("/passthrough", passthrough::get_router())
+        .route(
+            "/connection-model-definitions/test/:id",
+            post(test_connection_model_definition),
+        )
         .nest("/oauth", oauth::get_router())
         .nest("/unified", unified::get_router())
         .layer(TraceLayer::new_for_http())
