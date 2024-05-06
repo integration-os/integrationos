@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, HookExt, RequestExt};
+use super::{create, delete, read, update, HookExt, PublicExt, RequestExt};
 use crate::server::{AppState, AppStores};
 use axum::{
     routing::{patch, post},
@@ -40,6 +40,7 @@ pub struct CreateRequest {
 }
 
 impl HookExt<PlatformData> for CreateRequest {}
+impl PublicExt<PlatformData> for CreateRequest {}
 
 impl RequestExt for CreateRequest {
     type Output = PlatformData;

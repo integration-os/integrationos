@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, HookExt, RequestExt};
+use super::{create, delete, read, update, HookExt, PublicExt, RequestExt};
 use crate::{
     api_payloads::ErrorResponse,
     internal_server_error, not_found,
@@ -299,6 +299,7 @@ pub struct CreateRequest {
 }
 
 impl HookExt<ConnectionModelDefinition> for CreateRequest {}
+impl PublicExt<ConnectionModelDefinition> for CreateRequest {}
 
 impl RequestExt for CreateRequest {
     type Output = ConnectionModelDefinition;

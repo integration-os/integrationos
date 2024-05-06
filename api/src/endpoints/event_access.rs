@@ -1,4 +1,4 @@
-use super::{delete, read, RequestExt};
+use super::{delete, read, PublicExt, RequestExt};
 use crate::{
     api_payloads::ErrorResponse,
     bad_request,
@@ -64,6 +64,7 @@ impl RequestExt for CreateEventAccessRequest {
         stores.event_access
     }
 }
+impl PublicExt<EventAccess> for CreateEventAccessRequest {}
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]

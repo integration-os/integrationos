@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, ApiResult, HookExt, RequestExt};
+use super::{create, delete, read, update, ApiResult, HookExt, PublicExt, RequestExt};
 use crate::{
     internal_server_error, not_found,
     server::{AppState, AppStores},
@@ -50,6 +50,8 @@ pub struct CreateRequest {
     pub sample: Value,
     pub primary: bool,
 }
+
+impl PublicExt<CommonModel> for CreateRequest {}
 
 #[async_trait]
 impl HookExt<CommonModel> for CreateRequest {

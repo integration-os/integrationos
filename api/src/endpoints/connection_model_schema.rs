@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, ApiResult, HookExt, RequestExt};
+use super::{create, delete, read, update, ApiResult, HookExt, PublicExt, RequestExt};
 use crate::{
     internal_server_error,
     server::{AppState, AppStores},
@@ -84,6 +84,7 @@ pub struct CreateRequest {
 }
 
 impl HookExt<ConnectionModelSchema> for CreateRequest {}
+impl PublicExt<ConnectionModelSchema> for CreateRequest {}
 
 impl RequestExt for CreateRequest {
     type Output = ConnectionModelSchema;

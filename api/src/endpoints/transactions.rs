@@ -1,4 +1,4 @@
-use super::{read, RequestExt};
+use super::{read, PublicExt, RequestExt};
 use crate::server::{AppState, AppStores};
 use axum::{routing::get, Router};
 use bson::doc;
@@ -13,6 +13,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[derive(Serialize, Deserialize)]
 pub struct TransactionCrud;
 
+impl PublicExt<Transaction> for TransactionCrud {}
 impl RequestExt for TransactionCrud {
     type Output = Transaction;
 

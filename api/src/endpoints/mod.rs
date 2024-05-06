@@ -20,6 +20,7 @@ use integrationos_domain::{
 use moka::future::Cache;
 use mongodb::options::FindOneOptions;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde_json::Value;
 use std::{collections::BTreeMap, fmt::Debug, sync::Arc};
 use tokio::try_join;
 use tracing::error;
@@ -116,13 +117,22 @@ where
     }
 }
 
+pub trait PublicExt<Input>
+where
+    Input: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
+{
+    fn public(input: Input) -> Value {
+        serde_json::to_value(input).unwrap_or_default()
+    }
+}
+
 pub async fn create<T, U>(
     event_access: Option<Extension<Arc<EventAccess>>>,
     State(state): State<Arc<AppState>>,
     Json(req): Json<T>,
 ) -> ApiResult<U>
 where
-    T: RequestExt<Output = U> + HookExt<U> + 'static,
+    T: RequestExt<Output = U> + HookExt<U> + PublicExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
 {
     let output = event_access
@@ -168,7 +178,7 @@ pub async fn read<T, U>(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ReadResponse<U>>, ApiError>
 where
-    T: RequestExt<Output = U> + 'static,
+    T: RequestExt<Output = U> + PublicExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
 {
     let query = shape_mongo_filter(
@@ -332,7 +342,7 @@ pub async fn delete<T, U>(
     State(state): State<Arc<AppState>>,
 ) -> ApiResult<U>
 where
-    T: RequestExt<Output = U> + 'static,
+    T: RequestExt<Output = U> + PublicExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
 {
     let store = T::get_store(state.app_stores.clone());

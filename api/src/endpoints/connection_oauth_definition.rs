@@ -1,4 +1,6 @@
-use super::{create, delete, read, update, CachedRequest, HookExt, ReadResponse, RequestExt};
+use super::{
+    create, delete, read, update, CachedRequest, HookExt, PublicExt, ReadResponse, RequestExt,
+};
 use crate::server::{AppState, AppStores};
 use axum::{
     routing::{patch, post},
@@ -48,6 +50,7 @@ pub struct CreateRequest {
 }
 
 impl HookExt<ConnectionOAuthDefinition> for CreateRequest {}
+impl PublicExt<ConnectionOAuthDefinition> for CreateRequest {}
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
