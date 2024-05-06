@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, CachedRequest, HookExt, ReadResponse, RequestExt, Unit};
+use super::{create, delete, read, update, CachedRequest, HookExt, ReadResponse, RequestExt};
 use crate::server::{AppState, AppStores};
 use axum::{
     routing::{patch, post},
@@ -125,7 +125,7 @@ impl RequestExt for CreateRequest {
         })
     }
 
-    fn update(&self, record: &mut Self::Output) -> Unit {
+    fn update(&self, mut record: Self::Output) -> Self::Output {
         record.connection_platform = self.connection_platform.clone();
         record.configuration = OAuthApiConfig {
             init: self.init.configuration.clone(),
@@ -180,6 +180,8 @@ impl RequestExt for CreateRequest {
         };
         record.record_metadata.updated_at = Utc::now().timestamp_millis();
         record.record_metadata.updated = true;
+
+        record
     }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {

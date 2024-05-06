@@ -51,7 +51,6 @@ pub type InMemoryCache<T> = Arc<Cache<Option<BTreeMap<String, String>>, Arc<T>>>
 
 pub trait RequestExt: Sized {
     type Output: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static;
-
     /// Generate `Self::Output` of the request based on the given payload.
     ///
     /// @param self
@@ -69,10 +68,10 @@ pub trait RequestExt: Sized {
         None
     }
 
-    /// Update the output of the request based on the input.
-    fn update(&self, _: &mut Self::Output) -> Unit {}
+    fn update(&self, output: Self::Output) -> Self::Output {
+        output
+    }
 
-    /// Get the store for the request.
     fn get_store(stores: AppStores) -> MongoStore<Self::Output>;
 }
 
@@ -285,7 +284,7 @@ where
 
     let store = T::get_store(state.app_stores.clone());
 
-    let Some(mut record) = (match store.get_one(query.filter).await {
+    let Some(record) = (match store.get_one(query.filter).await {
         Ok(ret) => ret,
         Err(e) => {
             error!("Error getting record in store: {e}");
@@ -295,7 +294,7 @@ where
         return Err(not_found!("Record"));
     };
 
-    req.update(&mut record);
+    let record = req.update(record);
 
     let bson = bson::to_bson_with_options(
         &record,

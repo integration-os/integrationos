@@ -1,5 +1,5 @@
 use super::{
-    create, delete, read, update, ApiResult, CachedRequest, HookExt, ReadResponse, RequestExt, Unit,
+    create, delete, read, update, ApiResult, CachedRequest, HookExt, ReadResponse, RequestExt,
 };
 use crate::{
     internal_server_error, not_found,
@@ -319,7 +319,7 @@ impl RequestExt for CreateRequest {
         Some(record)
     }
 
-    fn update(&self, record: &mut Self::Output) -> Unit {
+    fn update(&self, mut record: Self::Output) -> Self::Output {
         record.name = self.name.clone();
         record.frontend.spec.description = self.description.clone();
         record.frontend.spec.category = self.category.clone();
@@ -328,6 +328,7 @@ impl RequestExt for CreateRequest {
         record.test_connection = self.test_connection;
         record.platform = self.platform.clone();
         record.record_metadata.active = self.active;
+        record
     }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
