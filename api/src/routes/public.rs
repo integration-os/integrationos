@@ -1,6 +1,7 @@
 use crate::{
     endpoints::{
-        connection_definition, connection_model_schema, connection_oauth_definition,
+        connection_definition, connection_model_definition::test_connection_model_definition,
+        connection_model_schema, connection_oauth_definition,
         event_access::create_event_access_for_new_user, openapi, read_cached,
     },
     middleware::jwt_auth::{self, JwtState},
@@ -23,6 +24,10 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
                 Arc::new(JwtState::new(state)),
                 jwt_auth::jwt_auth,
             )),
+        )
+        .route(
+            "/connection-model-definitions/test/:id",
+            post(test_connection_model_definition),
         )
         .route(
             "/connection-definitions",

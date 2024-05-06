@@ -96,12 +96,13 @@ impl RequestExt for CreateRequest {
         Some(record)
     }
 
-    fn update(&self, record: &mut Self::Output) {
+    fn update(&self, mut record: Self::Output) -> Self::Output {
         record.name = self.name.clone();
         record.record_metadata.version = self.version.clone();
         record.fields = self.fields.clone();
         record.category = self.category.clone();
         record.sample = self.sample.clone();
+        record
     }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {

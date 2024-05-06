@@ -64,7 +64,7 @@ impl RequestExt for CreatePipelineRequest {
         })
     }
 
-    fn update(&self, record: &mut Self::Output) {
+    fn update(&self, mut record: Self::Output) -> Self::Output {
         let CreatePipelineRequest {
             name,
             key,
@@ -83,6 +83,8 @@ impl RequestExt for CreatePipelineRequest {
         record.signature = signature.clone();
         record.config = Some(config.clone());
         record.record_metadata.mark_updated(&record.ownership.id);
+
+        record
     }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {

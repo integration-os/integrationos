@@ -2,7 +2,7 @@ use crate::{
     config::Config,
     endpoints::{
         connection_oauth_definition::FrontendOauthConnectionDefinition, openapi::OpenAPIData,
-        ReadResponse,
+        InMemoryCache, ReadResponse,
     },
     metrics::Metric,
     routes,
@@ -27,7 +27,7 @@ use integrationos_domain::{
 use moka::future::Cache;
 use mongodb::{options::UpdateOptions, Client, Database};
 use segment::{AutoBatcher, Batcher, HttpClient};
-use std::{collections::BTreeMap, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use tokio::{net::TcpListener, sync::mpsc::Sender, time::timeout, try_join};
 use tracing::{error, info, trace, warn};
 
@@ -63,14 +63,9 @@ pub struct AppState {
     pub openapi_data: OpenAPIData,
     pub http_client: reqwest::Client,
     pub connections_cache: Cache<(Arc<str>, HeaderValue), Arc<Connection>>,
-    pub connection_definitions_cache:
-        Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<ConnectionDefinition>>>>,
-    pub connection_oauth_definitions_cache: Arc<
-        Cache<
-            Option<BTreeMap<String, String>>,
-            Arc<ReadResponse<FrontendOauthConnectionDefinition>>,
-        >,
-    >,
+    pub connection_definitions_cache: InMemoryCache<ReadResponse<ConnectionDefinition>>,
+    pub connection_oauth_definitions_cache:
+        InMemoryCache<ReadResponse<FrontendOauthConnectionDefinition>>,
     pub secrets_client: Arc<dyn CryptoExt + Sync + Send>,
     pub extractor_caller: UnifiedDestination,
     pub event_tx: Sender<Event>,

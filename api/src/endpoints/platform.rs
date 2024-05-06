@@ -57,13 +57,15 @@ impl RequestExt for CreateRequest {
         })
     }
 
-    fn update(&self, record: &mut Self::Output) {
+    fn update(&self, mut record: Self::Output) -> Self::Output {
         record.connection_definition_id = self.connection_definition_id;
         record.name = self.name.clone();
         record.url = self.url.clone();
         record.platform_version = self.version.clone();
         record.ownership = self.ownership.clone();
         record.analyzed = self.analyzed;
+
+        record
     }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {

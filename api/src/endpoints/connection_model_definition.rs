@@ -1,4 +1,4 @@
-use super::{create, delete, read, update, HookExt, RequestExt, Unit};
+use super::{create, delete, read, update, HookExt, RequestExt};
 use crate::{
     api_payloads::ErrorResponse,
     internal_server_error, not_found,
@@ -348,7 +348,7 @@ impl RequestExt for CreateRequest {
         Some(record)
     }
 
-    fn update(&self, record: &mut Self::Output) -> Unit {
+    fn update(&self, mut record: Self::Output) -> Self::Output {
         let key = format!(
             "api::{}::{}::{}::{}::{}::{}",
             self.connection_platform,
@@ -383,6 +383,8 @@ impl RequestExt for CreateRequest {
         record.mapping = self.mapping.clone();
         record.extractor_config = self.extractor_config.clone();
         record.record_metadata.version = self.version.clone();
+
+        record
     }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
