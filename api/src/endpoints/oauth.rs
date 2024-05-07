@@ -32,7 +32,7 @@ use std::{
     str::FromStr,
     sync::Arc,
 };
-use tracing::{debug, error};
+use tracing::error;
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new().route("/:platform", post(oauth_handler))
@@ -61,6 +61,8 @@ struct OAuthPayload {
     metadata: Value,
 }
 
+// All of the debug statements are for debugging purposes, they won't reach production
+// and will be removed in the next MR.
 async fn oauth_handler(
     state: State<Arc<AppState>>,
     Extension(user_event_access): Extension<Arc<EventAccess>>,
@@ -69,6 +71,7 @@ async fn oauth_handler(
 ) -> ApiResult<Json<Connection>> {
     let oauth_definition = find_oauth_definition(&state, &platform).await?;
     let setting = find_settings(&state, &user_event_access.ownership).await?;
+    tracing::debug!("Setting ------------------------------------ {:?}", setting);
 
     let secret = get_secret::<PlatformSecret>(
         &state,
@@ -90,6 +93,11 @@ async fn oauth_handler(
         client_secret: secret.client_secret,
     };
 
+    tracing::debug!(
+        "OAuth Payload ------------------------------------ {:?}",
+        oauth_payload
+    );
+
     let request = request(&oauth_definition, &oauth_payload)?;
     let response = state
         .http_client
@@ -106,7 +114,7 @@ async fn oauth_handler(
             internal_server_error!()
         })?;
 
-    debug!("oauth response: {:?}", response);
+    tracing::debug!("oauth response: {:?}", response);
 
     let decoded: OAuthResponse = oauth_definition
         .compute
@@ -124,6 +132,11 @@ async fn oauth_handler(
         oauth_payload.client_secret,
         response,
         payload.payload,
+    );
+
+    tracing::debug!(
+        "OAuth Secret ------------------------------------ {:?}",
+        oauth_secret
     );
 
     let secret = state
