@@ -42,8 +42,6 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]
 struct OAuthRequest {
-    #[serde(rename = "__isEngineeringAccount__", default)]
-    is_engineering_account: bool,
     connection_definition_id: Id,
     client_id: String,
     group: String,
@@ -70,12 +68,7 @@ async fn oauth_handler(
     Json(payload): Json<OAuthRequest>,
 ) -> ApiResult<Json<Connection>> {
     let oauth_definition = find_oauth_definition(&state, &platform).await?;
-    let setting = find_settings(
-        &state,
-        &user_event_access.ownership,
-        payload.is_engineering_account,
-    )
-    .await?;
+    let setting = find_settings(&state, &user_event_access.ownership).await?;
 
     let secret = get_secret::<PlatformSecret>(
         &state,
@@ -86,11 +79,7 @@ async fn oauth_handler(
                     "Settings does not have a secret service id for the connection platform provided, settings"
                 )
             })?,
-            buildable_id: if payload.is_engineering_account {
-                state.config.engineering_account_id.clone()
-            } else {
-                user_event_access.clone().ownership.id.to_string()
-            },
+            buildable_id: user_event_access.clone().ownership.id.to_string()
         },
     )
     .await?;
@@ -441,21 +430,11 @@ async fn find_oauth_definition(
     Ok(oauth_definition)
 }
 
-async fn find_settings(
-    state: &State<Arc<AppState>>,
-    ownership: &Ownership,
-    is_admin: bool,
-) -> ApiResult<Settings> {
+async fn find_settings(state: &State<Arc<AppState>>, ownership: &Ownership) -> ApiResult<Settings> {
     let settings_store: &MongoStore<Settings> = &state.app_stores.settings;
 
-    let ownership_id = if !is_admin {
-        ownership.id.to_string()
-    } else {
-        state.config.engineering_account_id.clone()
-    };
-
     let setting: Settings = settings_store
-        .get_one(doc! {"ownership.buildableId": &ownership_id})
+        .get_one(doc! {"ownership.buildableId": &ownership.id.to_string()})
         .await
         .map_err(|e| {
             error!("Failed to retrieve from settings store: {}", e);
