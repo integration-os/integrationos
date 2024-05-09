@@ -73,12 +73,16 @@ async fn oauth_handler(
     Json(payload): Json<OAuthRequest>,
 ) -> Result<Json<Connection>, IntegrationOSError> {
     let conn_oauth_definition = get_conn_oauth_definition(&state, &platform).await?;
-    let setting = get_user_settings(&state, &user_event_access.ownership)
-        .await
-        .map_err(|e| {
-            error!("Failed to get user settings: {:?}", e);
-            e
-        })?;
+    let setting = get_user_settings(
+        &state,
+        &user_event_access.ownership,
+        payload.is_engineering_account,
+    )
+    .await
+    .map_err(|e| {
+        error!("Failed to get user settings: {:?}", e);
+        e
+    })?;
 
     let secret = get_secret::<PlatformSecret>(
         &state,
@@ -452,11 +456,18 @@ async fn get_conn_oauth_definition(
 pub async fn get_user_settings(
     state: &State<Arc<AppState>>,
     ownership: &Ownership,
+    is_engineering_account: bool,
 ) -> Result<Settings, IntegrationOSError> {
     let settings_store: &MongoStore<Settings> = &state.app_stores.settings;
 
+    let ownership_id = if is_engineering_account {
+        state.config.engineering_account_id.clone()
+    } else {
+        ownership.id.to_string()
+    };
+
     let setting: Settings = settings_store
-        .get_one(doc! {"ownership.buildableId": &ownership.id.to_string()})
+        .get_one(doc! {"ownership.buildableId": &ownership_id})
         .await?
         .ok_or_else(|| ApplicationError::not_found("Settings", None))?;
 
