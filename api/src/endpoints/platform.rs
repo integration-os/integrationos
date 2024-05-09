@@ -60,9 +60,9 @@ impl RequestExt for CreateRequest {
 
     fn update(&self, mut record: Self::Output) -> Self::Output {
         record.connection_definition_id = self.connection_definition_id;
-        record.name = self.name.clone();
-        record.url = self.url.clone();
-        record.platform_version = self.version.clone();
+        record.name.clone_from(&self.name);
+        record.url.clone_from(&self.url);
+        record.platform_version.clone_from(&self.version);
         record.ownership = self.ownership.clone();
         record.analyzed = self.analyzed;
 

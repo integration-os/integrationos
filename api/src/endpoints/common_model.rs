@@ -99,10 +99,10 @@ impl RequestExt for CreateRequest {
     }
 
     fn update(&self, mut record: Self::Output) -> Self::Output {
-        record.name = self.name.clone();
+        record.name.clone_from(&self.name);
         record.record_metadata.version = self.version.clone();
-        record.fields = self.fields.clone();
-        record.category = self.category.clone();
+        record.fields.clone_from(&self.fields);
+        record.category.clone_from(&self.category);
         record.sample = self.sample.clone();
         record
     }

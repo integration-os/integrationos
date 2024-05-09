@@ -123,9 +123,9 @@ impl RequestExt for CreateRequest {
         record.platform_id = self.platform_id;
         record.connection_definition_id = self.connection_definition_id;
         record.r#type = self.r#type.clone();
-        record.url = self.url.clone();
-        record.model_name = self.model_name.clone();
-        record.content = self.content.clone();
+        record.url.clone_from(&self.url);
+        record.model_name.clone_from(&self.model_name);
+        record.content.clone_from(&self.content);
         record.ownership = self.ownership.clone();
         record.analyzed = self.analyzed;
 

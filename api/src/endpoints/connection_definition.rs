@@ -322,13 +322,17 @@ impl RequestExt for CreateRequest {
     }
 
     fn update(&self, mut record: Self::Output) -> Self::Output {
-        record.name = self.name.clone();
-        record.frontend.spec.description = self.description.clone();
-        record.frontend.spec.category = self.category.clone();
-        record.frontend.spec.image = self.image.clone();
-        record.frontend.spec.tags = self.tags.clone();
+        record.name.clone_from(&self.name);
+        record
+            .frontend
+            .spec
+            .description
+            .clone_from(&self.description);
+        record.frontend.spec.category.clone_from(&self.category);
+        record.frontend.spec.image.clone_from(&self.image);
+        record.frontend.spec.tags.clone_from(&self.tags);
         record.test_connection = self.test_connection;
-        record.platform = self.platform.clone();
+        record.platform.clone_from(&self.platform);
         record.record_metadata.active = self.active;
         record
     }

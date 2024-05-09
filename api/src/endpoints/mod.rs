@@ -340,9 +340,9 @@ pub async fn delete<T, U>(
     event_access: Option<Extension<Arc<EventAccess>>>,
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<Value>, ApiError>
+) -> Result<Json<U>, ApiError>
 where
-    T: RequestExt<Output = U> + PublicExt<U> + 'static,
+    T: RequestExt<Output = U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
 {
     let store = T::get_store(state.app_stores.clone());
@@ -378,7 +378,7 @@ where
         )
         .await
     {
-        Ok(_) => Ok(Json(T::public(res))),
+        Ok(_) => Ok(Json(res)),
         Err(e) => {
             error!("Could not update record in store: {e}");
             Err(internal_server_error!())

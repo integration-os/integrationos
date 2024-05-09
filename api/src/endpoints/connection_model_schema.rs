@@ -116,14 +116,16 @@ impl RequestExt for CreateRequest {
     fn update(&self, mut record: Self::Output) -> Self::Output {
         record.platform_id = self.platform_id;
         record.platform_page_id = self.platform_page_id;
-        record.connection_platform = self.connection_platform.clone();
+        record
+            .connection_platform
+            .clone_from(&self.connection_platform);
         record.connection_definition_id = self.connection_definition_id;
-        record.platform_version = self.platform_version.clone();
-        record.model_name = self.model_name.clone();
+        record.platform_version.clone_from(&self.platform_version);
+        record.model_name.clone_from(&self.model_name);
         record.schema = self.schema.clone();
         record.sample = self.sample.clone();
-        record.paths = self.paths.clone();
-        record.mapping = self.mapping.clone();
+        record.paths.clone_from(&self.paths);
+        record.mapping.clone_from(&self.mapping);
         record
     }
 
