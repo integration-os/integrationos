@@ -129,7 +129,9 @@ impl RequestExt for CreateRequest {
     }
 
     fn update(&self, mut record: Self::Output) -> Self::Output {
-        record.connection_platform = self.connection_platform.clone();
+        record
+            .connection_platform
+            .clone_from(&self.connection_platform);
         record.configuration = OAuthApiConfig {
             init: self.init.configuration.clone(),
             refresh: self.refresh.configuration.clone(),

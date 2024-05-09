@@ -288,7 +288,7 @@ pub async fn update_connection(
     }
 
     if let Some(group) = req.group {
-        connection.group = group.clone();
+        connection.group.clone_from(&group);
         connection.key = format!("{}::{}", connection.platform, group).into();
     }
 
@@ -393,17 +393,12 @@ pub async fn delete_connection(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<DeleteResponse>, (StatusCode, Json<ErrorResponse>)> {
-    let response = delete::<CreateConnectionPayload, Connection>(
+    let connection = delete::<CreateConnectionPayload, Connection>(
         Some(Extension(user_event_access.clone())),
         Path(id.clone()),
         State(state.clone()),
     )
     .await?;
-
-    let connection = serde_json::from_value::<Connection>(response.0.clone()).map_err(|e| {
-        error!("Error deserializing connection in delete: {:?}", e);
-        bad_request!("Invalid connection")
-    })?;
 
     let partial_cursor_key = format!(
         "{}::{}::{}",

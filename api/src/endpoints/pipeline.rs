@@ -80,7 +80,7 @@ impl RequestExt for CreatePipelineRequest {
         record.key = key.into();
         record.source = source.clone();
         record.destination = destination.clone();
-        record.middleware = middleware.clone();
+        record.middleware.clone_from(middleware);
         record.signature = signature.clone();
         record.config = Some(config.clone());
         record.record_metadata.mark_updated(&record.ownership.id);

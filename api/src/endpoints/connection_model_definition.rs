@@ -362,11 +362,13 @@ impl RequestExt for CreateRequest {
         .to_lowercase();
 
         record.key = key;
-        record.connection_platform = self.connection_platform.clone();
+        record
+            .connection_platform
+            .clone_from(&self.connection_platform);
         record.connection_definition_id = self.connection_definition_id;
-        record.platform_version = self.platform_version.clone();
-        record.title = self.title.clone();
-        record.name = self.name.clone();
+        record.platform_version.clone_from(&self.platform_version);
+        record.title.clone_from(&self.title);
+        record.name.clone_from(&self.name);
         record.action = self.http_method.clone();
         record.action_name = self.action_name.clone();
         record.platform_info = PlatformInfo::Api(ApiModelConfig {
@@ -381,8 +383,8 @@ impl RequestExt for CreateRequest {
             responses: self.responses.clone(),
             paths: self.paths.clone(),
         });
-        record.mapping = self.mapping.clone();
-        record.extractor_config = self.extractor_config.clone();
+        record.mapping.clone_from(&self.mapping);
+        record.extractor_config.clone_from(&self.extractor_config);
         record.record_metadata.version = self.version.clone();
 
         record
