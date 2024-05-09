@@ -73,8 +73,12 @@ async fn oauth_handler(
     Json(payload): Json<OAuthRequest>,
 ) -> Result<Json<Connection>, IntegrationOSError> {
     let conn_oauth_definition = get_conn_oauth_definition(&state, &platform).await?;
-    let setting = get_user_settings(&state, &user_event_access.ownership).await?;
-    debug!("oauth request: {:?}", payload);
+    let setting = get_user_settings(&state, &user_event_access.ownership)
+        .await
+        .map_err(|e| {
+            error!("Failed to get user settings: {:?}", e);
+            e
+        })?;
 
     let secret = get_secret::<PlatformSecret>(
         &state,
@@ -91,15 +95,19 @@ async fn oauth_handler(
                     )
                 })?,
             buildable_id: if payload.is_engineering_account {
+                tracing::info!("Using engineering account id for secret");
                 state.config.engineering_account_id.clone()
             } else {
+                tracing::info!("Using user event access id for secret");
                 user_event_access.clone().ownership.id.to_string()
             },
         },
     )
-    .await?;
-
-    debug!("oauth secret: {:?}", secret);
+    .await
+    .map_err(|e| {
+        error!("Failed to get platform secret for connection: {:?}", e);
+        e
+    })?;
 
     let oauth_payload = OAuthPayload {
         metadata: payload.payload.clone().unwrap_or(Value::Null),
@@ -107,20 +115,25 @@ async fn oauth_handler(
         client_secret: secret.client_secret,
     };
 
-    debug!("oauth payload: {:?}", oauth_payload);
-
     let conn_oauth_definition = if conn_oauth_definition.is_full_template_enabled {
         state
             .template
-            .render_as(&conn_oauth_definition, oauth_payload.as_json().as_ref())?
+            .render_as(&conn_oauth_definition, oauth_payload.as_json().as_ref())
+            .map_err(|e| {
+                error!("Failed to render oauth definition: {:?}", e);
+                e
+            })?
     } else {
         conn_oauth_definition
     };
 
-    debug!("oauth definition: {:?}", conn_oauth_definition);
+    let request =
+        request(&conn_oauth_definition, &oauth_payload, &state.template).map_err(|e| {
+            error!("Failed to create oauth request: {}", e);
+            e
+        })?;
 
-    let request = request(&conn_oauth_definition, &oauth_payload, &state.template)?;
-    debug!("oauth request: {:?}", request);
+    debug!("Request: {:?}", request);
     let response = state
         .http_client
         .execute(request)
@@ -132,11 +145,11 @@ async fn oauth_handler(
         })?
         .await
         .map_err(|e| {
-            error!("Failed to decode third party oauth response: {}", e);
+            error!("Failed to decode third party oauth response: {:?}", e);
             InternalError::deserialize_error(&e.to_string(), None)
         })?;
 
-    debug!("oauth response: {:?}", response);
+    debug!("Response: {:?}", response);
 
     let decoded: OAuthResponse = conn_oauth_definition
         .compute
@@ -144,7 +157,7 @@ async fn oauth_handler(
         .response
         .compute(&response)
         .map_err(|e| {
-            error!("Failed to decode oauth response: {}", e);
+            error!("Failed to decode oauth response: {:?}", e);
             InternalError::script_error(e.message().as_ref(), None)
         })?;
 
