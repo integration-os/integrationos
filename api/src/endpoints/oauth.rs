@@ -74,6 +74,7 @@ async fn oauth_handler(
 ) -> Result<Json<Connection>, IntegrationOSError> {
     let conn_oauth_definition = get_conn_oauth_definition(&state, &platform).await?;
     let setting = get_user_settings(&state, &user_event_access.ownership).await?;
+    debug!("oauth request: {:?}", payload);
 
     let secret = get_secret::<PlatformSecret>(
         &state,
@@ -98,11 +99,15 @@ async fn oauth_handler(
     )
     .await?;
 
+    debug!("oauth secret: {:?}", secret);
+
     let oauth_payload = OAuthPayload {
         metadata: payload.payload.clone().unwrap_or(Value::Null),
         client_id: payload.client_id,
         client_secret: secret.client_secret,
     };
+
+    debug!("oauth payload: {:?}", oauth_payload);
 
     let conn_oauth_definition = if conn_oauth_definition.is_full_template_enabled {
         state
@@ -112,7 +117,10 @@ async fn oauth_handler(
         conn_oauth_definition
     };
 
+    debug!("oauth definition: {:?}", conn_oauth_definition);
+
     let request = request(&conn_oauth_definition, &oauth_payload, &state.template)?;
+    debug!("oauth request: {:?}", request);
     let response = state
         .http_client
         .execute(request)
