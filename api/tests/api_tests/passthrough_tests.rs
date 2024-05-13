@@ -14,7 +14,6 @@ use mockito::Server;
 use serde_json::Value;
 
 #[tokio::test]
-#[ignore = "Until we have a JWT token generated we can not test this"]
 async fn test_passthrough_api() {
     let mut server = TestServer::new(None).await;
     let (connection, conn_def) = server.create_connection(Environment::Live).await;
@@ -33,8 +32,7 @@ async fn test_passthrough_api() {
         .expect(1)
         .with_status(200)
         .with_body(response_body.clone())
-        .create_async()
-        .await;
+        .create();
 
     let create_model_definition_payload = CreateConnectionModelDefinitionRequest {
         connection_platform: connection.platform.to_string(),
@@ -43,7 +41,7 @@ async fn test_passthrough_api() {
         title: Faker.fake(),
         name: Faker.fake(),
         model_name: Faker.fake(),
-        action_name: Faker.fake::<CrudAction>(),
+        action_name: CrudAction::Create,
         base_url: mock_server.url() + &url_path,
         path: "customers".to_string(),
         auth_method: AuthMethod::BearerToken {
@@ -103,7 +101,7 @@ async fn test_passthrough_api() {
             ),
         )
         .await
-        .unwrap();
+        .expect("Failed to call universal API");
 
     // assert_eq!(call_universal_api.code, StatusCode::OK);
     assert_eq!(

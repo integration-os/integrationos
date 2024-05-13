@@ -38,7 +38,6 @@ async fn test_get_events() {
 }
 
 #[tokio::test]
-#[ignore = "Until we have a JWT token generated we can not test this"]
 async fn test_get_expanded_common_model() {
     let server = TestServer::new(None).await;
 

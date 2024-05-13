@@ -194,7 +194,13 @@ async fn test_send_to_destination() {
             _key: String,
             _value: &serde_json::Value,
         ) -> Result<CreateSecretResponse, IntegrationOSError> {
-            unimplemented!()
+            Ok(CreateSecretResponse {
+                id: "id".into(),
+                buildable_id: "buildable_id".into(),
+                created_at: Utc::now(),
+                author: "author".into(),
+                encrypted_secret: "encrypted_secret".into(),
+            })
         }
     }
 

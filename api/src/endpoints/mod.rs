@@ -209,7 +209,6 @@ where
         },
         Err(e) => {
             error!("Error reading from store: {e}");
-            println!("{:?}", e);
             return Err(internal_server_error!());
         }
     };
@@ -231,7 +230,6 @@ where
         .try_get_with(query.as_ref().map(|q| q.0.clone()), async {
             let query = shape_mongo_filter(query, None, None);
 
-            println!("{:?}", query);
             let store = T::get_store(state.app_stores.clone());
             let count = store.count(query.filter.clone(), None);
             let find = store.get_many(
@@ -243,16 +241,12 @@ where
             );
 
             let res = match try_join!(count, find) {
-                Ok((total, rows)) => {
-                    println!("{:?}", total);
-
-                    Arc::new(ReadResponse {
-                        rows,
-                        skip: query.skip,
-                        limit: query.limit,
-                        total,
-                    })
-                }
+                Ok((total, rows)) => Arc::new(ReadResponse {
+                    rows,
+                    skip: query.skip,
+                    limit: query.limit,
+                    total,
+                }),
                 Err(e) => {
                     error!("Error reading from store: {e}");
                     return Err(internal_server_error!());
