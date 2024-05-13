@@ -308,13 +308,6 @@ impl TestServer {
         payload: Option<&T>,
         headers: Option<BTreeMap<String, String>>,
     ) -> Result<ApiResponse<U>> {
-        // let headers = match headers {
-        //     Some(h) => h
-        //         .into_iter()
-        //         .chain(vec![(AUTHORIZATION.to_string(), self.token.clone())])
-        //         .collect(),
-        //     None => vec![(AUTHORIZATION.to_string(), self.token.clone())],
-        // };
         let mut req = self
             .client
             .request(method, format!("http://localhost:{}/{path}", self.port));
