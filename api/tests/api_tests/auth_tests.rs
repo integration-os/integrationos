@@ -1,10 +1,5 @@
 use super::test_server::{ApiResponse, TestServer, PUBLIC_PATHS};
-use api::endpoints::event_access::CreateEventAccessPayloadWithOwnership;
-use fake::{Fake, Faker};
-use http::{
-    header::{AUTHORIZATION, CONTENT_TYPE},
-    Method, StatusCode,
-};
+use http::{Method, StatusCode};
 use serde_json::{json, Value};
 
 #[tokio::test]
