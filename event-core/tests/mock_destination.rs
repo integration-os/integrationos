@@ -12,22 +12,19 @@ use fake::{
 use http::Method;
 use integrationos_domain::{
     algebra::CryptoExt,
-    create_secret_response::CreateSecretResponse,
+    api_model_config::{ApiModelConfig, AuthMethod, SamplesInput, SchemasInput},
+    connection_model_definition::{
+        ConnectionModelDefinition, CrudAction, PlatformInfo, TestConnection,
+    },
+    create_secret_response::{CreateSecretAuthor, CreateSecretResponse},
+    destination::Action,
+    environment::Environment,
     get_secret_request::GetSecretRequest,
     id::{prefix::IdPrefix, Id},
-    IntegrationOSError,
-    {
-        api_model_config::{ApiModelConfig, AuthMethod, SamplesInput, SchemasInput},
-        connection_model_definition::{
-            ConnectionModelDefinition, CrudAction, PlatformInfo, TestConnection,
-        },
-        destination::Action,
-        environment::Environment,
-        ownership::Ownership,
-        record_metadata::RecordMetadata,
-        settings::Settings,
-        Connection, ConnectionType, Pipeline, Throughput,
-    },
+    ownership::Ownership,
+    record_metadata::RecordMetadata,
+    settings::Settings,
+    Connection, ConnectionType, IntegrationOSError, Pipeline, Throughput,
 };
 use mockito::Server;
 use mongodb::Client;
@@ -104,10 +101,7 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
         id: Id::new_with_uuid(IdPrefix::Connection, ts, uuid),
         platform_version: "platformVersion".to_string(),
         connection_definition_id: Id::new_with_uuid(IdPrefix::ConnectionDefinition, ts, uuid),
-        r#type: ConnectionType::Api {
-            model_configs: vec![stripe_model_config],
-            oauth_configs: vec![],
-        },
+        r#type: ConnectionType::Api,
         name: "name".to_string(),
         key: "key".into(),
         group: "group".to_string(),
@@ -194,7 +188,14 @@ async fn test_send_to_destination() {
             _key: String,
             _value: &serde_json::Value,
         ) -> Result<CreateSecretResponse, IntegrationOSError> {
-            unimplemented!()
+            // FIXME: Created at SHOULD NOT be an f64
+            Ok(CreateSecretResponse {
+                id: "id".into(),
+                buildable_id: "buildable_id".into(),
+                created_at: 0.0,
+                author: CreateSecretAuthor { id: "id".into() },
+                encrypted_secret: "encrypted_secret".into(),
+            })
         }
     }
 

@@ -1,5 +1,4 @@
-use std::time::Duration;
-
+use crate::test_server::{test_core::TestCore, test_gateway::TestGateway, TestServer};
 use api::endpoints::{pipeline::CreatePipelineRequest, ReadResponse};
 use fake::{Fake, Faker};
 use http::{Method, StatusCode};
@@ -8,8 +7,7 @@ use integrationos_domain::{
     Transaction,
 };
 use serde_json::{json, Value};
-
-use crate::test_server::{test_core::TestCore, test_gateway::TestGateway, TestServer};
+use std::time::Duration;
 
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "Prometheus GlobalRecorder conflicts with other tests. It passes when run individually."]
@@ -26,9 +24,7 @@ async fn test_event_core() {
     pipeline.source.events = vec![event_name.clone()];
     pipeline.middleware = vec![];
     pipeline.destination = Faker.fake();
-    let PlatformInfo::Api(api_config) = conn_def.platform_info else {
-        panic!();
-    };
+    let PlatformInfo::Api(api_config) = conn_def.platform_info;
     pipeline.destination.platform = connection.platform.clone();
     pipeline.destination.connection_key = connection.key;
     pipeline.destination.action = Action::Passthrough {

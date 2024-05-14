@@ -81,7 +81,7 @@ macro_rules! crud {
 }
 
 crud!(
-    #[ignore = "Until we have a JWT token generated we can not test this"],
+    #[tokio::test],
     test_connection_definitions_crud,
     ConnectionDefinition,
     connection_definition,
@@ -89,7 +89,7 @@ crud!(
 );
 
 crud!(
-    #[ignore = "Until we have a JWT token generated we can not test this"],
+    #[tokio::test],
     test_connection_model_definitions_crud,
     ConnectionModelDefinition,
     connection_model_definition,
@@ -97,7 +97,7 @@ crud!(
 );
 
 crud!(
-    #[ignore = "Until we have a JWT token generated we can not test this"],
+    #[tokio::test],
     test_connection_model_schema_crud,
     ConnectionModelSchema,
     connection_model_schema,
@@ -105,7 +105,6 @@ crud!(
 );
 
 #[tokio::test]
-#[ignore = "Until we have a JWT token generated we can not test this"]
 async fn test_common_model_crud() {
     let server = TestServer::new(None).await;
 

@@ -13,24 +13,22 @@ use fake::{Fake, Faker};
 use http::StatusCode;
 use http::{header::AUTHORIZATION, Method};
 use integrationos_domain::{
+    access_key_data::AccessKeyData,
+    access_key_prefix::AccessKeyPrefix,
     algebra::{CryptoExt, MongoStore, StoreExt},
-    create_secret_response::{CreateSecretAuthor, CreateSecretResponse},
-    get_secret_request::GetSecretRequest,
-    IntegrationOSError,
-    {
-        access_key_data::AccessKeyData,
-        access_key_prefix::AccessKeyPrefix,
-        api_model_config::{AuthMethod, SamplesInput, SchemasInput},
-        connection_definition::{ConnectionDefinition, ConnectionDefinitionType},
-        connection_model_definition::{
-            ConnectionModelDefinition, CrudAction, CrudMapping, PlatformInfo,
-        },
-        environment::Environment,
-        event_access::EventAccess,
-        event_type::EventType,
-        AccessKey, Connection, Store,
+    api_model_config::{AuthMethod, SamplesInput, SchemasInput},
+    connection_definition::{ConnectionDefinition, ConnectionDefinitionType},
+    connection_model_definition::{
+        ConnectionModelDefinition, CrudAction, CrudMapping, PlatformInfo,
     },
+    create_secret_response::{CreateSecretAuthor, CreateSecretResponse},
+    environment::Environment,
+    event_access::EventAccess,
+    event_type::EventType,
+    get_secret_request::GetSecretRequest,
+    AccessKey, Claims, Connection, IntegrationOSError, Store,
 };
+use jsonwebtoken::EncodingKey;
 use mockito::{Matcher, Server as MockServer, ServerGuard};
 use mongodb::Client;
 use rand::Rng;
@@ -79,6 +77,7 @@ pub struct TestServer {
     client: reqwest::Client,
     pub mock_server: ServerGuard,
     pub secrets_client: Arc<MockSecretsClient>,
+    pub token: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -156,6 +155,7 @@ impl TestServer {
 
         // Random database name
         let db_name = db_name.unwrap_or_else(|| Uuid::new_v4().to_string());
+        let token_secret = "atveroeosetaccusamusetiustoodiodignissimosducimus".to_string();
 
         let config = Config::init_from_hashmap(&HashMap::from([
             ("CONTROL_DATABASE_URL".to_string(), db.clone()),
@@ -172,6 +172,7 @@ impl TestServer {
             ("MOCK_LLM".to_string(), "true".to_string()),
             ("CACHE_SIZE".to_string(), "0".to_string()),
             ("REDIS_URL".to_string(), redis),
+            ("JWT_SECRET".to_string(), token_secret.clone()),
         ]))
         .unwrap();
 
@@ -244,6 +245,27 @@ impl TestServer {
 
         tokio::time::sleep(Duration::from_millis(50)).await;
 
+        let token = jsonwebtoken::encode(
+            &jsonwebtoken::Header::default(),
+            &Claims {
+                id: "6579d510a6e42102334624f0".to_string(),
+                email: "email@test.com".to_string(),
+                username: "username".to_string(),
+                user_key: "userKey".to_string(),
+                first_name: "Paul".to_string(),
+                last_name: "K.".to_string(),
+                buildable_id: "buildable-26158aae73c048a58c7a7566726e88f4".to_string(),
+                container_id: "container-d4f0f8b9-1a56-4841-8597-fd3d90dd49b9".to_string(),
+                pointers: vec!["_1_k1cnB4cXF36-aBIsh-cVVNMYfXN51iENT5k9jqqDmDVfZIN5UDHe7BFrZQRjNnxgGZ9BMPg60zEWURtNi51u20t2baRhCvdbk9NCHnSRWMtZWa2aeUm0YKzyM4ScDR7UQnhVcsstjPG_7I_q_rMy5r9phVhgUAkPBh5CNT6T20L2FLZh0UmvWKW9hW37BVW_moHY81YyI".to_string()],
+                is_buildable_core: true,
+                iat: 1703108904,
+                exp: 3157463108904,
+                aud: "buildable-users".to_string(),
+                iss: "buildable".to_string(),
+            },
+            &EncodingKey::from_secret(token_secret.as_bytes()),
+        );
+
         Self {
             port,
             config,
@@ -254,6 +276,7 @@ impl TestServer {
             client: reqwest::Client::new(),
             mock_server: MockServer::new_async().await,
             secrets_client,
+            token: format!("Bearer {}", token.expect("Failed to encode token")),
         }
     }
 
@@ -264,8 +287,17 @@ impl TestServer {
         key: Option<&str>,
         payload: Option<&T>,
     ) -> Result<ApiResponse<U>> {
-        self.send_request_with_headers(path, method, key, payload, None)
-            .await
+        self.send_request_with_auth_headers(
+            path,
+            method,
+            key,
+            payload,
+            Some(BTreeMap::from_iter(vec![(
+                AUTHORIZATION.to_string(),
+                self.token.clone(),
+            )])),
+        )
+        .await
     }
 
     pub async fn send_request_with_headers<T: Serialize, U: DeserializeOwned>(
@@ -297,6 +329,28 @@ impl TestServer {
             code: res.status(),
             data: res.json().await?,
         })
+    }
+
+    pub async fn send_request_with_auth_headers<T: Serialize, U: DeserializeOwned>(
+        &self,
+        path: &str,
+        method: http::Method,
+        key: Option<&str>,
+        payload: Option<&T>,
+        headers: Option<BTreeMap<String, String>>,
+    ) -> Result<ApiResponse<U>> {
+        let headers = match headers {
+            Some(h) => h
+                .into_iter()
+                .chain(vec![(AUTHORIZATION.to_string(), self.token.clone())])
+                .collect(),
+            None => vec![(AUTHORIZATION.to_string(), self.token.clone())],
+        };
+
+        let headers = BTreeMap::from_iter(headers);
+
+        self.send_request_with_headers(path, method, key, payload, Some(headers))
+            .await
     }
 
     #[allow(dead_code)]
@@ -338,7 +392,6 @@ impl TestServer {
 
         let api_config = match test_connection.platform_info {
             PlatformInfo::Api(ref mut api_config_data) => api_config_data.clone(),
-            _ => panic!(),
         };
 
         let mut mock = self
@@ -351,6 +404,7 @@ impl TestServer {
                 AUTHORIZATION.as_str(),
                 format!("Bearer {bearer_key}").as_str(),
             );
+
         if let Some(ref headers) = api_config.headers {
             for k in headers.keys() {
                 let val: Vec<Matcher> = headers

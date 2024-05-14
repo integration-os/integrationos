@@ -226,7 +226,7 @@ impl MockStorage {
 }
 
 #[tokio::test]
-#[ignore = "Until we have a JWT token generated we can not test this"]
+#[ignore = "Pipeline is not being used"]
 async fn run_dispatcher() {
     let mut event: Event = Faker.fake();
     event.access_key = "id_live_1_abcd".to_owned();
