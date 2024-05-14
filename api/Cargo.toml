@@ -17,7 +17,6 @@ envconfig.workspace = true
 fake = { workspace = true, optional = true }
 futures-util.workspace = true
 futures.workspace = true
-handlebars.workspace = true
 http-serde-ext.workspace = true
 http.workspace = true
 hyper = "0.14.27"

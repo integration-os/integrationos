@@ -10,7 +10,6 @@ use serde_json::{json, Value};
 use std::time::Duration;
 
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "Prometheus GlobalRecorder conflicts with other tests. It passes when run individually."]
 async fn test_event_core() {
     let mut server = TestServer::new(None).await;
 

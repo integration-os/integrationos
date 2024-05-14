@@ -99,7 +99,6 @@ dependencies = [
  "futures",
  "futures-util",
  "gateway",
- "handlebars",
  "http 1.1.0",
  "http-serde-ext",
  "hyper 0.14.28",
@@ -974,7 +973,6 @@ dependencies = [
  "tokio",
  "tokio-condvar",
  "tracing",
- "tracing-subscriber",
  "uuid",
 ]
 
@@ -1181,7 +1179,6 @@ dependencies = [
  "criterion",
  "dotenvy",
  "envconfig",
- "futures",
  "http 1.1.0",
  "http-body-util",
  "http-serde-ext",
@@ -1195,7 +1192,6 @@ dependencies = [
  "tower",
  "tower-http",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -3985,17 +3981,11 @@ name = "watchdog"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "chrono",
  "dotenvy",
  "envconfig",
- "futures",
  "integrationos-domain",
- "mongodb",
- "redis",
- "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

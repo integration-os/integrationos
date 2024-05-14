@@ -10,7 +10,6 @@ axum-prometheus = "0.6.1"
 axum.workspace = true
 dotenvy.workspace = true
 envconfig.workspace = true
-futures.workspace = true
 http-serde-ext.workspace = true
 http.workspace = true
 integrationos-domain.workspace = true
@@ -21,7 +20,6 @@ serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 tower-http.workspace = true
-tracing-subscriber.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]

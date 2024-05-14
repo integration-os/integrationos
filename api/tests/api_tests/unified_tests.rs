@@ -140,7 +140,6 @@ async fn test_unified_api_get_one() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "Unimplemented"]
 async fn test_unified_api_get_count() {
     let mut server = TestServer::new(None).await;
     let (connection, _) = server.create_connection(Environment::Live).await;
