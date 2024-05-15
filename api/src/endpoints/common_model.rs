@@ -10,7 +10,7 @@ use axum::{
     Router,
 };
 use integrationos_domain::{
-    algebra::{MongoStore, StoreExt},
+    algebra::MongoStore,
     api_model_config::Lang,
     common_model::{CommonModel, Field},
     id::{prefix::IdPrefix, Id},

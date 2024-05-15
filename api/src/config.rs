@@ -6,7 +6,7 @@ use std::{
 use envconfig::Envconfig;
 use integrationos_domain::cache::CacheConfig as RedisConfig;
 use integrationos_domain::{
-    claude::ClaudeConfig, database::DatabaseConfig, openai::OpenAiConfig, secrets::SecretsConfig,
+    database::DatabaseConfig, openai::OpenAiConfig, secrets::SecretsConfig,
 };
 
 #[derive(Envconfig, Clone)]
@@ -69,8 +69,6 @@ pub struct Config {
     #[envconfig(nested = true)]
     pub db_config: DatabaseConfig,
     #[envconfig(nested = true)]
-    pub claude_config: ClaudeConfig,
-    #[envconfig(nested = true)]
     pub openai_config: OpenAiConfig,
     #[envconfig(nested = true)]
     pub redis_config: RedisConfig,
@@ -118,7 +116,6 @@ impl Display for Config {
         writeln!(f, "MOCK_LLM: {}", self.mock_llm)?;
         writeln!(f, "{}", self.headers)?;
         writeln!(f, "{}", self.db_config)?;
-        writeln!(f, "{}", self.claude_config)?;
         writeln!(f, "{}", self.openai_config)?;
         writeln!(f, "{}", self.redis_config)
     }

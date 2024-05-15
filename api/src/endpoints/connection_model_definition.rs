@@ -15,7 +15,7 @@ use bson::SerializerOptions;
 use chrono::Utc;
 use http::HeaderMap;
 use integrationos_domain::{
-    algebra::{MongoStore, StoreExt},
+    algebra::MongoStore,
     api_model_config::{
         ApiModelConfig, AuthMethod, ModelPaths, ResponseBody, SamplesInput, SchemasInput,
     },

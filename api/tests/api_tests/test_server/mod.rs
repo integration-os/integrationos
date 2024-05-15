@@ -15,7 +15,7 @@ use http::{header::AUTHORIZATION, Method};
 use integrationos_domain::{
     access_key_data::AccessKeyData,
     access_key_prefix::AccessKeyPrefix,
-    algebra::{CryptoExt, MongoStore, StoreExt},
+    algebra::{CryptoExt, MongoStore},
     api_model_config::{AuthMethod, SamplesInput, SchemasInput},
     connection_definition::{ConnectionDefinition, ConnectionDefinitionType},
     connection_model_definition::{
@@ -155,7 +155,7 @@ impl TestServer {
 
         // Random database name
         let db_name = db_name.unwrap_or_else(|| Uuid::new_v4().to_string());
-        let token_secret = "atveroeosetaccusamusetiustoodiodignissimosducimus".to_string();
+        let token_secret = "Qsfb9YUkdjwUULX.u96HdTCX4q7GuB".to_string();
 
         let config = Config::init_from_hashmap(&HashMap::from([
             ("CONTROL_DATABASE_URL".to_string(), db.clone()),
@@ -346,6 +346,8 @@ impl TestServer {
                 .collect(),
             None => vec![(AUTHORIZATION.to_string(), self.token.clone())],
         };
+
+        tracing::error!("Headers: {:?}", headers);
 
         let headers = BTreeMap::from_iter(headers);
 

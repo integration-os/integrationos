@@ -13,9 +13,8 @@ use axum::{
 use bson::{doc, SerializerOptions};
 use http::{HeaderMap, HeaderValue, StatusCode};
 use integrationos_domain::{
-    algebra::{MongoStore, StoreExt},
-    event_access::EventAccess,
-    ApplicationError, Connection, IntegrationOSError, InternalError, OAuth, Store,
+    algebra::MongoStore, event_access::EventAccess, ApplicationError, Connection,
+    IntegrationOSError, InternalError, OAuth, Store,
 };
 use moka::future::Cache;
 use mongodb::options::FindOneOptions;

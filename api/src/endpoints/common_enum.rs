@@ -4,7 +4,7 @@ use axum::{
     extract::{Query, State},
     Json,
 };
-use integrationos_domain::{algebra::StoreExt, common_model::CommonEnum};
+use integrationos_domain::common_model::CommonEnum;
 use shape_mongo_filter::DELETED_STR;
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::try_join;

@@ -11,7 +11,7 @@ use futures::{Stream, StreamExt, TryStreamExt};
 use http::StatusCode;
 use indexmap::IndexMap;
 use integrationos_domain::{
-    algebra::{MongoStore, StoreExt, TimedExt},
+    algebra::{MongoStore, TimedExt},
     common_model::{CommonEnum, CommonModel},
 };
 use mongodb::error::Error as MongoError;

@@ -16,7 +16,7 @@ use axum::{
 use integrationos_domain::{
     access_key_data::AccessKeyData,
     access_key_prefix::AccessKeyPrefix,
-    algebra::{MongoStore, StoreExt},
+    algebra::MongoStore,
     connection_definition::{ConnectionDefinitionType, Paths},
     environment::Environment,
     event_access::EventAccess,

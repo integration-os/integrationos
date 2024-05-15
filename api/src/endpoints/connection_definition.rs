@@ -12,7 +12,7 @@ use axum::{
     Json, Router,
 };
 use integrationos_domain::{
-    algebra::{MongoStore, StoreExt},
+    algebra::MongoStore,
     api_model_config::AuthMethod,
     connection_definition::ConnectionStatus,
     connection_definition::{

@@ -15,8 +15,8 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let path = format!("/{}", state.config.api_version);
     let public_path = format!("{path}/public");
     Router::new()
-        .nest(&path, protected::get_router(state).await)
         .nest(&public_path, public::get_router(state))
+        .nest(&path, protected::get_router(state).await)
         .nest(&path, authenticated::get_router(state).await)
         .route("/", get(get_root))
         .fallback(not_found_handler)
