@@ -10,7 +10,7 @@ use axum::{
 };
 use convert_case::{Case, Casing};
 use integrationos_domain::{
-    algebra::{MongoStore, StoreExt},
+    algebra::MongoStore,
     event_access::EventAccess,
     hashed_secret::HashedSecret,
     id::{prefix::IdPrefix, Id},

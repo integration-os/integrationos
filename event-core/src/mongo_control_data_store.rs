@@ -9,7 +9,7 @@ use futures::future::join_all;
 use handlebars::Handlebars;
 use http::header::AUTHORIZATION;
 use integrationos_domain::{
-    algebra::{CryptoExt, FecherExt, GoogleTokenFetcher, MongoStore, StoreExt},
+    algebra::{CryptoExt, FecherExt, GoogleTokenFetcher, MongoStore},
     client::unified_destination_client::UnifiedDestination,
     duplicates::Duplicates,
     encrypted_access_key::EncryptedAccessKey,

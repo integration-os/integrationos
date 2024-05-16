@@ -17,7 +17,7 @@ use chrono::Utc;
 use convert_case::{Case, Casing};
 use http::HeaderMap;
 use integrationos_domain::{
-    algebra::{MongoStore, StoreExt},
+    algebra::MongoStore,
     connection_definition::ConnectionDefinition,
     domain::connection::SanitizedConnection,
     event_access::EventAccess,

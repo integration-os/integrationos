@@ -9,7 +9,7 @@ use axum::{
     Json, Router,
 };
 use integrationos_domain::{
-    algebra::{MongoStore, StoreExt},
+    algebra::MongoStore,
     connection_model_schema::{ConnectionModelSchema, Mappings, SchemaPaths},
     id::{prefix::IdPrefix, Id},
     json_schema::JsonSchema,

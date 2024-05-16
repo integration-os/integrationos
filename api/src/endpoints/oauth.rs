@@ -8,7 +8,7 @@ use axum::{
 use chrono::{Duration, Utc};
 use http::{HeaderMap, HeaderName, HeaderValue};
 use integrationos_domain::{
-    algebra::{MongoStore, StoreExt, TemplateExt},
+    algebra::{MongoStore, TemplateExt},
     api_model_config::ContentType,
     connection_definition::ConnectionDefinition,
     connection_oauth_definition::{
@@ -32,7 +32,6 @@ use std::{
 };
 use tracing::{debug, error};
 
-// TODO: Write documentation
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new().route("/:platform", post(oauth_handler))
 }

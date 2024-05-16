@@ -1,7 +1,7 @@
 use crate::{endpoints::ApiError, internal_server_error, server::AppState, unauthorized};
 use axum::{body::Body, extract::State, middleware::Next, response::Response};
 use http::Request;
-use integrationos_domain::{algebra::StoreExt, ApplicationError, InternalError};
+use integrationos_domain::{ApplicationError, InternalError};
 use mongodb::bson::doc;
 use std::sync::Arc;
 use tracing::error;
