@@ -380,21 +380,23 @@ where
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct SparseConnection {
     oauth: OAuth,
+    secrets_service_id: String,
 }
 
 async fn get_connection(
     access: &EventAccess,
-    connection_id: &HeaderValue,
+    connection_key: &HeaderValue,
     stores: &AppStores,
     cache: &Cache<(Arc<str>, HeaderValue), Arc<Connection>>,
 ) -> Result<Arc<Connection>, IntegrationOSError> {
     let connection = cache
         .try_get_with(
-            (access.ownership.id.clone(), connection_id.clone()),
+            (access.ownership.id.clone(), connection_key.clone()),
             async {
-                let Ok(connection_id_str) = connection_id.to_str() else {
+                let Ok(connection_id_str) = connection_key.to_str() else {
                     return Err(ApplicationError::bad_request(
                         "Invalid connection key header",
                         None,
@@ -427,19 +429,21 @@ async fn get_connection(
         .await
         .map_err(Arc::unwrap_or_clone)?;
 
+    // If Oauth is enabled, fetching the latest secret (due to refresh, cache can't be used)
     if let Some(OAuth::Enabled { .. }) = connection.oauth {
         let sparse_connection = match stores
             .db
             .collection::<SparseConnection>(&Store::Connections.to_string())
             .find_one(
                 doc! {
-                    "_id": &connection.id.to_string(),
+                    "key": &connection.key.to_string(),
                     "ownership.buildableId": access.ownership.id.as_ref(),
                     "deleted": false
                 },
                 FindOneOptions::builder()
                     .projection(doc! {
-                       "oauth": 1
+                       "oauth": 1,
+                       "secretsServiceId": 1
                     })
                     .build(),
             )
@@ -457,6 +461,7 @@ async fn get_connection(
         };
         let mut connection = (*connection).clone();
         connection.oauth = Some(sparse_connection.oauth);
+        connection.secrets_service_id = sparse_connection.secrets_service_id;
         return Ok(Arc::new(connection));
     }
     Ok(connection)
