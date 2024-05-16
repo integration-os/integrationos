@@ -347,8 +347,6 @@ impl TestServer {
             None => vec![(AUTHORIZATION.to_string(), self.token.clone())],
         };
 
-        tracing::error!("Headers: {:?}", headers);
-
         let headers = BTreeMap::from_iter(headers);
 
         self.send_request_with_headers(path, method, key, payload, Some(headers))
