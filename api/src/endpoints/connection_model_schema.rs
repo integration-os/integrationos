@@ -1,23 +1,32 @@
-use super::{create, delete, read, update, ApiResult, HookExt, PublicExt, RequestExt};
+use super::{
+    create, delete, read, update, ApiError, ApiResult, HookExt, PublicExt, ReadResponse, RequestExt,
+};
 use crate::{
+    api_payloads::ErrorResponse,
     internal_server_error,
     server::{AppState, AppStores},
+    util::shape_mongo_filter,
 };
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     routing::{patch, post},
-    Json, Router,
+    Extension, Json, Router,
 };
+use futures::try_join;
+use http::StatusCode;
 use integrationos_domain::{
     algebra::MongoStore,
-    connection_model_schema::{ConnectionModelSchema, Mappings, SchemaPaths},
+    connection_model_schema::{
+        ConnectionModelSchema, Mappings, PublicConnectionModelSchema, SchemaPaths,
+    },
+    event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     json_schema::JsonSchema,
 };
 use mongodb::bson::doc;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 use tracing::error;
 
 pub fn get_router() -> Router<Arc<AppState>> {
@@ -32,6 +41,79 @@ pub fn get_router() -> Router<Arc<AppState>> {
             patch(update::<CreateRequest, ConnectionModelSchema>)
                 .delete(delete::<CreateRequest, ConnectionModelSchema>),
         )
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[serde(rename_all = "camelCase")]
+pub struct PublicGetConnectionModelSchema;
+
+pub async fn public_get_connection_model_schema<T, U>(
+    event_access: Option<Extension<Arc<EventAccess>>>,
+    query: Option<Query<BTreeMap<String, String>>>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ReadResponse<U>>, ApiError>
+where
+    T: RequestExt<Output = U>,
+    U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
+{
+    match query.as_ref().and_then(|q| q.get("connectionDefinitionId")) {
+        Some(id) => id.to_string(),
+        None => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: "connectionDefinitionId is required".to_string(),
+                }),
+            ))
+        }
+    };
+
+    let mut query = shape_mongo_filter(
+        query,
+        event_access.map(|e| {
+            let Extension(e) = e;
+            e
+        }),
+        None,
+    );
+
+    query.filter.remove("ownership.buildableId");
+    query.filter.remove("environment");
+    query.filter.insert("mapping", doc! { "$ne": null });
+
+    let store = T::get_store(state.app_stores.clone());
+    let count = store.count(query.filter.clone(), None);
+    let find = store.get_many(
+        Some(query.filter),
+        None,
+        None,
+        Some(query.limit),
+        Some(query.skip),
+    );
+
+    let res = match try_join!(count, find) {
+        Ok((total, rows)) => ReadResponse {
+            rows,
+            skip: query.skip,
+            limit: query.limit,
+            total,
+        },
+        Err(e) => {
+            error!("Error reading from store: {e}");
+            return Err(internal_server_error!());
+        }
+    };
+
+    Ok(Json(res))
+}
+
+impl RequestExt for PublicGetConnectionModelSchema {
+    type Output = PublicConnectionModelSchema;
+
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
+        stores.public_model_schema.clone()
+    }
 }
 
 pub async fn get_platform_models(
