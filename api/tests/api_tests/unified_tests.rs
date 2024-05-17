@@ -11,14 +11,12 @@ use http::{
     Method, StatusCode,
 };
 use integrationos_domain::{
+    api_model_config::{AuthMethod, SamplesInput, SchemasInput},
+    connection_model_definition::{ConnectionModelDefinition, CrudAction, CrudMapping},
+    connection_model_schema::{ConnectionModelSchema, Mappings},
+    environment::Environment,
     id::{prefix::IdPrefix, Id},
-    {
-        api_model_config::{AuthMethod, SamplesInput, SchemasInput},
-        connection_model_definition::{ConnectionModelDefinition, CrudAction, CrudMapping},
-        connection_model_schema::{ConnectionModelSchema, Mappings},
-        environment::Environment,
-        Connection,
-    },
+    Connection, SanitizedConnection,
 };
 use mockito::Mock;
 use serde_json::Value;
@@ -527,7 +525,7 @@ async fn test_unified_metrics() {
 
 async fn create_connection_model_definition(
     server: &mut TestServer,
-    connection: &Connection,
+    connection: &SanitizedConnection,
     mapping: CrudMapping,
 ) -> Mock {
     let secret_key = Faker.fake::<String>();
