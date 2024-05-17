@@ -46,9 +46,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]
-pub struct PublicGetConnectionModelSchema {
-    pub connection_definition_id: Id,
-}
+pub struct PublicGetConnectionModelSchema;
 
 pub async fn public_get_connection_model_schema<T, U>(
     event_access: Option<Extension<Arc<EventAccess>>>,

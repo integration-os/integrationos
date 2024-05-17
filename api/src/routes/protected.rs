@@ -40,7 +40,7 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             post(test_connection_model_definition),
         )
         .route(
-            "/connection-model-schemas",
+            "/connection-model-schema",
             get(public_get_connection_model_schema::<
                 PublicGetConnectionModelSchema,
                 PublicConnectionModelSchema,
