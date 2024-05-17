@@ -128,7 +128,7 @@ pub async fn create_connection(
     Extension(user_event_access): Extension<Arc<EventAccess>>,
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateConnectionPayload>,
-) -> Result<Json<Connection>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<SanitizedConnection>, (StatusCode, Json<ErrorResponse>)> {
     if let Err(validation_errors) = req.validate() {
         return Err(bad_request!(format!(
             "Invalid payload: {:?}",
@@ -246,7 +246,25 @@ pub async fn create_connection(
             internal_server_error!()
         })?;
 
-    Ok(Json(connection))
+    // TODO: This should be a From impl on integrationosdomain::connection
+    Ok(Json(SanitizedConnection {
+        id: connection.id,
+        platform_version: connection.platform_version,
+        connection_definition_id: connection.connection_definition_id,
+        r#type: connection.r#type,
+        name: connection.name,
+        key: connection.key,
+        group: connection.group,
+        environment: connection.environment,
+        platform: connection.platform,
+        secrets_service_id: connection.secrets_service_id,
+        event_access_id: connection.event_access_id,
+        settings: connection.settings,
+        throughput: connection.throughput,
+        ownership: connection.ownership,
+        oauth: connection.oauth,
+        record_metadata: connection.record_metadata,
+    }))
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
