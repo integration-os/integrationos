@@ -26,7 +26,7 @@ use integrationos_domain::{
     event_access::EventAccess,
     event_type::EventType,
     get_secret_request::GetSecretRequest,
-    AccessKey, Claims, Connection, IntegrationOSError, Store,
+    AccessKey, Claims, Connection, IntegrationOSError, SanitizedConnection, Store,
 };
 use jsonwebtoken::EncodingKey;
 use mockito::{Matcher, Server as MockServer, ServerGuard};
@@ -357,7 +357,7 @@ impl TestServer {
     pub async fn create_connection(
         &mut self,
         environment: Environment,
-    ) -> (Connection, ConnectionModelDefinition) {
+    ) -> (SanitizedConnection, ConnectionModelDefinition) {
         let (key, access_key) = match environment {
             Environment::Live => (self.live_key.as_ref(), &self.live_access_key),
             Environment::Development => (self.live_key.as_ref(), &self.test_access_key),
@@ -475,7 +475,7 @@ impl TestServer {
         };
 
         let res = self
-            .send_request::<CreateConnectionPayload, Connection>(
+            .send_request::<CreateConnectionPayload, SanitizedConnection>(
                 "v1/connections",
                 http::Method::POST,
                 Some(key),
