@@ -1,7 +1,11 @@
 use crate::{
     endpoints::{
-        connection, connection_model_definition::test_connection_model_definition, event_access,
-        events, metrics, oauth, passthrough, pipeline, transactions, unified,
+        connection,
+        connection_model_definition::test_connection_model_definition,
+        connection_model_schema::{
+            public_get_connection_model_schema, PublicGetConnectionModelSchema,
+        },
+        event_access, events, metrics, oauth, passthrough, pipeline, transactions, unified,
     },
     middleware::{
         auth,
@@ -11,9 +15,13 @@ use crate::{
     server::AppState,
 };
 use axum::{
-    error_handling::HandleErrorLayer, middleware::from_fn_with_state, routing::post, Router,
+    error_handling::HandleErrorLayer,
+    middleware::from_fn_with_state,
+    routing::{get, post},
+    Router,
 };
 use http::HeaderName;
+use integrationos_domain::connection_model_schema::PublicConnectionModelSchema;
 use std::{iter::once, sync::Arc};
 use tower::{filter::FilterLayer, ServiceBuilder};
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
@@ -30,6 +38,13 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         .route(
             "/connection-model-definitions/test/:id",
             post(test_connection_model_definition),
+        )
+        .route(
+            "/connection-model-schemas",
+            get(public_get_connection_model_schema::<
+                PublicGetConnectionModelSchema,
+                PublicConnectionModelSchema,
+            >),
         )
         .nest("/oauth", oauth::get_router())
         .nest("/unified", unified::get_router())
