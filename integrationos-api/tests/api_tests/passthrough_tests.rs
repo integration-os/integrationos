@@ -1,10 +1,10 @@
 use crate::test_server::TestServer;
-use api::endpoints::connection_model_definition::CreateRequest as CreateConnectionModelDefinitionRequest;
 use fake::{faker::filesystem::raw::DirPath, locales::EN, Fake, Faker};
 use http::{
     header::{AUTHORIZATION, CONTENT_TYPE},
     Method, StatusCode,
 };
+use integrationos_api::endpoints::connection_model_definition::CreateRequest as CreateConnectionModelDefinitionRequest;
 use integrationos_domain::{
     api_model_config::{AuthMethod, SamplesInput, SchemasInput},
     connection_model_definition::CrudAction,

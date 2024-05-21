@@ -1,10 +1,10 @@
 use crate::test_server::TestServer;
-use api::endpoints::{
+use fake::{Fake, Faker};
+use http::{Method, StatusCode};
+use integrationos_api::endpoints::{
     common_model, connection_definition, connection_model_definition, connection_model_schema,
     ReadResponse,
 };
-use fake::{Fake, Faker};
-use http::{Method, StatusCode};
 use integrationos_domain::{
     common_model::CommonModel, connection_definition::ConnectionDefinition,
     connection_model_definition::ConnectionModelDefinition,

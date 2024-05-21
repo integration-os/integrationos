@@ -1,13 +1,11 @@
-use std::time::Duration;
-
-use api::endpoints::{pipeline::CreatePipelineRequest, ReadResponse};
+use crate::test_server::TestServer;
 use fake::{Fake, Faker};
 use http::{Method, StatusCode};
+use integrationos_api::endpoints::{pipeline::CreatePipelineRequest, ReadResponse};
 use integrationos_domain::Pipeline;
 use serde_json::Value;
+use std::time::Duration;
 use tokio::time::sleep;
-
-use crate::test_server::TestServer;
 
 #[tokio::test]
 async fn test_pagination() {

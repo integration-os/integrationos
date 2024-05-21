@@ -1,14 +1,14 @@
 use std::{collections::HashMap, sync::Arc};
 
-use api::config::Config as ApiConfig;
 use envconfig::Envconfig;
-use event_core::{
+use http::StatusCode;
+use integrationos_api::config::Config as ApiConfig;
+use integrationos_domain::{event_response::EventResponse, event_with_context::EventWithContext};
+use integrationos_event::{
     config::EventCoreConfig, dispatcher::Dispatcher, event_handler::EventHandler,
     mongo_context_store::MongoContextStore, mongo_control_data_store::MongoControlDataStore,
 };
-use gateway::config::Config as GatewayConfig;
-use http::StatusCode;
-use integrationos_domain::{event_response::EventResponse, event_with_context::EventWithContext};
+use integrationos_gateway::config::Config as GatewayConfig;
 use tokio::sync::{
     mpsc::{self, Receiver},
     Mutex,

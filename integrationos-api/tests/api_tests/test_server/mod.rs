@@ -1,5 +1,14 @@
 use anyhow::Result;
-use api::{
+use axum::async_trait;
+use envconfig::Envconfig;
+use fake::{Fake, Faker};
+use http::StatusCode;
+use http::{header::AUTHORIZATION, Method};
+use integrationos_api::endpoints::{
+    connection::CreateConnectionPayload,
+    connection_definition::CreateRequest as CreateConnectionDefinitionRequest,
+};
+use integrationos_api::{
     config::Config,
     endpoints::{
         connection_model_definition::CreateRequest as CreateConnectionModelDefinitionRequest,
@@ -7,11 +16,6 @@ use api::{
     },
     server::Server,
 };
-use axum::async_trait;
-use envconfig::Envconfig;
-use fake::{Fake, Faker};
-use http::StatusCode;
-use http::{header::AUTHORIZATION, Method};
 use integrationos_domain::{
     access_key_data::AccessKeyData,
     access_key_prefix::AccessKeyPrefix,
@@ -26,7 +30,7 @@ use integrationos_domain::{
     event_access::EventAccess,
     event_type::EventType,
     get_secret_request::GetSecretRequest,
-    AccessKey, Claims, Connection, IntegrationOSError, SanitizedConnection, Store,
+    AccessKey, Claims, IntegrationOSError, SanitizedConnection, Store,
 };
 use jsonwebtoken::EncodingKey;
 use mockito::{Matcher, Server as MockServer, ServerGuard};
@@ -48,11 +52,6 @@ use testcontainers_modules::{
 use tokio::net::TcpListener;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};
 use uuid::Uuid;
-
-use api::endpoints::{
-    connection::CreateConnectionPayload,
-    connection_definition::CreateRequest as CreateConnectionDefinitionRequest,
-};
 
 pub mod test_core;
 #[cfg(test)]

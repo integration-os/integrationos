@@ -1,7 +1,7 @@
 use crate::test_server::{test_core::TestCore, test_gateway::TestGateway, TestServer};
-use api::endpoints::{pipeline::CreatePipelineRequest, ReadResponse};
 use fake::{Fake, Faker};
 use http::{Method, StatusCode};
+use integrationos_api::endpoints::{pipeline::CreatePipelineRequest, ReadResponse};
 use integrationos_domain::{
     connection_model_definition::PlatformInfo, destination::Action, environment::Environment,
     Transaction,

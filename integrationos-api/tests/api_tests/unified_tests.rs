@@ -1,14 +1,14 @@
 use crate::test_server::TestServer;
-use api::endpoints::{
-    connection_model_definition::CreateRequest as CreateConnectionModelDefinitionRequest,
-    connection_model_schema::CreateRequest as CreateConnectionModelSchemaRequest,
-    metrics::MetricResponse,
-};
 use chrono::{Datelike, Utc};
 use fake::{faker::filesystem::raw::DirPath, locales::EN, Fake, Faker};
 use http::{
     header::{AUTHORIZATION, CONTENT_TYPE},
     Method, StatusCode,
+};
+use integrationos_api::endpoints::{
+    connection_model_definition::CreateRequest as CreateConnectionModelDefinitionRequest,
+    connection_model_schema::CreateRequest as CreateConnectionModelSchemaRequest,
+    metrics::MetricResponse,
 };
 use integrationos_domain::{
     api_model_config::{AuthMethod, SamplesInput, SchemasInput},
@@ -16,7 +16,7 @@ use integrationos_domain::{
     connection_model_schema::{ConnectionModelSchema, Mappings},
     environment::Environment,
     id::{prefix::IdPrefix, Id},
-    Connection, SanitizedConnection,
+    SanitizedConnection,
 };
 use mockito::Mock;
 use serde_json::Value;

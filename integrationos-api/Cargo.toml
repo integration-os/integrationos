@@ -1,5 +1,5 @@
 [package]
-name = "api"
+name = "integrationos-api"
 version = "0.1.0"
 edition = "2021"
 
@@ -45,8 +45,8 @@ validator.workspace = true
 
 [dev-dependencies]
 testcontainers-modules = { workspace = true, features = ["mongo", "redis"] }
-event-core = { path = "../event-core" }
-gateway = { path = "../gateway" }
+integrationos-event = { path = "../integrationos-event" }
+integrationos-gateway = { path = "../integrationos-gateway" }
 mockito.workspace = true
 uuid.workspace = true
 

@@ -1,7 +1,7 @@
 use anyhow::Result;
-use api::{config::Config, server::Server};
 use dotenvy::dotenv;
 use envconfig::Envconfig;
+use integrationos_api::{config::Config, server::Server};
 use integrationos_domain::client::secrets_client::SecretsClient;
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use std::sync::Arc;
