@@ -1,6 +1,6 @@
 use crate::{
-    config::Config, event_request::EventRequest, finalize_event::FinalizeEvent,
-    mock_finalizer::MockFinalizer, state::AppState, util::get_value_from_path,
+    config::Config, finalizer::event::FinalizeEvent, mock::finalizer::MockFinalizer,
+    util::get_value_from_path,
 };
 use anyhow::{anyhow, Result};
 use axum::{
@@ -13,9 +13,12 @@ use axum::{
 };
 use axum_prometheus::PrometheusMetricLayer;
 use integrationos_domain::{
-    encrypted_access_key::EncryptedAccessKey, event_response::EventResponse, event_type::EventType,
-    AccessKey, Event,
+    encrypted_access_key::EncryptedAccessKey, encrypted_data::PASSWORD_LENGTH,
+    event_response::EventResponse, event_type::EventType, AccessKey, Event,
 };
+use moka::future::Cache;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::{collections::HashMap, iter::once, sync::Arc};
 use tokio::net::TcpListener;
 use tower_http::{
@@ -30,6 +33,35 @@ const INVALID_ACCESS_KEY_ERROR: (StatusCode, &str) =
     (StatusCode::BAD_REQUEST, "Invalid access key");
 const MISSING_HEADER_ERROR: (StatusCode, &str) =
     (StatusCode::BAD_REQUEST, "Missing x-buildable-secret header");
+
+pub struct AppState {
+    pub config: Config,
+    pub cache: Cache<EncryptedAccessKey<'static>, AccessKey>,
+    pub finalizer: Arc<dyn FinalizeEvent + Sync + Send>,
+}
+
+impl AppState {
+    pub fn new(config: Config, finalizer: Arc<dyn FinalizeEvent + Sync + Send>) -> Self {
+        let cache = Cache::new(config.cache_size);
+        Self {
+            config,
+            cache,
+            finalizer,
+        }
+    }
+
+    pub fn get_secret_key(&self) -> [u8; PASSWORD_LENGTH] {
+        // We validate that the config must have 32 byte secret key in main.rs
+        // So this is safe to unwrap
+        self.config.secret_key.as_bytes().try_into().unwrap()
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct EventRequest {
+    pub event: String,
+    pub payload: Value,
+}
 
 #[derive(Clone)]
 pub struct Server {
