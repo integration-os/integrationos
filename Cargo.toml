@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["api", "event-core", "gateway", "watchdog"]
+members = ["integrationos-api", "integrationos-event", "integrationos-gateway", "integrationos-watchdog"]
 
 [workspace.dependencies]
 anyhow = "1.0.75"
