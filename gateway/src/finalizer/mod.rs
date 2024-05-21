@@ -1,4 +1,7 @@
-use crate::{config::Config, finalize_event::FinalizeEvent};
+pub mod event;
+
+use self::event::FinalizeEvent;
+use crate::config::Config;
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use integrationos_domain::{

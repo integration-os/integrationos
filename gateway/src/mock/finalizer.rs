@@ -1,4 +1,4 @@
-use super::finalize_event::FinalizeEvent;
+use crate::finalizer::event::FinalizeEvent;
 use async_trait::async_trait;
 use integrationos_domain::{encrypted_access_key::EncryptedAccessKey, Event};
 

@@ -23,10 +23,5 @@ tower-http.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
-criterion = { version = "0.5.1", features = ["async_tokio"] }
 http-body-util = "0.1.1"
 tower = { version = "0.4", features = ["util"] }
-
-[[bench]]
-name = "bench"
-harness = false
