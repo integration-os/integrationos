@@ -1,10 +1,6 @@
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use chrono::Utc;
-use integrationos_event::{
-    dispatcher::Dispatcher,
-    store::{ContextStore, ControlDataStore, EventStore},
-};
 use fake::{Fake, Faker};
 use integrationos_domain::{
     algebra::PipelineExt,
@@ -15,6 +11,10 @@ use integrationos_domain::{
         duplicates::Duplicates, extractor::HttpExtractor, Connection, Event, ExtractorContext,
         Pipeline, PipelineContext, RootContext,
     },
+};
+use integrationos_event::{
+    dispatcher::Dispatcher,
+    store::{ContextStore, ControlDataStore, EventStore},
 };
 use serde_json::Value;
 use std::{
