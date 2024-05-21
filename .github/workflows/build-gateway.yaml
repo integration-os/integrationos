@@ -6,8 +6,7 @@ on:
       - "[0-9]+.[0-9]+.[0-9]+"
     paths:
       - .github/workflows/build-gateway.yaml
-      - "gateway/**"
-      - "redis-retry/**"
+      - "integrationos-gateway/**"
       - Dockerfile
       - Cargo.lock
 
@@ -30,4 +29,4 @@ jobs:
           service_account: github-actions@integrationos.iam.gserviceaccount.com
           workload_identity_provider: projects/356173785332/locations/global/workloadIdentityPools/github-actions/providers/github-actions
           build-args: |
-            "EXECUTABLE=gateway"
+            "EXECUTABLE=integrationos-gateway"
