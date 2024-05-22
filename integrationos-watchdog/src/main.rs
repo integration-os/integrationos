@@ -1,9 +1,11 @@
+mod client;
+
+use crate::client::WatchdogClient;
 use anyhow::{Context, Result};
 use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_domain::{
     cache::CacheConfig,
-    client::watchdog_client::WatchdogClient,
     database::DatabaseConfig,
     telemetry::{get_subscriber, init_subscriber},
     watchdog::WatchdogConfig,

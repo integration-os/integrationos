@@ -2,10 +2,11 @@
 resolver = "2"
 members = [
   "integrationos-api", 
+  "integrationos-cache",
+  "integrationos-domain",
   "integrationos-event", 
   "integrationos-gateway", 
   "integrationos-watchdog", 
-  "integrationos-domain"
 ]
 
 [workspace.dependencies]
@@ -29,23 +30,22 @@ fake = { version = "2.9.2", features = [
     "http",
     "serde_json",
     "semver",
-] }
+]}
 futures = "0.3.28"
 futures-util = "0.3.28"
 handlebars = "4.4.0"
 http = "1.1.0"
 http-serde-ext = "1.0.2"
-integrationos-domain = { path = "./integrationos-domain" }
 js-sandbox-ios = "0.1.0"
 jsonpath_lib = "0.3.0"
 jsonwebtoken = "8.3.0"
 mockito = "1.2.0"
-moka = { version = "0.12.1", features = ["future"] }
-mongodb = "2.7.0"
+moka = { version = "0.12.4", features = ["future"] }
+mongodb = "2.8.0"
 once_cell = "1.18.0"
 openapiv3 = { version = "2.0.0", features = ["skip_serializing_defaults"] }
 rand = "0.8.5"
-redis = { version = "0.23.3", features = ["connection-manager", "tokio-comp"] }
+redis = { version = "0.25", features = ["connection-manager", "tokio-comp"] }
 regex = "1.10.2"
 reqwest = { version = "0.12.3", features = [
     "json",

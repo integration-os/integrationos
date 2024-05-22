@@ -45,8 +45,6 @@ pub mod unified;
 
 const INTEGRATION_OS_PASSTHROUGH_HEADER: &str = "x-integrationos-passthrough";
 
-pub type Unit = ();
-
 pub type InMemoryCache<T> = Arc<Cache<Option<BTreeMap<String, String>>, Arc<T>>>;
 
 pub trait RequestExt: Sized {

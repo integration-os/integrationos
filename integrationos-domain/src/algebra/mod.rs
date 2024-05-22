@@ -1,4 +1,3 @@
-mod cache;
 mod crypto;
 mod fetcher;
 mod hash;
@@ -8,7 +7,6 @@ mod string;
 mod template;
 mod timed;
 
-pub use cache::*;
 pub use crypto::*;
 pub use fetcher::*;
 pub use hash::*;

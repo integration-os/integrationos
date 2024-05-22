@@ -5,9 +5,16 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
+bson.workspace = true
+chrono.workspace = true
 dotenvy.workspace = true
 envconfig.workspace = true
-integrationos-domain.workspace = true
+futures.workspace = true
+integrationos-cache = { path = "../integrationos-cache" }
+integrationos-domain = { path = "../integrationos-domain" }
+serde_json.workspace = true
+mongodb.workspace = true
+redis.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 

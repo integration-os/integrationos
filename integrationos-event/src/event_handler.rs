@@ -1,7 +1,7 @@
 use crate::store::{ContextStore, ControlDataStore};
 use anyhow::{Context, Result};
+use integrationos_cache::remote::RedisCache;
 use integrationos_domain::{
-    algebra::RedisCache,
     cache::CacheConfig,
     {event_with_context::EventWithContext, Event, Transaction},
 };
@@ -29,7 +29,7 @@ impl<T: ControlDataStore + Sync + Send + 'static, U: ContextStore + Sync + Send 
         control_store: Arc<T>,
         context_store: Arc<U>,
     ) -> Result<Self> {
-        let redis = Arc::new(Mutex::new(RedisCache::new(&config, 100).await?));
+        let redis = Arc::new(Mutex::new(RedisCache::new(&config).await?));
 
         Ok(Self {
             config,
@@ -44,7 +44,8 @@ impl<T: ControlDataStore + Sync + Send + 'static, U: ContextStore + Sync + Send 
             {
                 if let Some(data) = async {
                     let mut conn = self.redis.lock().await;
-                    conn.rpop::<&str, Option<Vec<u8>>>(&self.config.queue_name, None)
+                    conn.inner
+                        .rpop::<&str, Option<Vec<u8>>>(&self.config.queue_name, None)
                         .await
                         .with_context(|| "failed to parse redis message")
                 }
@@ -68,7 +69,8 @@ impl<T: ControlDataStore + Sync + Send + 'static, U: ContextStore + Sync + Send 
 
         let count: u64 = async {
             let mut conn = self.redis.lock().await;
-            conn.hincr(&self.config.event_throughput_key, &throughput.key, 1)
+            conn.inner
+                .hincr(&self.config.event_throughput_key, &throughput.key, 1)
                 .await
                 .with_context(|| "Could not increment throughput for integration")
         }
@@ -104,7 +106,8 @@ impl<T: ControlDataStore + Sync + Send + 'static, U: ContextStore + Sync + Send 
                 .with_context(|| "Could not serialize event with context")?;
             let mut conn = self.redis.lock().await;
 
-            conn.lpush::<&str, &[u8], ()>(&self.config.queue_name, &serialized)
+            conn.inner
+                .lpush::<&str, &[u8], ()>(&self.config.queue_name, &serialized)
                 .await
                 .with_context(|| "Could not send channel response to queue")
         };

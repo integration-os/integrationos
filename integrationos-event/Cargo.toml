@@ -14,7 +14,8 @@ envconfig.workspace = true
 futures.workspace = true
 handlebars.workspace = true
 http.workspace = true
-integrationos-domain = { workspace = true, features = ["unified"] }
+integrationos-cache = { path = "../integrationos-cache" }
+integrationos-domain = { path = "../integrationos-domain", features = ["unified"] }
 js-sandbox-ios.workspace = true
 metrics = "0.21.1"
 metrics-exporter-prometheus = "0.12.1"
