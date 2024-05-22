@@ -5,8 +5,8 @@ on:
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
     paths:
-      - .github/workflows/build-watchdog.yaml
-      - "integrationos-watchdog/**"
+      - .github/workflows/build-event.yaml
+      - "integrationos-event/**"
       - Dockerfile
       - Cargo.lock
 
@@ -25,8 +25,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: integration-os/google-artifact-registry-action@v2
         with:
-          image: "us-docker.pkg.dev/integrationos/docker-oss/watchdog:${{ env.docker_image_tag }}"
+          image: "us-docker.pkg.dev/integrationos/docker-oss/event-core:${{ env.docker_image_tag }}"
           service_account: github-actions@integrationos.iam.gserviceaccount.com
           workload_identity_provider: projects/356173785332/locations/global/workloadIdentityPools/github-actions/providers/github-actions
           build-args: |
-            "EXECUTABLE=integrationos-watchdog"
+            "EXECUTABLE=integrationos-event"

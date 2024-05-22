@@ -147,8 +147,8 @@ services:
       - mongo
     restart: "no"
     volumes:
-      - ./seed-data:/seed-data:ro
-    entrypoint: ["/bin/bash", "-c", "sleep 10 && mongorestore --host mongo --nsFrom='seed_db.*' --nsTo='events-service.*' --authenticationDatabase admin -u integrationos -p ${MONGO_PASSWORD} /seed-data"]
+      - ./resources:/resources:ro
+    entrypoint: ["/bin/bash", "-c", "sleep 10 && mongorestore --host mongo --nsFrom='seed.*' --nsTo='events-service.*' --authenticationDatabase admin -u integrationos -p ${MONGO_PASSWORD} /resources"]
 
   redis:
     image: redis:7.0

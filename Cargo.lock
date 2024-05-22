@@ -72,52 +72,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27a4bd113ab6da4cd0f521068a6e2ee1065eab54107266a11835d02c8ec86a37"
 
 [[package]]
-name = "api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "bson",
- "chrono",
- "convert_case 0.6.0",
- "dotenvy",
- "envconfig",
- "event-core",
- "fake",
- "futures",
- "futures-util",
- "gateway",
- "http 1.1.0",
- "http-serde-ext",
- "hyper 0.14.28",
- "indexmap 2.2.6",
- "integrationos-domain",
- "jsonwebtoken",
- "mockito",
- "moka",
- "mongodb",
- "num_cpus",
- "openapiv3",
- "rand",
- "redis",
- "reqwest",
- "segment",
- "semver 1.0.23",
- "serde",
- "serde_json",
- "strum",
- "testcontainers-modules",
- "tokio",
- "tower",
- "tower-http",
- "tower_governor",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "validator",
-]
-
-[[package]]
 name = "arc-swap"
 version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -821,38 +775,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "event-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "bson",
- "chrono",
- "dotenvy",
- "envconfig",
- "fake",
- "futures",
- "handlebars",
- "http 1.1.0",
- "integrationos-domain",
- "js-sandbox-ios",
- "metrics 0.21.1",
- "metrics-exporter-prometheus 0.12.2",
- "mockito",
- "moka",
- "mongodb",
- "redis",
- "reqwest",
- "serde",
- "serde_json",
- "testcontainers-modules",
- "tokio",
- "tokio-condvar",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "event-listener"
 version = "4.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1042,31 +964,6 @@ dependencies = [
  "pin-project-lite",
  "pin-utils",
  "slab",
-]
-
-[[package]]
-name = "gateway"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "axum",
- "axum-prometheus",
- "dotenvy",
- "envconfig",
- "http 1.1.0",
- "http-body-util",
- "http-serde-ext",
- "integrationos-domain",
- "moka",
- "mongodb",
- "redis",
- "serde",
- "serde_json",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
 ]
 
 [[package]]
@@ -1486,6 +1383,52 @@ dependencies = [
 ]
 
 [[package]]
+name = "integrationos-api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "bson",
+ "chrono",
+ "convert_case 0.6.0",
+ "dotenvy",
+ "envconfig",
+ "fake",
+ "futures",
+ "futures-util",
+ "http 1.1.0",
+ "http-serde-ext",
+ "hyper 0.14.28",
+ "indexmap 2.2.6",
+ "integrationos-domain",
+ "integrationos-event",
+ "integrationos-gateway",
+ "jsonwebtoken",
+ "mockito",
+ "moka",
+ "mongodb",
+ "num_cpus",
+ "openapiv3",
+ "rand",
+ "redis",
+ "reqwest",
+ "segment",
+ "semver 1.0.23",
+ "serde",
+ "serde_json",
+ "strum",
+ "testcontainers-modules",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tower_governor",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "validator",
+]
+
+[[package]]
 name = "integrationos-domain"
 version = "4.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1532,6 +1475,75 @@ dependencies = [
  "tracing-log 0.2.0",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "integrationos-event"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bson",
+ "chrono",
+ "dotenvy",
+ "envconfig",
+ "fake",
+ "futures",
+ "handlebars",
+ "http 1.1.0",
+ "integrationos-domain",
+ "js-sandbox-ios",
+ "metrics 0.21.1",
+ "metrics-exporter-prometheus 0.12.2",
+ "mockito",
+ "moka",
+ "mongodb",
+ "redis",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "testcontainers-modules",
+ "tokio",
+ "tokio-condvar",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "integrationos-gateway"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum",
+ "axum-prometheus",
+ "dotenvy",
+ "envconfig",
+ "http 1.1.0",
+ "http-body-util",
+ "http-serde-ext",
+ "integrationos-domain",
+ "moka",
+ "mongodb",
+ "redis",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+]
+
+[[package]]
+name = "integrationos-watchdog"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dotenvy",
+ "envconfig",
+ "integrationos-domain",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -3743,18 +3755,6 @@ name = "wasm-bindgen-shared"
 version = "0.2.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af190c94f2773fdb3729c55b007a722abb5384da03bc0986df4c289bf5567e96"
-
-[[package]]
-name = "watchdog"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "dotenvy",
- "envconfig",
- "integrationos-domain",
- "tokio",
- "tracing",
-]
 
 [[package]]
 name = "web-sys"
