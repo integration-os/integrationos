@@ -126,6 +126,30 @@ pub async fn refresh_openapi(
     ))
 }
 
+#[tracing::instrument(name = "Get OpenAPI schema YAML", skip(state))]
+pub async fn get_openapi_yaml(
+    state: State<Arc<AppState>>,
+) -> Result<(StatusCode, Vec<u8>), ApiError> {
+    let spec = get_openapi(state).await;
+
+    match spec {
+        Ok((status_code, Json(spec))) => {
+            let try_yaml: serde_yaml::Value = serde_yaml::to_value(spec).map_err(|e| {
+                error!("Could not serialize openapi schema to yaml: {:?}", e);
+                internal_server_error!()
+            })?;
+
+            let text = serde_yaml::to_string(&try_yaml).map_err(|e| {
+                error!("Could not serialize openapi schema to yaml: {:?}", e);
+                internal_server_error!()
+            })?;
+
+            Ok((status_code, text.into_bytes()))
+        }
+        Err(e) => Err(e),
+    }
+}
+
 #[tracing::instrument(name = "Get OpenAPI schema", skip(state))]
 pub async fn get_openapi(
     state: State<Arc<AppState>>,

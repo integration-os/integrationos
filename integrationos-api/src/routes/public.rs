@@ -39,6 +39,7 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             >),
         )
         .route("/openapi", get(openapi::get_openapi))
+        .route("/openapi/yaml", get(openapi::get_openapi_yaml))
         .route(
             "/connection-data/models/:platform_name",
             get(connection_model_schema::get_platform_models),

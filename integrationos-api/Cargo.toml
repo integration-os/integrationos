@@ -42,6 +42,7 @@ tower_governor = "0.3.2"
 tracing-subscriber.workspace = true
 tracing.workspace = true
 validator.workspace = true
+serde_yaml = "0.9.34"
 
 [dev-dependencies]
 testcontainers-modules = { workspace = true, features = ["mongo", "redis"] }
