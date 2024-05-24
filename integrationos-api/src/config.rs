@@ -72,6 +72,8 @@ pub struct Config {
     pub openai_config: OpenAiConfig,
     #[envconfig(nested = true)]
     pub redis_config: RedisConfig,
+    #[envconfig(from = "RATE_LIMIT_ENABLED", default = "true")]
+    pub rate_limit_enabled: bool,
 }
 
 impl Display for Config {
@@ -117,7 +119,8 @@ impl Display for Config {
         writeln!(f, "{}", self.headers)?;
         writeln!(f, "{}", self.db_config)?;
         writeln!(f, "{}", self.openai_config)?;
-        writeln!(f, "{}", self.redis_config)
+        writeln!(f, "{}", self.redis_config)?;
+        writeln!(f, "RATE_LIMIT_ENABLED: {}", self.rate_limit_enabled)
     }
 }
 

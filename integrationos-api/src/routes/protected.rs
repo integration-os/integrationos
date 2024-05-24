@@ -10,7 +10,7 @@ use crate::{
     middleware::{
         auth,
         blocker::{handle_blocked_error, BlockInvalidHeaders},
-        extractor::OwnershipId,
+        extractor::{rate_limit, RateLimiter},
     },
     server::AppState,
 };
@@ -24,8 +24,8 @@ use http::HeaderName;
 use integrationos_domain::connection_model_schema::PublicConnectionModelSchema;
 use std::{iter::once, sync::Arc};
 use tower::{filter::FilterLayer, ServiceBuilder};
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::{sensitive_headers::SetSensitiveRequestHeadersLayer, trace::TraceLayer};
+use tracing::warn;
 
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let routes = Router::new()
@@ -51,20 +51,18 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         .layer(TraceLayer::new_for_http())
         .nest("/metrics", metrics::get_router());
 
-    let config = Box::new(
-        GovernorConfigBuilder::default()
-            .per_second(state.config.burst_rate_limit)
-            .burst_size(state.config.burst_size)
-            .key_extractor(OwnershipId)
-            .use_headers()
-            .finish()
-            .expect("Failed to build GovernorConfig"),
-    );
+    let routes = match RateLimiter::new(state.clone()).await {
+        Ok(rate_limiter) => routes.layer(axum::middleware::from_fn_with_state(
+            Arc::new(rate_limiter),
+            rate_limit,
+        )),
+        Err(e) => {
+            warn!("Could not connect to redis: {e}");
+            routes
+        }
+    };
 
     routes
-        .layer(GovernorLayer {
-            config: Box::leak(config),
-        })
         .layer(from_fn_with_state(state.clone(), auth::auth))
         .layer(TraceLayer::new_for_http())
         .layer(SetSensitiveRequestHeadersLayer::new(once(
