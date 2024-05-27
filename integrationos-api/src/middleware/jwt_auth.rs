@@ -16,8 +16,11 @@ pub struct JwtState {
 
 impl JwtState {
     pub fn new(state: &Arc<AppState>) -> Self {
+        let mut validation = Validation::default();
+        validation.set_audience(&["integrationos-users"]);
+        validation.set_issuer(&["integrationos"]);
         Self {
-            validation: Default::default(),
+            validation,
             decoding_key: DecodingKey::from_secret(state.config.jwt_secret.as_ref()),
         }
     }
