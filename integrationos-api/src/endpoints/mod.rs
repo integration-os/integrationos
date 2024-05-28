@@ -338,7 +338,6 @@ async fn get_connection(
     connection_key: &HeaderValue,
     stores: &AppStores,
     cache: &ConnectionCache,
-    // Cache<(Arc<str>, HeaderValue), Arc<Connection>>,
 ) -> Result<Arc<Connection>, IntegrationOSError> {
     let connection = cache
         .get_or_insert_with_filter(
@@ -356,38 +355,35 @@ async fn get_connection(
 
     // If Oauth is enabled, fetching the latest secret (due to refresh, cache can't be used)
     if let Some(OAuth::Enabled { .. }) = connection.oauth {
-        let sparse_connection = match stores
+        let collection = stores
             .db
-            .collection::<SparseConnection>(&Store::Connections.to_string())
-            .find_one(
-                doc! {
-                    "key": &connection.key.to_string(),
-                    "ownership.buildableId": access.ownership.id.as_ref(),
-                    "deleted": false
-                },
-                FindOneOptions::builder()
-                    .projection(doc! {
-                       "oauth": 1,
-                       "secretsServiceId": 1
-                    })
-                    .build(),
-            )
-            .await
-        {
+            .collection::<SparseConnection>(&Store::Connections.to_string());
+        let filter = doc! {
+            "key": &connection.key.to_string(),
+            "ownership.buildableId": access.ownership.id.as_ref(),
+            "deleted": false
+        };
+        let options = FindOneOptions::builder()
+            .projection(doc! {
+                "oauth": 1,
+                "secretsServiceId": 1
+            })
+            .build();
+
+        let sparse_connection = match collection.find_one(filter, options).await {
             Ok(Some(data)) => data,
-            Ok(None) => {
-                return Err(ApplicationError::not_found("Connection", None));
-            }
+            Ok(None) => return Err(ApplicationError::not_found("Connection", None)),
             Err(e) => {
                 error!("Error fetching connection: {:?}", e);
-
                 return Err(InternalError::unknown("Error fetching connection", None));
             }
         };
-        let mut connection = (connection.clone()).clone();
-        connection.oauth = Some(sparse_connection.oauth);
-        connection.secrets_service_id = sparse_connection.secrets_service_id;
-        return Ok(Arc::new(connection));
+
+        let mut updated_connection = connection.clone();
+        updated_connection.oauth = Some(sparse_connection.oauth);
+        updated_connection.secrets_service_id = sparse_connection.secrets_service_id;
+
+        return Ok(Arc::new(updated_connection));
     }
     Ok(Arc::new(connection))
 }
