@@ -3,7 +3,7 @@ version: "3.8"
 services:
   typescript-services:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/typescript-services:1.0.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/typescript-services:1.1.3
     ports:
       - 3001:3001
     environment:
@@ -29,7 +29,7 @@ services:
 
   connections-api:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/api:1.0.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/api:1.1.3
     ports:
       - 3005:3005
     environment:
@@ -49,7 +49,7 @@ services:
 
   event-core:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/event-core:1.0.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/event-core:1.1.3
     environment:
       - CONTEXT_COLLECTION_NAME=event-transactions
       - CONTEXT_DATABASE_NAME=events-service
@@ -64,7 +64,7 @@ services:
 
   gateway:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/gateway:1.0.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/gateway:1.1.3
     ports:
       - 3002:3002
     environment:
@@ -82,7 +82,7 @@ services:
 
   oauth-api:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/oauth:1.0.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/oauth:1.1.3
     ports:
       - 3003:3003
     environment:
@@ -107,7 +107,7 @@ services:
 
   secrets-service:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/secrets-service:1.0.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/secrets-service:1.1.3
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - KEY_ID=${KMS_KEY_ID}
@@ -120,7 +120,7 @@ services:
 
   watchdog:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/watchdog:1.0.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/watchdog:1.1.3
     environment:
       - CONTEXT_COLLECTION_NAME=event-transactions
       - CONTEXT_DATABASE_NAME=events-service
