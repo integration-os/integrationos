@@ -1701,6 +1701,7 @@ dependencies = [
  "http-serde-ext",
  "hyper 0.14.28",
  "indexmap 2.2.6",
+ "integrationos-cache",
  "integrationos-domain",
  "integrationos-event",
  "integrationos-gateway",

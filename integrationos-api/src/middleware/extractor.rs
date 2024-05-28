@@ -8,7 +8,8 @@ use axum::{
     Extension,
 };
 use http::{HeaderName, Request};
-use integrationos_domain::{event_access::EventAccess, RedisCache};
+use integrationos_cache::remote::RedisCache;
+use integrationos_domain::event_access::EventAccess;
 use redis::AsyncCommands;
 use std::sync::Arc;
 use tokio::sync::{
@@ -33,7 +34,7 @@ impl RateLimiter {
             return Err(anyhow::anyhow!("Rate limiting is disabled"));
         };
 
-        let mut redis = RedisCache::new(&state.config.redis_config, 0)
+        let mut redis = RedisCache::new(&state.config.redis_config)
             .await
             .with_context(|| "Could not connect to redis")?;
 
@@ -44,6 +45,7 @@ impl RateLimiter {
         tokio::spawn(async move {
             while let Some((id, tx)) = rx.recv().await {
                 let count: u64 = redis
+                    .inner
                     .hincr(&throughput_key, id.as_ref(), 1)
                     .await
                     .unwrap_or_default();

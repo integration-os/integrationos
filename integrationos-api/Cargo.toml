@@ -21,6 +21,7 @@ http-serde-ext.workspace = true
 http.workspace = true
 hyper = "0.14.27"
 indexmap = "2.1.0"
+integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain", features = [ "unified", "metrics", "axum-error", ] }
 jsonwebtoken.workspace = true
 moka.workspace = true
