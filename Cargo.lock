@@ -862,7 +862,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ff315fab2a7a42132352909afc81140d06b8bbfd1414b098ce278e3f95dd1b9"
 dependencies = [
  "deadpool",
- "redis 0.25.3",
+ "redis",
  "serde",
 ]
 
@@ -1712,7 +1712,7 @@ dependencies = [
  "num_cpus",
  "openapiv3",
  "rand",
- "redis 0.25.3",
+ "redis",
  "reqwest",
  "segment",
  "semver 1.0.23",
@@ -1741,7 +1741,7 @@ dependencies = [
  "integrationos-domain",
  "moka",
  "mongodb",
- "redis 0.25.3",
+ "redis",
  "serde",
  "serde_json",
  "tokio",
@@ -1758,7 +1758,6 @@ dependencies = [
  "async-recursion",
  "async-trait",
  "axum",
- "base64 0.21.7",
  "base64ct",
  "bson",
  "chrono",
@@ -1774,7 +1773,6 @@ dependencies = [
  "js-sandbox-ios",
  "jsonpath_lib",
  "mockito",
- "moka",
  "mongodb",
  "napi",
  "napi-derive",
@@ -1783,7 +1781,6 @@ dependencies = [
  "pin-project",
  "prost",
  "rand",
- "redis 0.23.3",
  "reqwest",
  "schemars",
  "semver 1.0.23",
@@ -1824,7 +1821,7 @@ dependencies = [
  "mockito",
  "moka",
  "mongodb",
- "redis 0.25.3",
+ "redis",
  "reqwest",
  "serde",
  "serde_json",
@@ -1852,7 +1849,7 @@ dependencies = [
  "integrationos-domain",
  "moka",
  "mongodb",
- "redis 0.25.3",
+ "redis",
  "serde",
  "serde_json",
  "tokio",
@@ -1897,7 +1894,7 @@ dependencies = [
  "integrationos-cache",
  "integrationos-domain",
  "mongodb",
- "redis 0.25.3",
+ "redis",
  "serde_json",
  "tokio",
  "tracing",
@@ -2902,30 +2899,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e29830cbb1290e404f24c73af91c5d8d631ce7e128691e9477556b540cd01ecd"
 dependencies = [
  "bitflags 2.5.0",
-]
-
-[[package]]
-name = "redis"
-version = "0.23.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f49cdc0bb3f412bf8e7d1bd90fe1d9eb10bc5c399ba90973c14662a27b3f8ba"
-dependencies = [
- "arc-swap",
- "async-trait",
- "bytes",
- "combine",
- "futures",
- "futures-util",
- "itoa",
- "percent-encoding",
- "pin-project-lite",
- "ryu",
- "sha1_smol",
- "socket2 0.4.10",
- "tokio",
- "tokio-retry",
- "tokio-util",
- "url",
 ]
 
 [[package]]
