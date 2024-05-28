@@ -7,13 +7,8 @@ edition = "2021"
 repository = "https://github.com/integration-os/integrationos-domain"
 
 [features]
-default = ["unified"]
-
 # This feature can be used for tests to provide dummy implementations
 dummy = ["dep:fake"]
-
-# This feature provides access to unified-destination functionality.
-unified = ["metrics", "dep:handlebars", "dep:moka"]
 
 # This feature is for using napi to export structs to an npm package
 napi = ["dep:napi", "dep:napi-derive"]
@@ -52,7 +47,7 @@ fake = { version = "2.9.2", features = [
     "semver",
 ], optional = true }
 futures = "0.3.30"
-handlebars = { version = "4.4.0", optional = true }
+handlebars = { version = "4.4.0" }
 http = "1.1.0"
 http-serde-ext = "1.0.2"
 indexmap = "2.1.0"

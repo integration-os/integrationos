@@ -10,7 +10,6 @@ use handlebars::Handlebars;
 use http::header::AUTHORIZATION;
 use integrationos_domain::{
     algebra::{CryptoExt, FecherExt, GoogleTokenFetcher, MongoStore},
-    client::unified_destination_client::UnifiedDestination,
     duplicates::Duplicates,
     encrypted_access_key::EncryptedAccessKey,
     event_access::EventAccess,
@@ -19,6 +18,7 @@ use integrationos_domain::{
     middleware::Middleware,
     Connection, Event, Pipeline, Store,
 };
+use integrationos_unified::unified::UnifiedDestination;
 use moka::future::Cache;
 use mongodb::{options::ClientOptions, Client};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};

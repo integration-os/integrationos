@@ -1,0 +1,30 @@
+[package]
+name = "integrationos-unified"
+description = "Unified service library for IntegrationOS"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+jsonpath_lib = "0.3.0"
+bson = "2.9.0"
+chrono = { version = "0.4.32", features = ["serde"] }
+integrationos-domain = { path = "../integrationos-domain" }
+futures = "0.3.30"
+handlebars = { version = "4.4.0" }
+http = "1.1.0"
+http-serde-ext = "1.0.2"
+js-sandbox-ios = "0.1.0"
+moka.workspace = true
+mongodb = "2.8.0"
+reqwest = { version = "0.12.3", features = [
+    "json",
+    "rustls-tls",
+], default-features = false }
+serde = { version = "1.0.195", features = ["derive", "rc"] }
+serde_json = "1.0.111"
+tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
+tracing = "0.1.40"
+uuid = { version = "1.7.0", features = ["v4"] }
+
+[lib]
+path = "src/lib.rs"

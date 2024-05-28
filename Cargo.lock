@@ -1705,6 +1705,7 @@ dependencies = [
  "integrationos-domain",
  "integrationos-event",
  "integrationos-gateway",
+ "integrationos-unified",
  "jsonwebtoken",
  "mockito",
  "mongodb",
@@ -1816,6 +1817,7 @@ dependencies = [
  "http 1.1.0",
  "integrationos-cache",
  "integrationos-domain",
+ "integrationos-unified",
  "js-sandbox-ios",
  "metrics 0.21.1",
  "metrics-exporter-prometheus 0.12.2",
@@ -1857,6 +1859,29 @@ dependencies = [
  "tower",
  "tower-http",
  "tracing",
+]
+
+[[package]]
+name = "integrationos-unified"
+version = "0.1.0"
+dependencies = [
+ "bson",
+ "chrono",
+ "futures",
+ "handlebars",
+ "http 1.1.0",
+ "http-serde-ext",
+ "integrationos-domain",
+ "js-sandbox-ios",
+ "jsonpath_lib",
+ "moka",
+ "mongodb",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

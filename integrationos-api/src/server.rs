@@ -15,7 +15,6 @@ use integrationos_cache::local::{
 };
 use integrationos_domain::{
     algebra::{CryptoExt, DefaultTemplate, MongoStore},
-    client::unified_destination_client::UnifiedDestination,
     common_model::{CommonEnum, CommonModel},
     connection_definition::{ConnectionDefinition, PublicConnectionDetails},
     connection_model_definition::ConnectionModelDefinition,
@@ -27,6 +26,7 @@ use integrationos_domain::{
     stage::Stage,
     Connection, Event, Pipeline, PlatformData, Store, Transaction,
 };
+use integrationos_unified::unified::UnifiedDestination;
 use mongodb::{options::UpdateOptions, Client, Database};
 use segment::{AutoBatcher, Batcher, HttpClient};
 use std::{sync::Arc, time::Duration};
