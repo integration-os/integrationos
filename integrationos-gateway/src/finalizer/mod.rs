@@ -4,12 +4,10 @@ use self::event::FinalizeEvent;
 use crate::config::Config;
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
+use integrationos_cache::remote::RedisCache;
 use integrationos_domain::{
-    algebra::{MongoStore, RedisCache},
-    {
-        encrypted_access_key::EncryptedAccessKey, event_with_context::EventWithContext, Event,
-        RootContext, Store,
-    },
+    algebra::MongoStore, encrypted_access_key::EncryptedAccessKey,
+    event_with_context::EventWithContext, Event, RootContext, Store,
 };
 use mongodb::Collection;
 use redis::AsyncCommands;
@@ -26,7 +24,7 @@ pub struct Finalizer {
 
 impl Finalizer {
     pub async fn new(config: Config) -> Result<Self> {
-        let redis = RedisCache::new(&config.redis, 2).await?;
+        let redis = RedisCache::new(&config.redis).await?;
 
         let context_mongo_client = mongodb::Client::with_uri_str(config.db.context_db_url)
             .await
@@ -86,7 +84,7 @@ impl FinalizeEvent for Finalizer {
         let msg = EventWithContext::new(event.clone(), context);
         let msg: Vec<u8> = serde_json::to_vec(&msg)?;
         let mut conn = self.redis.lock().await;
-        match conn.lpush(&self.queue_name, &msg).await {
+        match conn.inner.lpush(&self.queue_name, &msg).await {
             Ok(()) => Ok("Sent on redis".to_string()),
             Err(e) => {
                 error!("Could not publish to redis: {e}");

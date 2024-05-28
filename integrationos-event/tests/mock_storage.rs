@@ -229,7 +229,7 @@ impl MockStorage {
 #[ignore = "Pipeline is not being used"]
 async fn run_dispatcher() {
     let mut event: Event = Faker.fake();
-    event.access_key = "id_live_1_abcd".to_owned();
+    "id_live_1_abcd".clone_into(&mut event.access_key);
     let store = Arc::new(MockStorage::new());
     store.events.lock().unwrap().insert(event.id, event.clone());
 

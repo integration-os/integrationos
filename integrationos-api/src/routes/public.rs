@@ -2,7 +2,6 @@ use crate::{
     endpoints::{
         common_enum, common_model, connection_definition, connection_model_schema,
         connection_oauth_definition, event_access::create_event_access_for_new_user, openapi, read,
-        read_cached,
     },
     middleware::jwt_auth::{self, JwtState},
     server::AppState,
@@ -29,11 +28,11 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         )
         .route(
             "/connection-definitions",
-            get(read_cached::<connection_definition::CreateRequest, ConnectionDefinition>),
+            get(read::<connection_definition::CreateRequest, ConnectionDefinition>),
         )
         .route(
             "/connection-oauth-definition-schema",
-            get(read_cached::<
+            get(read::<
                 connection_oauth_definition::FrontendOauthConnectionDefinition,
                 connection_oauth_definition::FrontendOauthConnectionDefinition,
             >),

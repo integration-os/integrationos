@@ -1,17 +1,13 @@
-use crate::{
-    cache::CacheConfig,
-    database::DatabaseConfig,
-    event_with_context::EventWithContext,
-    pipeline_context::PipelineStage,
-    prelude::{MongoStore, RedisCache},
-    root_context::RootStage,
-    watchdog::WatchdogConfig,
-    Event, ExtractorContext, IntegrationOSError, InternalError, PipelineContext, RootContext,
-    Store,
-};
 use bson::{doc, Bson, Document};
 use chrono::Utc;
 use futures::{future::join_all, TryStreamExt};
+use integrationos_cache::remote::RedisCache;
+use integrationos_domain::{
+    cache::CacheConfig, database::DatabaseConfig, event_with_context::EventWithContext,
+    pipeline_context::PipelineStage, prelude::MongoStore, root_context::RootStage,
+    watchdog::WatchdogConfig, Event, ExtractorContext, IntegrationOSError, InternalError,
+    PipelineContext, RootContext, Store,
+};
 use mongodb::options::FindOneOptions;
 use redis::{AsyncCommands, LposOptions, RedisResult};
 use std::fmt::Display;
@@ -53,7 +49,7 @@ impl WatchdogClient {
 
     pub async fn run(self) -> Result<(), IntegrationOSError> {
         info!("Starting watchdog");
-        let mut cache = RedisCache::new(&self.cache, 3).await.map_err(|e| {
+        let mut cache = RedisCache::new(&self.cache).await.map_err(|e| {
             error!("Could not connect to cache: {e}");
             InternalError::io_err(e.to_string().as_str(), None)
         })?;
@@ -61,7 +57,7 @@ impl WatchdogClient {
 
         info!("Initializing connection to cache");
 
-        let mut redis_clone = cache.clone();
+        let mut redis_clone = cache.inner.clone();
         tokio::spawn(async move {
             loop {
                 let _: RedisResult<String> = async { redis_clone.del(key.clone()).await }.await;
@@ -70,7 +66,7 @@ impl WatchdogClient {
         });
 
         let key = self.cache.api_throughput_key.clone();
-        let mut redis_clone = cache.clone();
+        let mut redis_clone = cache.inner.clone();
         tokio::spawn(async move {
             loop {
                 let _: RedisResult<String> = async { redis_clone.del(key.clone()).await }.await;
@@ -284,6 +280,7 @@ impl WatchdogClient {
                     }
                 };
                 let matching_idx = cache
+                    .inner
                     .lpos::<&str, &[u8], Option<isize>>(
                         &self.cache.queue_name,
                         &payload,
@@ -300,7 +297,7 @@ impl WatchdogClient {
                     continue;
                 }
 
-                match cache.lpush(&self.cache.queue_name, payload).await {
+                match cache.inner.lpush(&self.cache.queue_name, payload).await {
                     Ok(()) => count += 1,
                     Err(e) => error!("Could not publish event to redis: {e}"),
                 }

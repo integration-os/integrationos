@@ -11,3 +11,5 @@ pub mod prelude {
     pub use crate::domain::*;
     pub use crate::service::*;
 }
+
+pub type Unit = ();

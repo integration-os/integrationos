@@ -1,6 +1,4 @@
-use super::{
-    create, delete, read, update, CachedRequest, HookExt, PublicExt, ReadResponse, RequestExt,
-};
+use super::{create, delete, read, update, HookExt, PublicExt, RequestExt};
 use crate::server::{AppState, AppStores};
 use axum::{
     routing::{patch, post},
@@ -16,10 +14,9 @@ use integrationos_domain::{
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
 };
-use moka::future::Cache;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -205,18 +202,12 @@ pub struct FrontendOauthConnectionDefinition {
     pub record_metadata: RecordMetadata,
 }
 
+impl PublicExt<FrontendOauthConnectionDefinition> for FrontendOauthConnectionDefinition {}
+
 impl RequestExt for FrontendOauthConnectionDefinition {
     type Output = FrontendOauthConnectionDefinition;
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.frontend_oauth_config.clone()
-    }
-}
-
-impl CachedRequest for FrontendOauthConnectionDefinition {
-    fn get_cache(
-        state: Arc<AppState>,
-    ) -> Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<Self::Output>>>> {
-        state.connection_oauth_definitions_cache.clone()
     }
 }

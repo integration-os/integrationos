@@ -12,11 +12,11 @@ use axum::{
 };
 use bson::{doc, SerializerOptions};
 use http::{HeaderMap, HeaderValue, StatusCode};
+use integrationos_cache::local::connection_cache::ConnectionCache;
 use integrationos_domain::{
     algebra::MongoStore, event_access::EventAccess, ApplicationError, Connection,
     IntegrationOSError, InternalError, OAuth, Store,
 };
-use moka::future::Cache;
 use mongodb::options::FindOneOptions;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
@@ -45,10 +45,6 @@ pub mod unified;
 
 const INTEGRATION_OS_PASSTHROUGH_HEADER: &str = "x-integrationos-passthrough";
 
-pub type Unit = ();
-
-pub type InMemoryCache<T> = Arc<Cache<Option<BTreeMap<String, String>>, Arc<T>>>;
-
 pub trait RequestExt: Sized {
     type Output: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static;
     /// Generate `Self::Output` of the request based on the given payload.
@@ -73,10 +69,6 @@ pub trait RequestExt: Sized {
     }
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output>;
-}
-
-pub trait CachedRequest: RequestExt {
-    fn get_cache(state: Arc<AppState>) -> InMemoryCache<ReadResponse<Self::Output>>;
 }
 
 pub type ApiError = (StatusCode, Json<ErrorResponse>);
@@ -215,51 +207,6 @@ where
     Ok(Json(res))
 }
 
-pub async fn read_cached<T, U>(
-    query: Option<Query<BTreeMap<String, String>>>,
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<Arc<ReadResponse<U>>>, ApiError>
-where
-    T: CachedRequest<Output = U> + 'static,
-    U: Clone + Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
-{
-    let cache = T::get_cache(state.clone());
-
-    let res = cache
-        .try_get_with(query.as_ref().map(|q| q.0.clone()), async {
-            let query = shape_mongo_filter(query, None, None);
-
-            let store = T::get_store(state.app_stores.clone());
-            let count = store.count(query.filter.clone(), None);
-            let find = store.get_many(
-                Some(query.filter),
-                None,
-                None,
-                Some(query.limit),
-                Some(query.skip),
-            );
-
-            let res = match try_join!(count, find) {
-                Ok((total, rows)) => Arc::new(ReadResponse {
-                    rows,
-                    skip: query.skip,
-                    limit: query.limit,
-                    total,
-                }),
-                Err(e) => {
-                    error!("Error reading from store: {e}");
-                    return Err(internal_server_error!());
-                }
-            };
-
-            Ok(res)
-        })
-        .await
-        .map_err(Arc::unwrap_or_clone)?;
-
-    Ok(Json(res))
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct SuccessResponse {
     success: bool,
@@ -390,79 +337,53 @@ async fn get_connection(
     access: &EventAccess,
     connection_key: &HeaderValue,
     stores: &AppStores,
-    cache: &Cache<(Arc<str>, HeaderValue), Arc<Connection>>,
+    cache: &ConnectionCache,
 ) -> Result<Arc<Connection>, IntegrationOSError> {
     let connection = cache
-        .try_get_with(
-            (access.ownership.id.clone(), connection_key.clone()),
-            async {
-                let Ok(connection_id_str) = connection_key.to_str() else {
-                    return Err(ApplicationError::bad_request(
-                        "Invalid connection key header",
-                        None,
-                    ));
-                };
-
-                let connection = match stores
-                    .connection
-                    .get_one(doc! {
-                        "key": connection_id_str,
-                        "ownership.buildableId": access.ownership.id.as_ref(),
-                        "deleted": false
-                    })
-                    .await
-                {
-                    Ok(Some(data)) => Arc::new(data),
-                    Ok(None) => {
-                        return Err(ApplicationError::not_found("Connection", None));
-                    }
-                    Err(e) => {
-                        error!("Error fetching connection: {:?}", e);
-
-                        return Err(InternalError::unknown("Error fetching connection", None));
-                    }
-                };
-
-                Ok(connection)
+        .get_or_insert_with_filter(
+            &(access.ownership.id.clone(), connection_key.clone()),
+            stores.connection.clone(),
+            doc! {
+                "key": connection_key.to_str().map_err(|_| {
+                    ApplicationError::bad_request("Invalid connection key header", None)
+                })?,
+                "ownership.buildableId": access.ownership.id.as_ref(),
+                "deleted": false
             },
         )
-        .await
-        .map_err(Arc::unwrap_or_clone)?;
+        .await?;
 
     // If Oauth is enabled, fetching the latest secret (due to refresh, cache can't be used)
     if let Some(OAuth::Enabled { .. }) = connection.oauth {
-        let sparse_connection = match stores
+        let collection = stores
             .db
-            .collection::<SparseConnection>(&Store::Connections.to_string())
-            .find_one(
-                doc! {
-                    "key": &connection.key.to_string(),
-                    "ownership.buildableId": access.ownership.id.as_ref(),
-                    "deleted": false
-                },
-                FindOneOptions::builder()
-                    .projection(doc! {
-                       "oauth": 1,
-                       "secretsServiceId": 1
-                    })
-                    .build(),
-            )
-            .await
-        {
+            .collection::<SparseConnection>(&Store::Connections.to_string());
+        let filter = doc! {
+            "key": &connection.key.to_string(),
+            "ownership.buildableId": access.ownership.id.as_ref(),
+            "deleted": false
+        };
+        let options = FindOneOptions::builder()
+            .projection(doc! {
+                "oauth": 1,
+                "secretsServiceId": 1
+            })
+            .build();
+
+        let sparse_connection = match collection.find_one(filter, options).await {
             Ok(Some(data)) => data,
-            Ok(None) => {
-                return Err(ApplicationError::not_found("Connection", None));
-            }
+            Ok(None) => return Err(ApplicationError::not_found("Connection", None)),
             Err(e) => {
                 error!("Error fetching connection: {:?}", e);
-
                 return Err(InternalError::unknown("Error fetching connection", None));
             }
         };
-        let mut connection = (*connection).clone();
-        connection.oauth = Some(sparse_connection.oauth);
-        connection.secrets_service_id = sparse_connection.secrets_service_id;
-        return Ok(Arc::new(connection));
+
+        let mut updated_connection = connection.clone();
+        updated_connection.oauth = Some(sparse_connection.oauth);
+        updated_connection.secrets_service_id = sparse_connection.secrets_service_id;
+
+        return Ok(Arc::new(updated_connection));
     }
-    Ok(connection)
+    Ok(Arc::new(connection))
 }

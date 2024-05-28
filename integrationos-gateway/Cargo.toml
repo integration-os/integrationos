@@ -12,7 +12,8 @@ dotenvy.workspace = true
 envconfig.workspace = true
 http-serde-ext.workspace = true
 http.workspace = true
-integrationos-domain.workspace = true
+integrationos-cache = { path = "../integrationos-cache" }
+integrationos-domain = { path = "../integrationos-domain" }
 moka.workspace = true
 mongodb.workspace = true
 redis.workspace = true
