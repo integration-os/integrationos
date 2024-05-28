@@ -2,14 +2,17 @@ use crate::{
     config::Config,
     endpoints::{
         connection_oauth_definition::FrontendOauthConnectionDefinition, openapi::OpenAPIData,
-        InMemoryCache, ReadResponse,
     },
     metrics::Metric,
     routes,
 };
 use anyhow::{anyhow, Context, Result};
 use axum::Router;
-use http::HeaderValue;
+use integrationos_cache::local::{
+    connection_cache::ConnectionCache, connection_definition_cache::ConnectionDefinitionCache,
+    connection_oauth_definition_cache::ConnectionOAuthDefinitionCache,
+    event_access_cache::EventAccessCache,
+};
 use integrationos_domain::{
     algebra::{CryptoExt, DefaultTemplate, MongoStore},
     client::unified_destination_client::UnifiedDestination,
@@ -24,7 +27,6 @@ use integrationos_domain::{
     stage::Stage,
     Connection, Event, Pipeline, PlatformData, Store, Transaction,
 };
-use moka::future::Cache;
 use mongodb::{options::UpdateOptions, Client, Database};
 use segment::{AutoBatcher, Batcher, HttpClient};
 use std::{sync::Arc, time::Duration};
@@ -59,13 +61,12 @@ pub struct AppStores {
 pub struct AppState {
     pub app_stores: AppStores,
     pub config: Config,
-    pub cache: Cache<HeaderValue, Arc<EventAccess>>,
     pub openapi_data: OpenAPIData,
     pub http_client: reqwest::Client,
-    pub connections_cache: Cache<(Arc<str>, HeaderValue), Arc<Connection>>,
-    pub connection_definitions_cache: InMemoryCache<ReadResponse<ConnectionDefinition>>,
-    pub connection_oauth_definitions_cache:
-        InMemoryCache<ReadResponse<FrontendOauthConnectionDefinition>>,
+    pub event_access_cache: EventAccessCache,
+    pub connections_cache: ConnectionCache,
+    pub connection_definitions_cache: ConnectionDefinitionCache,
+    pub connection_oauth_definitions_cache: ConnectionOAuthDefinitionCache,
     pub secrets_client: Arc<dyn CryptoExt + Sync + Send>,
     pub extractor_caller: UnifiedDestination,
     pub event_tx: Sender<Event>,
@@ -143,15 +144,18 @@ impl Server {
             stages,
         };
 
-        let cache = Cache::builder()
-            .max_capacity(config.cache_size)
-            .time_to_live(Duration::from_secs(config.access_key_cache_ttl_secs))
-            .build();
-        let connections_cache = Cache::new(config.cache_size);
-        let connection_definitions_cache =
-            Arc::new(Cache::builder().max_capacity(config.cache_size).build());
-        let connection_oauth_definitions_cache =
-            Arc::new(Cache::builder().max_capacity(config.cache_size).build());
+        let event_access_cache =
+            EventAccessCache::new(config.cache_size, config.access_key_cache_ttl_secs);
+        let connections_cache =
+            ConnectionCache::new(config.cache_size, config.connection_cache_ttl_secs);
+        let connection_definitions_cache = ConnectionDefinitionCache::new(
+            config.cache_size,
+            config.connection_definition_cache_ttl_secs,
+        );
+        let connection_oauth_definitions_cache = ConnectionOAuthDefinitionCache::new(
+            config.cache_size,
+            config.connection_oauth_definition_cache_ttl_secs,
+        );
         let openapi_data = OpenAPIData::default();
         openapi_data.spawn_openapi_generation(
             app_stores.common_model.clone(),
@@ -268,7 +272,7 @@ impl Server {
             state: Arc::new(AppState {
                 app_stores,
                 config,
-                cache,
+                event_access_cache,
                 http_client,
                 connections_cache,
                 connection_definitions_cache,

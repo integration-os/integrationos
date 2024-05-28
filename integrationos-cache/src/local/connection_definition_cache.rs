@@ -7,6 +7,7 @@ use moka::future::Cache;
 use mongodb::bson::Document;
 use std::{sync::Arc, time::Duration};
 
+#[derive(Clone)]
 pub struct ConnectionDefinitionCache {
     inner: Arc<Cache<Id, ConnectionDefinition>>,
 }

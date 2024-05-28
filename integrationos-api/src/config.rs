@@ -24,8 +24,14 @@ pub struct Config {
     pub access_key_cache_ttl_secs: u64,
     #[envconfig(from = "ACCESS_KEY_WHITELIST_REFRESH_INTERVAL_SECS", default = "60")]
     pub access_key_whitelist_refresh_interval_secs: u64,
+    #[envconfig(from = "CONNECTION_CACHE_TTL_SECS", default = "120")]
+    pub connection_cache_ttl_secs: u64,
     #[envconfig(from = "ENGINEERING_ACCOUNT_ID", default = "engineering_account")]
     pub engineering_account_id: String,
+    #[envconfig(from = "CONNECTION_DEFINITION_CACHE_TTL_SECS", default = "120")]
+    pub connection_definition_cache_ttl_secs: u64,
+    #[envconfig(from = "CONNECTION_OAUTH_DEFINITION_CACHE_TTL_SECS", default = "120")]
+    pub connection_oauth_definition_cache_ttl_secs: u64,
     #[envconfig(
         from = "EVENT_ACCESS_PASSWORD",
         default = "32KFFT_i4UpkJmyPwY2TGzgHpxfXs7zS"
@@ -99,6 +105,21 @@ impl Display for Config {
             self.event_access_throughput
         )?;
         writeln!(f, "EVENT_SAVE_BUFFER_SIZE: {}", self.event_save_buffer_size)?;
+        writeln!(
+            f,
+            "CONNECTION_CACHE_TTL_SECS: {}",
+            self.connection_cache_ttl_secs
+        )?;
+        writeln!(
+            f,
+            "CONNECTION_DEFINITION_CACHE_TTL_SECS: {}",
+            self.connection_definition_cache_ttl_secs
+        )?;
+        writeln!(
+            f,
+            "CONNECTION_OAUTH_DEFINITION_CACHE_TTL_SECS: {}",
+            self.connection_oauth_definition_cache_ttl_secs
+        )?;
         writeln!(
             f,
             "EVENT_SAVE_TIMEOUT_SECS: {}",

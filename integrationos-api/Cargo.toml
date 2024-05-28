@@ -24,7 +24,6 @@ indexmap = "2.1.0"
 integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain", features = [ "unified", "metrics", "axum-error", ] }
 jsonwebtoken.workspace = true
-moka.workspace = true
 mongodb.workspace = true
 num_cpus = "1"
 openapiv3.workspace = true

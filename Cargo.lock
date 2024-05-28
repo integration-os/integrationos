@@ -1707,7 +1707,6 @@ dependencies = [
  "integrationos-gateway",
  "jsonwebtoken",
  "mockito",
- "moka",
  "mongodb",
  "num_cpus",
  "openapiv3",

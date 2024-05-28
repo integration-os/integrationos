@@ -1,7 +1,4 @@
-use super::{
-    create, delete, read, update, ApiResult, CachedRequest, HookExt, PublicExt, ReadResponse,
-    RequestExt,
-};
+use super::{create, delete, read, update, ApiResult, HookExt, PublicExt, RequestExt};
 use crate::{
     internal_server_error, not_found,
     server::{AppState, AppStores},
@@ -24,10 +21,9 @@ use integrationos_domain::{
     record_metadata::RecordMetadata,
     settings::Settings,
 };
-use moka::future::Cache;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 use tracing::error;
 
 pub fn get_router() -> Router<Arc<AppState>> {
@@ -339,13 +335,5 @@ impl RequestExt for CreateRequest {
 
     fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
         stores.connection_config
-    }
-}
-
-impl CachedRequest for CreateRequest {
-    fn get_cache(
-        state: Arc<AppState>,
-    ) -> Arc<Cache<Option<BTreeMap<String, String>>, Arc<ReadResponse<Self::Output>>>> {
-        state.connection_definitions_cache.clone()
     }
 }
