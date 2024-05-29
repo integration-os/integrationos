@@ -530,6 +530,7 @@ impl TestServer {
                 ),
                 to_common_model: Some("function mapCrudRequest(data) { return data; }".to_string()),
             }),
+            verified: Some(true),
         };
 
         let res = self

@@ -1093,6 +1093,13 @@ impl UnifiedDestination {
             Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
         }?;
 
+        if !config.verified {
+            return Err(InternalError::invalid_argument(
+                "Connection Model Definition is not verified.",
+                None,
+            ));
+        }
+
         let secret = self
             .secrets_cache
             .try_get_with_by_ref(&connection, async {

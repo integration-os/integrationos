@@ -580,6 +580,7 @@ async fn create_connection_model_definition(
         responses: vec![],
         is_default_crud_mapping: None,
         mapping: Some(mapping.clone()),
+        verified: Some(true),
     };
 
     let create_model_definition_response = server

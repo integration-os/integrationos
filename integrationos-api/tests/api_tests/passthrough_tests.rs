@@ -68,6 +68,7 @@ async fn test_passthrough_api() {
         responses: vec![],
         is_default_crud_mapping: None,
         mapping: None,
+        verified: Some(true),
     };
 
     let create_model_definition_response = server
@@ -82,6 +83,28 @@ async fn test_passthrough_api() {
 
     assert_eq!(create_model_definition_response.code, StatusCode::OK);
 
+    let unverified_create_model_definition_payload = CreateConnectionModelDefinitionRequest {
+        verified: Some(false),
+        path: "invoices".to_string(),
+        ..create_model_definition_payload.clone()
+    };
+
+    let create_unverified_model_definition_response = server
+        .send_request::<Value, Value>(
+            "v1/connection-model-definitions",
+            Method::POST,
+            Some(&server.live_key),
+            Some(&serde_json::to_value(&unverified_create_model_definition_payload).unwrap()),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(
+        create_unverified_model_definition_response.code,
+        StatusCode::OK
+    );
+
+    // Test a passthrough API call for a verified connection model definition
     let call_universal_api = server
         .send_request_with_headers::<Value, Value>(
             "v1/passthrough/customers",
@@ -103,10 +126,36 @@ async fn test_passthrough_api() {
         .await
         .expect("Failed to call universal API");
 
-    // assert_eq!(call_universal_api.code, StatusCode::OK);
     assert_eq!(
         call_universal_api.data,
         serde_json::from_str::<Value>(&response_body).unwrap()
+    );
+
+    // Test a passthrough API call for an unverified connection model definition
+    let call_unverified_passthrough_endpoint = server
+        .send_request_with_headers::<Value, Value>(
+            "v1/passthrough/invoices",
+            Method::GET,
+            Some(&server.live_key),
+            None,
+            Some(
+                vec![
+                    (CONTENT_TYPE.to_string(), "application/json".to_string()),
+                    (
+                        "x-integrationos-connection-key".to_string(),
+                        connection.key.to_string(),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            ),
+        )
+        .await
+        .expect("Connection Model Definition is not verified.");
+
+    assert_eq!(
+        call_unverified_passthrough_endpoint.code,
+        StatusCode::BAD_REQUEST
     );
 
     mock.assert_async().await;

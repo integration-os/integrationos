@@ -171,6 +171,7 @@ mod tests {
             record_metadata: Default::default(),
             is_default_crud_mapping: None,
             mapping: None,
+            verified: true,
         };
 
         let client = Client::new();
@@ -244,6 +245,7 @@ mod tests {
             record_metadata: Default::default(),
             is_default_crud_mapping: None,
             mapping: None,
+            verified: true,
         };
 
         let client = Client::new();

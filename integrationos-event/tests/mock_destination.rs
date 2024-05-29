@@ -83,6 +83,7 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
         record_metadata: Default::default(),
         is_default_crud_mapping: None,
         mapping: None,
+        verified: true,
     };
 
     db.collection("connection-model-definitions")
