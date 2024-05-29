@@ -296,7 +296,7 @@ pub struct CreateRequest {
     pub is_default_crud_mapping: Option<bool>,
     pub mapping: Option<CrudMapping>,
     pub paths: Option<ModelPaths>,
-    pub verified: Option<bool>,
+    pub supported: Option<bool>,
 }
 
 impl HookExt<ConnectionModelDefinition> for CreateRequest {}
@@ -345,7 +345,7 @@ impl RequestExt for CreateRequest {
             is_default_crud_mapping: self.is_default_crud_mapping,
             mapping: self.mapping.clone(),
             record_metadata: Default::default(),
-            verified: self.verified.unwrap_or(false),
+            supported: self.supported.unwrap_or(false),
         };
         record.record_metadata.version = self.version.clone();
         Some(record)
@@ -389,8 +389,8 @@ impl RequestExt for CreateRequest {
         record.extractor_config.clone_from(&self.extractor_config);
         record.record_metadata.version = self.version.clone();
 
-        if let Some(verified) = self.verified {
-            record.verified = verified;
+        if let Some(supported) = self.supported {
+            record.supported = supported;
         }
 
         record

@@ -973,9 +973,9 @@ impl UnifiedDestination {
             Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
         }?;
 
-        if !config.verified {
+        if !config.supported {
             return Err(ApplicationError::not_found(
-                "Verified Connection Model Definition",
+                "Supported Connection Model Definition",
                 None,
             ));
         }

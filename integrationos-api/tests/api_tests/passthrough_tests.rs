@@ -68,7 +68,7 @@ async fn test_passthrough_api() {
         responses: vec![],
         is_default_crud_mapping: None,
         mapping: None,
-        verified: Some(true),
+        supported: Some(true),
     };
 
     let create_model_definition_response = server
@@ -84,7 +84,7 @@ async fn test_passthrough_api() {
     assert_eq!(create_model_definition_response.code, StatusCode::OK);
 
     let unverified_create_model_definition_payload = CreateConnectionModelDefinitionRequest {
-        verified: Some(false),
+        supported: Some(false),
         path: "invoices".to_string(),
         ..create_model_definition_payload.clone()
     };
@@ -124,7 +124,7 @@ async fn test_passthrough_api() {
             ),
         )
         .await
-        .expect("Failed to call universal API");
+        .expect("Failed to call passthrough API");
 
     assert_eq!(
         call_universal_api.data,
@@ -151,11 +151,11 @@ async fn test_passthrough_api() {
             ),
         )
         .await
-        .expect("Connection Model Definition is not verified.");
+        .expect("Failed to call the passthrough API");
 
     assert_eq!(
         call_unverified_passthrough_endpoint.code,
-        StatusCode::BAD_REQUEST
+        StatusCode::NOT_FOUND
     );
 
     mock.assert_async().await;

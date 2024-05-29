@@ -50,7 +50,7 @@ pub struct ConnectionModelDefinition {
     pub record_metadata: RecordMetadata,
 
     #[serde(default)]
-    pub verified: bool,
+    pub supported: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
