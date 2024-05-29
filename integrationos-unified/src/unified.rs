@@ -1,6 +1,18 @@
-use super::caller_client::CallerClient;
 use crate::{
+    request::{
+        PathParams, RequestCrud, RequestCrudBorrowed, ResponseCrud, ResponseCrudToMap,
+        ResponseCrudToMapRequest,
+    },
+    utility::{match_route, remove_nulls, template_route},
+};
+use bson::doc;
+use chrono::Utc;
+use futures::{future::join_all, join, FutureExt};
+use handlebars::Handlebars;
+use http::{HeaderMap, HeaderName, HeaderValue, Response, StatusCode};
+use integrationos_domain::{
     api_model_config::{ModelPaths, RequestModelPaths, ResponseModelPaths},
+    client::caller_client::CallerClient,
     connection_model_definition::{
         ConnectionModelDefinition, CrudAction, CrudMapping, PlatformInfo,
     },
@@ -14,18 +26,12 @@ use crate::{
     prelude::{CryptoExt, MongoStore, TimedExt},
     Connection, ErrorMeta, IntegrationOSError, Store,
 };
-use bson::doc;
-use chrono::Utc;
-use futures::{future::join_all, join, FutureExt};
-use handlebars::Handlebars;
-use http::{HeaderMap, HeaderName, HeaderValue, Response, StatusCode};
 use js_sandbox_ios::Script;
 use moka::future::Cache;
 use mongodb::{
     options::{Collation, CollationStrength, FindOneOptions},
     Client,
 };
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Number, Value};
 use std::{
     cell::RefCell,
@@ -35,152 +41,24 @@ use std::{
 };
 use tracing::{debug, error};
 
-std::thread_local! {
+thread_local! {
     static JS_RUNTIME: RefCell<Script> = RefCell::new(Script::new());
 }
 
 #[derive(Clone)]
 pub struct UnifiedDestination {
-    connections_cache: Cache<Arc<str>, Arc<Connection>>,
-    connections_store: MongoStore<Connection>,
-    connection_model_definitions_cache: Cache<Destination, Arc<ConnectionModelDefinition>>,
-    connection_model_definitions_destination_cache:
+    pub connections_cache: Cache<Arc<str>, Arc<Connection>>,
+    pub connections_store: MongoStore<Connection>,
+    pub connection_model_definitions_cache: Cache<Destination, Arc<ConnectionModelDefinition>>,
+    pub connection_model_definitions_destination_cache:
         Cache<Destination, Arc<ConnectionModelDefinition>>,
-    connection_model_definitions_store: MongoStore<ConnectionModelDefinition>,
-    connection_model_schemas_cache: Cache<(Arc<str>, Arc<str>), Arc<ConnectionModelSchema>>,
-    connection_model_schemas_store: MongoStore<ConnectionModelSchema>,
-    secrets_client: Arc<dyn CryptoExt + Sync + Send>,
-    secrets_cache: Cache<Connection, Arc<Value>>,
-    http_client: reqwest::Client,
-    renderer: Option<Arc<RwLock<Handlebars<'static>>>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RequestCrudBorrowed<'a> {
-    pub query_params: &'a HashMap<String, String>,
-    #[serde(with = "http_serde_ext::header_map", default)]
-    pub headers: &'a HeaderMap,
-    pub path_params: Option<PathParams<'a>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PathParams<'a> {
-    pub id: &'a str,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RequestCrud {
-    pub query_params: Option<HashMap<String, String>>,
-    #[serde(with = "http_serde_ext::header_map", default)]
-    pub headers: HeaderMap,
-    pub path_params: Option<HashMap<String, String>>,
-    pub body: Option<Value>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ResponseCrudToMap<'a> {
-    #[serde(with = "http_serde_ext::header_map")]
-    pub headers: &'a HeaderMap,
-    pub pagination: Option<Value>,
-    pub request: ResponseCrudToMapRequest<'a>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ResponseCrudToMapRequest<'a> {
-    pub query_params: &'a HashMap<String, String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ResponseCrud {
-    pub pagination: Option<Value>,
-}
-
-fn match_route<'a>(full_path: &'a str, routes: impl Iterator<Item = &'a str>) -> Option<&'a str> {
-    let path = full_path.split('?').next().unwrap_or("");
-
-    let segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
-
-    for route in routes {
-        let route_segments: Vec<&str> = route.split('/').filter(|s| !s.is_empty()).collect();
-
-        if segments.len() != route_segments.len() {
-            continue;
-        }
-
-        if route_segments
-            .iter()
-            .zip(&segments)
-            .all(|(route_seg, path_seg)| {
-                route_seg == path_seg
-                    || route_seg.starts_with(':')
-                    || (route_seg.starts_with("{{") && route_seg.ends_with("}}"))
-            })
-        {
-            return Some(route);
-        }
-    }
-
-    None
-}
-
-fn template_route(model_definition_path: String, full_request_path: String) -> String {
-    let model_definition_segments: Vec<&str> = model_definition_path
-        .split('/')
-        .filter(|s| !s.is_empty())
-        .collect();
-
-    let full_request_segments: Vec<&str> = full_request_path
-        .split('/')
-        .filter(|s| !s.is_empty())
-        .collect();
-
-    let mut template = String::new();
-
-    for (i, segment) in model_definition_segments.iter().enumerate() {
-        if segment.starts_with(':') || (segment.starts_with("{{") && segment.ends_with("}}")) {
-            template.push_str(full_request_segments[i]);
-        } else {
-            template.push_str(segment);
-        }
-
-        if i != model_definition_segments.len() - 1 {
-            template.push('/');
-        }
-    }
-
-    template
-}
-
-fn remove_nulls(value: &mut Value) {
-    match value {
-        Value::Object(map) => {
-            let keys_to_remove: Vec<String> = map
-                .iter()
-                .filter(|(_, v)| v.is_null())
-                .map(|(k, _)| k.clone())
-                .collect();
-
-            for key in keys_to_remove {
-                map.remove(&key);
-            }
-
-            for value in map.values_mut() {
-                remove_nulls(value);
-            }
-        }
-        Value::Array(vec) => {
-            for item in vec {
-                remove_nulls(item);
-            }
-        }
-        _ => {}
-    }
+    pub connection_model_definitions_store: MongoStore<ConnectionModelDefinition>,
+    pub connection_model_schemas_cache: Cache<(Arc<str>, Arc<str>), Arc<ConnectionModelSchema>>,
+    pub connection_model_schemas_store: MongoStore<ConnectionModelSchema>,
+    pub secrets_client: Arc<dyn CryptoExt + Sync + Send>,
+    pub secrets_cache: Cache<Connection, Arc<Value>>,
+    pub http_client: reqwest::Client,
+    pub renderer: Option<Arc<RwLock<Handlebars<'static>>>>,
 }
 
 impl UnifiedDestination {
@@ -354,6 +232,8 @@ impl UnifiedDestination {
         }
     }
 
+    // FIXME: This function is way too long. It should be broken down into smaller more manageable
+    // pieces.
     pub async fn send_to_destination_unified(
         &self,
         connection: Arc<Connection>,
@@ -493,7 +373,7 @@ impl UnifiedDestination {
                         error!("Could not create request schema mapping script: {e}");
                         InternalError::invalid_argument(&e.to_string(), None)
                     })?;
-                let mut body = JS_RUNTIME
+                let body = JS_RUNTIME
                     .with_borrow_mut(|script| script.call_namespace(&ns, body))
                     .map_err(|e| {
                         InternalError::script_error(
@@ -504,7 +384,7 @@ impl UnifiedDestination {
 
                 tokio::task::yield_now().await;
 
-                remove_nulls(&mut body);
+                let body = remove_nulls(&body);
 
                 debug!(
                     "Mapped body to {}",
@@ -882,7 +762,7 @@ impl UnifiedDestination {
             const ID_KEY: &str = "id";
             const MODIFY_TOKEN_KEY: &str = "modifyToken";
 
-            let mut mapped_body: Value = if let Some(Value::Array(arr)) = body {
+            let mapped_body: Value = if let Some(Value::Array(arr)) = body {
                 let mut futs = Vec::with_capacity(arr.len());
                 for body in arr {
                     futs.push(async {
@@ -939,7 +819,7 @@ impl UnifiedDestination {
                 Value::Object(Default::default())
             };
 
-            remove_nulls(&mut mapped_body);
+            let mapped_body = remove_nulls(&mapped_body);
 
             body = Some(mapped_body);
         } else if matches!(config.action_name, CrudAction::Update | CrudAction::Delete) {
@@ -1135,59 +1015,5 @@ impl UnifiedDestination {
 
         self.execute_model_definition(&templated_config, headers, &query_params, &secret, context)
             .await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_match_route() {
-        let routes = [
-            "/customers",
-            "/customers/:id",
-            "/customers/{{id}}/orders",
-            "/customers/:id/orders/:order_id",
-        ]
-        .into_iter();
-
-        assert_eq!(
-            match_route("/customers", routes.clone()),
-            Some("/customers")
-        );
-        assert_eq!(
-            match_route("/customers/123", routes.clone()),
-            Some("/customers/:id")
-        );
-        assert_eq!(
-            match_route("/customers/123/orders", routes.clone()),
-            Some("/customers/{{id}}/orders")
-        );
-        assert_eq!(
-            match_route("/customers/123/orders/456", routes.clone()),
-            Some("/customers/:id/orders/:order_id")
-        );
-        assert_eq!(match_route("/customers/123/456", routes.clone()), None);
-        assert_eq!(match_route("/customers/123/orders/456/789", routes), None);
-    }
-
-    #[test]
-    fn test_template_route() {
-        assert_eq!(
-            template_route(
-                "/customers/:id/orders/:order_id".to_string(),
-                "/customers/123/orders/456".to_string()
-            ),
-            "customers/123/orders/456".to_string()
-        );
-
-        assert_eq!(
-            template_route(
-                "/customers/{{id}}/orders/{{order_id}}".to_string(),
-                "/customers/123/orders/456".to_string()
-            ),
-            "customers/123/orders/456".to_string()
-        );
     }
 }

@@ -7,16 +7,8 @@ edition = "2021"
 repository = "https://github.com/integration-os/integrationos-domain"
 
 [features]
-default = ["unified"]
-
 # This feature can be used for tests to provide dummy implementations
 dummy = ["dep:fake"]
-
-# This feature provides access to unified-destination functionality.
-unified = ["metrics", "dep:handlebars", "dep:moka"]
-
-# This feature is for using napi to export structs to an npm package
-napi = ["dep:napi", "dep:napi-derive"]
 
 # This feature allows you to measure the time it takes to execute a future
 metrics = ["dep:pin-project"]
@@ -36,7 +28,6 @@ anyhow = "1.0.79"
 async-recursion = "1.0.5"
 async-trait = "0.1.77"
 axum = { version = "0.7.5", optional = true }
-base64 = "0.21.7"
 base64ct = { version = "1.6.0", features = ["alloc"] }
 bson = "2.9.0"
 chrono = { version = "0.4.32", features = ["serde"] }
@@ -52,22 +43,18 @@ fake = { version = "2.9.2", features = [
     "semver",
 ], optional = true }
 futures = "0.3.30"
-handlebars = { version = "4.4.0", optional = true }
+handlebars = { version = "4.4.0" }
 http = "1.1.0"
 http-serde-ext = "1.0.2"
 indexmap = "2.1.0"
 js-sandbox-ios = "0.1.0"
-moka = { workspace = true, optional = true }
 mongodb = "2.8.0"
-napi = { version = "2.14.2", default-features = false, features = [
-    "napi4",
-], optional = true }
-napi-derive = { version = "2.14.6", optional = true }
+napi = { version = "2.14.2", default-features = false, features = [ "napi4" ] }
+napi-derive = { version = "2.14.6" }
 openapiv3 = "2.0.0"
 pin-project = { version = "1.1.4", optional = true }
 prost = "0.12.3"
 rand = "0.8.5"
-redis = { version = "0.23.3", features = ["connection-manager", "tokio-comp"] }
 reqwest = { version = "0.12.3", features = [
     "json",
     "rustls-tls",
