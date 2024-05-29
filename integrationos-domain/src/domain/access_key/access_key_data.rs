@@ -1,12 +1,10 @@
-#[cfg(feature = "napi")]
-use napi_derive::napi;
-
 use crate::{IntegrationOSError, InternalError};
+use napi_derive::napi;
 use prost::Message;
 
 #[derive(Clone, Eq, PartialEq, prost::Message)]
+#[napi(object)]
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
-#[cfg_attr(feature = "napi", napi(object))]
 pub struct AccessKeyData {
     #[prost(string, tag = "1")]
     pub id: String,
