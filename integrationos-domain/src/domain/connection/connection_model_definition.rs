@@ -48,6 +48,9 @@ pub struct ConnectionModelDefinition {
 
     #[serde(flatten, default)]
     pub record_metadata: RecordMetadata,
+
+    #[serde(default)]
+    pub supported: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]

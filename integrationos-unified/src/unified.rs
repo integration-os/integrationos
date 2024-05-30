@@ -24,7 +24,7 @@ use integrationos_domain::{
     hashed_secret::HashedSecret,
     id::{prefix::IdPrefix, Id},
     prelude::{CryptoExt, MongoStore, TimedExt},
-    Connection, ErrorMeta, IntegrationOSError, Store,
+    ApplicationError, Connection, ErrorMeta, IntegrationOSError, Store,
 };
 use js_sandbox_ios::Script;
 use moka::future::Cache;
@@ -972,6 +972,13 @@ impl UnifiedDestination {
             )),
             Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
         }?;
+
+        if !config.supported {
+            return Err(ApplicationError::not_found(
+                "Supported Connection Model Definition",
+                None,
+            ));
+        }
 
         let secret = self
             .secrets_cache
