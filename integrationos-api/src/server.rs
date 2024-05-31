@@ -9,7 +9,8 @@ use crate::{
 use anyhow::{anyhow, Context, Result};
 use axum::Router;
 use integrationos_cache::local::{
-    connection_cache::ConnectionCacheArcStrHeaderKey, connection_definition_cache::ConnectionDefinitionCache,
+    connection_cache::ConnectionCacheArcStrHeaderKey,
+    connection_definition_cache::ConnectionDefinitionCache,
     connection_oauth_definition_cache::ConnectionOAuthDefinitionCache,
     event_access_cache::EventAccessCache,
 };
@@ -146,8 +147,10 @@ impl Server {
 
         let event_access_cache =
             EventAccessCache::new(config.cache_size, config.access_key_cache_ttl_secs);
-        let connections_cache =
-            ConnectionCacheArcStrHeaderKey::create(config.cache_size, config.connection_cache_ttl_secs);
+        let connections_cache = ConnectionCacheArcStrHeaderKey::create(
+            config.cache_size,
+            config.connection_cache_ttl_secs,
+        );
         let connection_definitions_cache = ConnectionDefinitionCache::new(
             config.cache_size,
             config.connection_definition_cache_ttl_secs,
