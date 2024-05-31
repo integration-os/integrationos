@@ -1,8 +1,10 @@
 pub mod connection_cache;
 pub mod connection_definition_cache;
 pub mod connection_model_definition_cache;
+pub mod connection_model_schema_cache;
 pub mod connection_oauth_definition_cache;
 pub mod event_access_cache;
+pub mod secrets_cache;
 
 use crate::LocalCacheExt;
 use integrationos_domain::{IntegrationOSError, Unit};

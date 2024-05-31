@@ -12,7 +12,7 @@ use axum::{
 };
 use bson::{doc, SerializerOptions};
 use http::{HeaderMap, HeaderValue, StatusCode};
-use integrationos_cache::local::connection_cache::ConnectionCache;
+use integrationos_cache::local::connection_cache::ConnectionCacheArcStrHeaderKey;
 use integrationos_domain::{
     algebra::MongoStore, event_access::EventAccess, ApplicationError, Connection,
     IntegrationOSError, InternalError, OAuth, Store,
@@ -337,11 +337,11 @@ async fn get_connection(
     access: &EventAccess,
     connection_key: &HeaderValue,
     stores: &AppStores,
-    cache: &ConnectionCache,
+    cache: &ConnectionCacheArcStrHeaderKey,
 ) -> Result<Arc<Connection>, IntegrationOSError> {
     let connection = cache
         .get_or_insert_with_filter(
-            &(access.ownership.id.clone(), connection_key.clone()),
+            (access.ownership.id.clone(), connection_key.clone()),
             stores.connection.clone(),
             doc! {
                 "key": connection_key.to_str().map_err(|_| {

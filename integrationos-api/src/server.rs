@@ -9,7 +9,7 @@ use crate::{
 use anyhow::{anyhow, Context, Result};
 use axum::Router;
 use integrationos_cache::local::{
-    connection_cache::ConnectionCache, connection_definition_cache::ConnectionDefinitionCache,
+    connection_cache::ConnectionCacheArcStrHeaderKey, connection_definition_cache::ConnectionDefinitionCache,
     connection_oauth_definition_cache::ConnectionOAuthDefinitionCache,
     event_access_cache::EventAccessCache,
 };
@@ -64,7 +64,7 @@ pub struct AppState {
     pub openapi_data: OpenAPIData,
     pub http_client: reqwest::Client,
     pub event_access_cache: EventAccessCache,
-    pub connections_cache: ConnectionCache,
+    pub connections_cache: ConnectionCacheArcStrHeaderKey,
     pub connection_definitions_cache: ConnectionDefinitionCache,
     pub connection_oauth_definitions_cache: ConnectionOAuthDefinitionCache,
     pub secrets_client: Arc<dyn CryptoExt + Sync + Send>,
@@ -147,7 +147,7 @@ impl Server {
         let event_access_cache =
             EventAccessCache::new(config.cache_size, config.access_key_cache_ttl_secs);
         let connections_cache =
-            ConnectionCache::new(config.cache_size, config.connection_cache_ttl_secs);
+            ConnectionCacheArcStrHeaderKey::create(config.cache_size, config.connection_cache_ttl_secs);
         let connection_definitions_cache = ConnectionDefinitionCache::new(
             config.cache_size,
             config.connection_definition_cache_ttl_secs,
