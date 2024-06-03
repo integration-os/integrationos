@@ -4,7 +4,7 @@ use std::{
 };
 
 use envconfig::Envconfig;
-use integrationos_domain::cache::CacheConfig as RedisConfig;
+use integrationos_domain::cache::CacheConfig;
 use integrationos_domain::{
     database::DatabaseConfig, openai::OpenAiConfig, secrets::SecretsConfig,
 };
@@ -32,6 +32,12 @@ pub struct Config {
     pub connection_definition_cache_ttl_secs: u64,
     #[envconfig(from = "CONNECTION_OAUTH_DEFINITION_CACHE_TTL_SECS", default = "120")]
     pub connection_oauth_definition_cache_ttl_secs: u64,
+    #[envconfig(from = "CONNECTION_MODEL_SCHEMA_TTL_SECS", default = "3600")]
+    pub connection_model_schema_cache_ttl_secs: u64,
+    #[envconfig(from = "CONNECTION_MODEL_DEFINITION_CACHE_TTL_SECS", default = "3600")]
+    pub connection_model_definition_cache_ttl_secs: u64,
+    #[envconfig(from = "SECRET_CACHE_TTL_SECS", default = "3600")]
+    pub secret_cache_ttl_secs: u64,
     #[envconfig(
         from = "EVENT_ACCESS_PASSWORD",
         default = "32KFFT_i4UpkJmyPwY2TGzgHpxfXs7zS"
@@ -77,7 +83,7 @@ pub struct Config {
     #[envconfig(nested = true)]
     pub openai_config: OpenAiConfig,
     #[envconfig(nested = true)]
-    pub redis_config: RedisConfig,
+    pub cache_config: CacheConfig,
     #[envconfig(from = "RATE_LIMIT_ENABLED", default = "true")]
     pub rate_limit_enabled: bool,
 }
@@ -140,7 +146,7 @@ impl Display for Config {
         writeln!(f, "{}", self.headers)?;
         writeln!(f, "{}", self.db_config)?;
         writeln!(f, "{}", self.openai_config)?;
-        writeln!(f, "{}", self.redis_config)?;
+        writeln!(f, "{}", self.cache_config)?;
         writeln!(f, "RATE_LIMIT_ENABLED: {}", self.rate_limit_enabled)
     }
 }

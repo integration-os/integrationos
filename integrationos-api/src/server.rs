@@ -9,7 +9,8 @@ use crate::{
 use anyhow::{anyhow, Context, Result};
 use axum::Router;
 use integrationos_cache::local::{
-    connection_cache::ConnectionCache, connection_definition_cache::ConnectionDefinitionCache,
+    connection_cache::ConnectionCacheArcStrHeaderKey,
+    connection_definition_cache::ConnectionDefinitionCache,
     connection_oauth_definition_cache::ConnectionOAuthDefinitionCache,
     event_access_cache::EventAccessCache,
 };
@@ -26,7 +27,7 @@ use integrationos_domain::{
     stage::Stage,
     Connection, Event, Pipeline, PlatformData, Store, Transaction,
 };
-use integrationos_unified::unified::UnifiedDestination;
+use integrationos_unified::unified::{UnifiedCacheTTLs, UnifiedDestination};
 use mongodb::{options::UpdateOptions, Client, Database};
 use segment::{AutoBatcher, Batcher, HttpClient};
 use std::{sync::Arc, time::Duration};
@@ -64,7 +65,7 @@ pub struct AppState {
     pub openapi_data: OpenAPIData,
     pub http_client: reqwest::Client,
     pub event_access_cache: EventAccessCache,
-    pub connections_cache: ConnectionCache,
+    pub connections_cache: ConnectionCacheArcStrHeaderKey,
     pub connection_definitions_cache: ConnectionDefinitionCache,
     pub connection_oauth_definitions_cache: ConnectionOAuthDefinitionCache,
     pub secrets_client: Arc<dyn CryptoExt + Sync + Send>,
@@ -117,6 +118,14 @@ impl Server {
             config.db_config.clone(),
             config.cache_size,
             secrets_client.clone(),
+            UnifiedCacheTTLs {
+                connection_cache_ttl_secs: config.connection_cache_ttl_secs,
+                connection_model_schema_cache_ttl_secs: config
+                    .connection_model_schema_cache_ttl_secs,
+                connection_model_definition_cache_ttl_secs: config
+                    .connection_model_definition_cache_ttl_secs,
+                secret_cache_ttl_secs: config.secret_cache_ttl_secs,
+            },
         )
         .await
         .with_context(|| "Could not initialize extractor caller")?;
@@ -146,8 +155,10 @@ impl Server {
 
         let event_access_cache =
             EventAccessCache::new(config.cache_size, config.access_key_cache_ttl_secs);
-        let connections_cache =
-            ConnectionCache::new(config.cache_size, config.connection_cache_ttl_secs);
+        let connections_cache = ConnectionCacheArcStrHeaderKey::create(
+            config.cache_size,
+            config.connection_cache_ttl_secs,
+        );
         let connection_definitions_cache = ConnectionDefinitionCache::new(
             config.cache_size,
             config.connection_definition_cache_ttl_secs,

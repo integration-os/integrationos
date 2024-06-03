@@ -1,7 +1,5 @@
 use envconfig::Envconfig;
-use integrationos_domain::{
-    cache::CacheConfig as RedisConfig, database::DatabaseConfig, secrets::SecretsConfig,
-};
+use integrationos_domain::{cache::CacheConfig, database::DatabaseConfig, secrets::SecretsConfig};
 use std::fmt::{Display, Formatter};
 
 #[derive(Envconfig, Clone)] // Intentionally no Debug so secret is not printed
@@ -17,9 +15,17 @@ pub struct EventCoreConfig {
     #[envconfig(nested = true)]
     pub secrets_config: SecretsConfig,
     #[envconfig(nested = true)]
-    pub redis: RedisConfig,
+    pub cache: CacheConfig,
     #[envconfig(nested = true)]
     pub db: DatabaseConfig,
+    #[envconfig(from = "CONNECTION_CACHE_TTL_SECS", default = "3600")]
+    pub connection_cache_ttl_secs: u64,
+    #[envconfig(from = "CONNECTION_MODEL_SCHEMA_TTL_SECS", default = "3600")]
+    pub connection_model_schema_cache_ttl_secs: u64,
+    #[envconfig(from = "CONNECTION_MODEL_DEFINITION_CACHE_TTL_SECS", default = "3600")]
+    pub connection_model_definition_cache_ttl_secs: u64,
+    #[envconfig(from = "SECRET_CACHE_TTL_SECS", default = "3600")]
+    pub secret_cache_ttl_secs: u64,
 }
 
 impl Display for EventCoreConfig {
@@ -33,7 +39,7 @@ impl Display for EventCoreConfig {
             self.fetch_google_auth_token
         )?;
         write!(f, "{}", self.secrets_config)?;
-        write!(f, "{}", self.redis)?;
+        write!(f, "{}", self.cache)?;
         write!(f, "{}", self.db)
     }
 }

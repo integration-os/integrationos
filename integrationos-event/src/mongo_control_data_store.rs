@@ -18,7 +18,7 @@ use integrationos_domain::{
     middleware::Middleware,
     Connection, Event, Pipeline, Store,
 };
-use integrationos_unified::unified::UnifiedDestination;
+use integrationos_unified::unified::{UnifiedCacheTTLs, UnifiedDestination};
 use moka::future::Cache;
 use mongodb::{options::ClientOptions, Client};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
@@ -111,6 +111,14 @@ impl MongoControlDataStore {
                 config.db.clone(),
                 config.cache_size,
                 secrets_client,
+                UnifiedCacheTTLs {
+                    connection_cache_ttl_secs: config.connection_cache_ttl_secs,
+                    connection_model_definition_cache_ttl_secs: config
+                        .connection_model_definition_cache_ttl_secs,
+                    connection_model_schema_cache_ttl_secs: config
+                        .connection_model_schema_cache_ttl_secs,
+                    secret_cache_ttl_secs: config.secret_cache_ttl_secs,
+                },
             )
             .await?,
         })

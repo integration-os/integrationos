@@ -10,6 +10,11 @@ use chrono::Utc;
 use futures::{future::join_all, join, FutureExt};
 use handlebars::Handlebars;
 use http::{HeaderMap, HeaderName, HeaderValue, Response, StatusCode};
+use integrationos_cache::local::{
+    connection_cache::ConnectionCacheArcStrKey,
+    connection_model_definition_cache::ConnectionModelDefinitionDestinationKey,
+    connection_model_schema_cache::ConnectionModelSchemaCache, secrets_cache::SecretCache,
+};
 use integrationos_domain::{
     api_model_config::{ModelPaths, RequestModelPaths, ResponseModelPaths},
     client::caller_client::CallerClient,
@@ -27,7 +32,6 @@ use integrationos_domain::{
     ApplicationError, Connection, ErrorMeta, IntegrationOSError, Store,
 };
 use js_sandbox_ios::Script;
-use moka::future::Cache;
 use mongodb::{
     options::{Collation, CollationStrength, FindOneOptions},
     Client,
@@ -47,38 +51,51 @@ thread_local! {
 
 #[derive(Clone)]
 pub struct UnifiedDestination {
-    pub connections_cache: Cache<Arc<str>, Arc<Connection>>,
+    pub connections_cache: ConnectionCacheArcStrKey,
     pub connections_store: MongoStore<Connection>,
-    pub connection_model_definitions_cache: Cache<Destination, Arc<ConnectionModelDefinition>>,
-    pub connection_model_definitions_destination_cache:
-        Cache<Destination, Arc<ConnectionModelDefinition>>,
+    pub connection_model_definitions_cache: ConnectionModelDefinitionDestinationKey,
     pub connection_model_definitions_store: MongoStore<ConnectionModelDefinition>,
-    pub connection_model_schemas_cache: Cache<(Arc<str>, Arc<str>), Arc<ConnectionModelSchema>>,
+    pub connection_model_schemas_cache: ConnectionModelSchemaCache,
     pub connection_model_schemas_store: MongoStore<ConnectionModelSchema>,
     pub secrets_client: Arc<dyn CryptoExt + Sync + Send>,
-    pub secrets_cache: Cache<Connection, Arc<Value>>,
+    pub secrets_cache: SecretCache,
     pub http_client: reqwest::Client,
     pub renderer: Option<Arc<RwLock<Handlebars<'static>>>>,
 }
 
+pub struct UnifiedCacheTTLs {
+    pub connection_cache_ttl_secs: u64,
+    pub connection_model_definition_cache_ttl_secs: u64,
+    pub connection_model_schema_cache_ttl_secs: u64,
+    pub secret_cache_ttl_secs: u64,
+}
+
 impl UnifiedDestination {
+    // TODO: Pass this ttls values as parameters
     pub async fn new(
-        config: DatabaseConfig,
+        db_config: DatabaseConfig,
         cache_size: u64,
         secrets_client: Arc<dyn CryptoExt + Sync + Send>,
+        cache_ttls: UnifiedCacheTTLs,
     ) -> Result<Self, IntegrationOSError> {
         let http_client = reqwest::Client::new();
-        let connections_cache = Cache::new(cache_size);
-        let connection_model_definitions_cache = Cache::new(cache_size);
-        let connection_model_definitions_destination_cache = Cache::new(cache_size);
-        let connection_model_schemas_cache = Cache::new(cache_size);
-        let secrets_cache = Cache::new(cache_size);
+        let connections_cache =
+            ConnectionCacheArcStrKey::new(cache_size, cache_ttls.connection_cache_ttl_secs);
+        let connection_model_definitions_cache = ConnectionModelDefinitionDestinationKey::create(
+            cache_size,
+            cache_ttls.connection_model_definition_cache_ttl_secs,
+        );
+        let connection_model_schemas_cache = ConnectionModelSchemaCache::new(
+            cache_size,
+            cache_ttls.connection_model_schema_cache_ttl_secs,
+        );
+        let secrets_cache = SecretCache::new(cache_size, cache_ttls.secret_cache_ttl_secs);
 
-        let client = Client::with_uri_str(&config.control_db_url)
+        let client = Client::with_uri_str(&db_config.control_db_url)
             .await
             .map_err(|e| InternalError::connection_error(&e.to_string(), None))?;
 
-        let db = client.database(&config.control_db_name);
+        let db = client.database(&db_config.control_db_name);
 
         let connections_store = MongoStore::new(&db, &Store::Connections).await?;
         let connection_model_definitions_store =
@@ -90,7 +107,6 @@ impl UnifiedDestination {
             connections_cache,
             connections_store,
             connection_model_definitions_cache,
-            connection_model_definitions_destination_cache,
             connection_model_definitions_store,
             connection_model_schemas_cache,
             connection_model_schemas_store,
@@ -178,10 +194,10 @@ impl UnifiedDestination {
 
     pub async fn execute_model_definition(
         &self,
-        config: &Arc<ConnectionModelDefinition>,
+        config: &ConnectionModelDefinition,
         headers: HeaderMap,
         query_params: &HashMap<String, String>,
-        secret: &Arc<Value>,
+        secret: &Value,
         context: Option<Vec<u8>>,
     ) -> Result<reqwest::Response, IntegrationOSError> {
         let template_name = config.id.to_string();
@@ -251,30 +267,32 @@ impl UnifiedDestination {
 
         let config_fut = self
             .connection_model_definitions_cache
-            .try_get_with_by_ref(&key, async {
+            .get_or_insert_with_fn(key.clone(), || async {
                 match self.get_connection_model_definition(&key).await {
-                    Ok(Some(c)) => Ok(Arc::new(c)),
+                    Ok(Some(c)) => Ok(c),
                     Ok(None) => Err(InternalError::key_not_found("model definition", None)),
                     Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
                 }
             });
 
-        let secret_fut = self.secrets_cache.try_get_with_by_ref(&connection, async {
-            let secret_request = GetSecretRequest {
-                buildable_id: connection.ownership.id.to_string(),
-                id: connection.secrets_service_id.clone(),
-            };
-            match self
-                .secrets_client
-                .decrypt(&secret_request)
-                .map(|v| Some(v).transpose())
-                .await
-            {
-                Ok(Some(c)) => Ok(Arc::new(c)),
-                Ok(None) => Err(InternalError::key_not_found("secret", None)),
-                Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
-            }
-        });
+        let secret_fut =
+            self.secrets_cache
+                .get_or_insert_with_fn(connection.as_ref().clone(), || async {
+                    let secret_request = GetSecretRequest {
+                        buildable_id: connection.ownership.id.to_string(),
+                        id: connection.secrets_service_id.clone(),
+                    };
+                    match self
+                        .secrets_client
+                        .decrypt(&secret_request)
+                        .map(|v| Some(v).transpose())
+                        .await
+                    {
+                        Ok(Some(c)) => Ok(c),
+                        Ok(None) => Err(InternalError::key_not_found("secret", None)),
+                        Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
+                    }
+                });
 
         let Action::Unified {
             action: _,
@@ -289,33 +307,26 @@ impl UnifiedDestination {
         };
 
         let schema_key = (connection.platform.clone(), name.clone());
-        let schema_fut =
-            self.connection_model_schemas_cache
-                .try_get_with_by_ref(&schema_key, async {
-                    match self
-                        .connection_model_schemas_store
-                        .collection
-                        .find_one(
-                            doc! {
-                                "connectionPlatform": connection.platform.as_ref(),
-                                "mapping.commonModelName": name.as_ref(),
-                            },
-                            FindOneOptions::builder()
-                                .collation(Some(
-                                    Collation::builder()
-                                        .strength(CollationStrength::Secondary)
-                                        .locale("en")
-                                        .build(),
-                                ))
+        let schema_fut = self
+            .connection_model_schemas_cache
+            .get_or_insert_with_filter(
+                &schema_key,
+                self.connection_model_schemas_store.clone(),
+                doc! {
+                    "connectionPlatform": connection.platform.as_ref(),
+                    "mapping.commonModelName": name.as_ref(),
+                },
+                Some(
+                    FindOneOptions::builder()
+                        .collation(Some(
+                            Collation::builder()
+                                .strength(CollationStrength::Secondary)
+                                .locale("en")
                                 .build(),
-                        )
-                        .await
-                    {
-                        Ok(Some(c)) => Ok(Arc::new(c)),
-                        Ok(None) => Err(InternalError::key_not_found("model schema", None)),
-                        Err(e) => Err(InternalError::connection_error(&e.to_string(), None)),
-                    }
-                });
+                        ))
+                        .build(),
+                ),
+            );
 
         let join_result = join!(config_fut, secret_fut, schema_fut);
 
@@ -335,22 +346,22 @@ impl UnifiedDestination {
             id: schema_id,
             mapping,
             ..
-        } = cms.as_ref();
+        } = cms;
 
         if let Some(id) = id {
-            let secret = Arc::make_mut(&mut secret);
+            let secret = &mut secret;
             if let Value::Object(sec) = secret {
                 const ID: &str = "id";
                 sec.insert(ID.to_string(), Value::String(id.to_string()));
             }
         }
 
-        let crud_script_namespace = if self.secrets_cache.policy().max_capacity() == Some(0) {
+        let crud_script_namespace = if self.secrets_cache.max_capacity() == 0 {
             "$".to_string() + &uuid::Uuid::new_v4().simple().to_string()
         } else {
             config.id.to_string().replace([':', '-'], "_")
         };
-        let schema_script_namespace = if self.secrets_cache.policy().max_capacity() == Some(0) {
+        let schema_script_namespace = if self.secrets_cache.max_capacity() == 0 {
             "$".to_string() + &uuid::Uuid::new_v4().simple().to_string()
         } else {
             schema_id.to_string().replace([':', '-'], "_")
@@ -485,7 +496,7 @@ impl UnifiedDestination {
 
                 query_params = res.query_params.unwrap_or_default();
 
-                let secret = Arc::make_mut(&mut secret);
+                let secret = &mut secret;
                 if let Value::Object(ref mut sec) = secret {
                     if let Some(path_params) = res.path_params {
                         sec.extend(path_params.into_iter().map(|(a, b)| (a, Value::String(b))));
@@ -943,25 +954,15 @@ impl UnifiedDestination {
         let connection = if let Some(connection) = connection {
             connection
         } else {
-            self.connections_cache
-                .try_get_with_by_ref(&destination.connection_key, async {
-                    match self
-                        .connections_store
-                        .get_one(doc! { "key": destination.connection_key.as_ref() })
-                        .await
-                    {
-                        Ok(Some(c)) => Ok(Arc::new(c)),
-                        Ok(None) => Err(InternalError::key_not_found("Connection", None)),
-                        Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
-                    }
-                })
-                .await
-                .map_err(|e| {
-                    InternalError::connection_error(
-                        &e.to_string(),
-                        Some(&destination.connection_key.clone()),
+            Arc::new(
+                self.connections_cache
+                    .get_or_insert_with_filter(
+                        destination.connection_key.clone(),
+                        self.connections_store.clone(),
+                        doc! { "key": destination.connection_key.as_ref() },
                     )
-                })?
+                    .await?,
+            )
         };
 
         let config = match self.get_connection_model_definition(destination).await {
@@ -982,7 +983,7 @@ impl UnifiedDestination {
 
         let secret = self
             .secrets_cache
-            .try_get_with_by_ref(&connection, async {
+            .get_or_insert_with_fn(connection.as_ref().clone(), || async {
                 let secret_request = GetSecretRequest {
                     buildable_id: connection.ownership.id.to_string(),
                     id: connection.secrets_service_id.clone(),
@@ -993,7 +994,7 @@ impl UnifiedDestination {
                     .map(|v| Some(v).transpose())
                     .await
                 {
-                    Ok(Some(c)) => Ok(Arc::new(c)),
+                    Ok(Some(c)) => Ok(c),
                     Ok(None) => Err(InternalError::key_not_found("Secrets", None)),
                     Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
                 }

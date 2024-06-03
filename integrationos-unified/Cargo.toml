@@ -8,13 +8,13 @@ edition = "2021"
 jsonpath_lib = "0.3.0"
 bson = "2.9.0"
 chrono = { version = "0.4.32", features = ["serde"] }
+integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain" }
 futures = "0.3.30"
 handlebars = { version = "4.4.0" }
 http = "1.1.0"
 http-serde-ext = "1.0.2"
 js-sandbox-ios = "0.1.0"
-moka.workspace = true
 mongodb = "2.8.0"
 reqwest = { version = "0.12.3", features = [
     "json",

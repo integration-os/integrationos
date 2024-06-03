@@ -34,13 +34,13 @@ impl RateLimiter {
             return Err(anyhow::anyhow!("Rate limiting is disabled"));
         };
 
-        let mut redis = RedisCache::new(&state.config.redis_config)
+        let mut redis = RedisCache::new(&state.config.cache_config)
             .await
             .with_context(|| "Could not connect to redis")?;
 
         let (tx, mut rx) = channel::<(Arc<str>, oneshot::Sender<u64>)>(1024);
 
-        let throughput_key = state.config.redis_config.api_throughput_key.clone();
+        let throughput_key = state.config.cache_config.api_throughput_key.clone();
 
         tokio::spawn(async move {
             while let Some((id, tx)) = rx.recv().await {
