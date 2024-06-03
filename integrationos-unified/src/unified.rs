@@ -37,12 +37,7 @@ use mongodb::{
     Client,
 };
 use serde_json::{json, Number, Value};
-use std::{
-    cell::RefCell,
-    collections::HashMap,
-    str::FromStr,
-    sync::{Arc, RwLock},
-};
+use std::{cell::RefCell, collections::HashMap, str::FromStr, sync::Arc};
 use tracing::{debug, error};
 
 thread_local! {
@@ -60,7 +55,6 @@ pub struct UnifiedDestination {
     pub secrets_client: Arc<dyn CryptoExt + Sync + Send>,
     pub secrets_cache: SecretCache,
     pub http_client: reqwest::Client,
-    pub renderer: Option<Arc<RwLock<Handlebars<'static>>>>,
 }
 
 pub struct UnifiedCacheTTLs {
@@ -71,7 +65,6 @@ pub struct UnifiedCacheTTLs {
 }
 
 impl UnifiedDestination {
-    // TODO: Pass this ttls values as parameters
     pub async fn new(
         db_config: DatabaseConfig,
         cache_size: u64,
@@ -113,11 +106,6 @@ impl UnifiedDestination {
             secrets_client,
             secrets_cache,
             http_client,
-            renderer: if cache_size == 0 {
-                None
-            } else {
-                Some(Arc::new(RwLock::new(Handlebars::new())))
-            },
         })
     }
 
@@ -200,37 +188,14 @@ impl UnifiedDestination {
         secret: &Value,
         context: Option<Vec<u8>>,
     ) -> Result<reqwest::Response, IntegrationOSError> {
-        let template_name = config.id.to_string();
-        let config = if let Some(renderer) = &self.renderer {
-            let has_template = {
-                let guard = renderer.read().unwrap();
-                guard.has_template(&template_name)
-            };
+        let renderer = Handlebars::new();
 
-            if !has_template {
-                renderer
-                    .write()
-                    .unwrap()
-                    .register_template_string(
-                        &template_name,
-                        &serde_json::to_string(&config)
-                            .map_err(|e| InternalError::invalid_argument(&e.to_string(), None))?,
-                    )
-                    .map_err(|e| InternalError::invalid_argument(&e.to_string(), None))?;
-            }
-            renderer
-                .read()
-                .unwrap()
-                .render(&template_name, secret)
-                .map_err(|e| InternalError::invalid_argument(&e.to_string(), None))?
-        } else {
-            let renderer = Handlebars::new();
-            let config = serde_json::to_string(&config)
-                .map_err(|e| InternalError::invalid_argument(&e.to_string(), None))?;
-            renderer
-                .render_template(&config, secret)
-                .map_err(|e| InternalError::invalid_argument(&e.to_string(), None))?
-        };
+        let config_str = serde_json::to_string(&config)
+            .map_err(|e| InternalError::invalid_argument(&e.to_string(), None))?;
+
+        let config = renderer
+            .render_template(&config_str, secret)
+            .map_err(|e| InternalError::invalid_argument(&e.to_string(), None))?;
 
         let config: ConnectionModelDefinition = serde_json::from_str(&config)
             .map_err(|e| InternalError::invalid_argument(&e.to_string(), None))?;
