@@ -27,7 +27,7 @@ use integrationos_domain::{
     stage::Stage,
     Connection, Event, Pipeline, PlatformData, Store, Transaction,
 };
-use integrationos_unified::unified::UnifiedDestination;
+use integrationos_unified::unified::{UnifiedCacheTTLs, UnifiedDestination};
 use mongodb::{options::UpdateOptions, Client, Database};
 use segment::{AutoBatcher, Batcher, HttpClient};
 use std::{sync::Arc, time::Duration};
@@ -118,6 +118,14 @@ impl Server {
             config.db_config.clone(),
             config.cache_size,
             secrets_client.clone(),
+            UnifiedCacheTTLs {
+                connection_cache_ttl_secs: config.connection_cache_ttl_secs,
+                connection_model_schema_cache_ttl_secs: config
+                    .connection_model_schema_cache_ttl_secs,
+                connection_model_definition_cache_ttl_secs: config
+                    .connection_model_definition_cache_ttl_secs,
+                secret_cache_ttl_secs: config.secret_cache_ttl_secs,
+            },
         )
         .await
         .with_context(|| "Could not initialize extractor caller")?;

@@ -32,7 +32,6 @@ use integrationos_domain::{
     ApplicationError, Connection, ErrorMeta, IntegrationOSError, Store,
 };
 use js_sandbox_ios::Script;
-// use moka::future::Cache;
 use mongodb::{
     options::{Collation, CollationStrength, FindOneOptions},
     Client,
@@ -64,25 +63,39 @@ pub struct UnifiedDestination {
     pub renderer: Option<Arc<RwLock<Handlebars<'static>>>>,
 }
 
+pub struct UnifiedCacheTTLs {
+    pub connection_cache_ttl_secs: u64,
+    pub connection_model_definition_cache_ttl_secs: u64,
+    pub connection_model_schema_cache_ttl_secs: u64,
+    pub secret_cache_ttl_secs: u64,
+}
+
 impl UnifiedDestination {
     // TODO: Pass this ttls values as parameters
     pub async fn new(
-        config: DatabaseConfig,
+        db_config: DatabaseConfig,
         cache_size: u64,
         secrets_client: Arc<dyn CryptoExt + Sync + Send>,
+        cache_ttls: UnifiedCacheTTLs,
     ) -> Result<Self, IntegrationOSError> {
         let http_client = reqwest::Client::new();
-        let connections_cache = ConnectionCacheArcStrKey::new(cache_size, 3600);
-        let connection_model_definitions_cache =
-            ConnectionModelDefinitionDestinationKey::create(cache_size, 3600);
-        let connection_model_schemas_cache = ConnectionModelSchemaCache::new(cache_size, 3600);
-        let secrets_cache = SecretCache::new(cache_size, 3600);
+        let connections_cache =
+            ConnectionCacheArcStrKey::new(cache_size, cache_ttls.connection_cache_ttl_secs);
+        let connection_model_definitions_cache = ConnectionModelDefinitionDestinationKey::create(
+            cache_size,
+            cache_ttls.connection_model_definition_cache_ttl_secs,
+        );
+        let connection_model_schemas_cache = ConnectionModelSchemaCache::new(
+            cache_size,
+            cache_ttls.connection_model_schema_cache_ttl_secs,
+        );
+        let secrets_cache = SecretCache::new(cache_size, cache_ttls.secret_cache_ttl_secs);
 
-        let client = Client::with_uri_str(&config.control_db_url)
+        let client = Client::with_uri_str(&db_config.control_db_url)
             .await
             .map_err(|e| InternalError::connection_error(&e.to_string(), None))?;
 
-        let db = client.database(&config.control_db_name);
+        let db = client.database(&db_config.control_db_name);
 
         let connections_store = MongoStore::new(&db, &Store::Connections).await?;
         let connection_model_definitions_store =

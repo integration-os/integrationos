@@ -39,7 +39,7 @@ impl TestCore {
         let mut config = EventCoreConfig::init_from_hashmap(&HashMap::from([])).unwrap();
 
         config.db = api_config.db_config.clone();
-        config.redis = gateway_config.redis.clone();
+        config.cache = gateway_config.redis.clone();
 
         let control_store = Arc::new(
             MongoControlDataStore::new(&config, secrets_client)
@@ -55,7 +55,7 @@ impl TestCore {
             control_data_store: control_store.clone(),
         };
 
-        let event_handler = EventHandler::new(config.redis.clone(), control_store, context_store)
+        let event_handler = EventHandler::new(config.cache.clone(), control_store, context_store)
             .await
             .unwrap();
 

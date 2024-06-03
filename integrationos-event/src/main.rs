@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
     };
 
     let event_handler =
-        EventHandler::new(config.redis, control_store.clone(), context_store).await?;
+        EventHandler::new(config.cache, control_store.clone(), context_store).await?;
 
     info!("Listening for events on redis...");
     let sync_pair = Arc::new((Mutex::new(0u64), Condvar::new()));
