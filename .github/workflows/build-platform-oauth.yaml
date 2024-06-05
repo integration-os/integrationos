@@ -23,6 +23,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: integration-os/google-artifact-registry-action@v2
         with:
+          context: integrationos-platform-oauth
+          file: integrationos-platform-oauth/Dockerfile
           image: "us-docker.pkg.dev/integrationos/docker-oss/platform-oauth:${{ env.docker_image_tag }}"
           service_account: github-actions@integrationos.iam.gserviceaccount.com
           workload_identity_provider: projects/356173785332/locations/global/workloadIdentityPools/github-actions/providers/github-actions
