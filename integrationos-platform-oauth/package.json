@@ -1,5 +1,5 @@
 {
-    "name": "oauth",
+    "name": "platform-oauth",
     "version": "1.0.0",
     "main": "index.js",
     "scripts": {
