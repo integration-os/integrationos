@@ -24,7 +24,7 @@ pub struct EventCoreConfig {
     pub connection_model_schema_cache_ttl_secs: u64,
     #[envconfig(from = "CONNECTION_MODEL_DEFINITION_CACHE_TTL_SECS", default = "3600")]
     pub connection_model_definition_cache_ttl_secs: u64,
-    #[envconfig(from = "SECRET_CACHE_TTL_SECS", default = "3600")]
+    #[envconfig(from = "SECRET_CACHE_TTL_SECS", default = "300")]
     pub secret_cache_ttl_secs: u64,
 }
 
