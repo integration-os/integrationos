@@ -228,8 +228,9 @@ async fn oauth_handler(
             expires_in: Some(oauth_secret.expires_in),
             expires_at: Some(
                 (chrono::Utc::now()
-                    + Duration::try_seconds(oauth_secret.expires_in as i64)
+                    + (Duration::try_seconds(oauth_secret.expires_in as i64)
                         .unwrap_or(Duration::zero()))
+                    - Duration::seconds(120)) // 2 minutes before expiry
                 .timestamp(),
             ),
         }),
