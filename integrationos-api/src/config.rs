@@ -20,7 +20,6 @@ pub struct Config {
     #[envconfig(from = "CACHE_SIZE", default = "100")]
     pub cache_size: u64,
     #[envconfig(from = "ACCESS_KEY_CACHE_TTL_SECS", default = "1800")]
-    // Half hour access key ttl by default
     pub access_key_cache_ttl_secs: u64,
     #[envconfig(from = "ACCESS_KEY_WHITELIST_REFRESH_INTERVAL_SECS", default = "60")]
     pub access_key_whitelist_refresh_interval_secs: u64,
@@ -28,13 +27,13 @@ pub struct Config {
     pub connection_cache_ttl_secs: u64,
     #[envconfig(from = "ENGINEERING_ACCOUNT_ID", default = "engineering_account")]
     pub engineering_account_id: String,
-    #[envconfig(from = "CONNECTION_DEFINITION_CACHE_TTL_SECS", default = "120")]
+    #[envconfig(from = "CONNECTION_DEFINITION_CACHE_TTL_SECS", default = "86400")]
     pub connection_definition_cache_ttl_secs: u64,
-    #[envconfig(from = "CONNECTION_OAUTH_DEFINITION_CACHE_TTL_SECS", default = "120")]
+    #[envconfig(from = "CONNECTION_OAUTH_DEFINITION_CACHE_TTL_SECS", default = "86400")]
     pub connection_oauth_definition_cache_ttl_secs: u64,
-    #[envconfig(from = "CONNECTION_MODEL_SCHEMA_TTL_SECS", default = "3600")]
+    #[envconfig(from = "CONNECTION_MODEL_SCHEMA_TTL_SECS", default = "86400")]
     pub connection_model_schema_cache_ttl_secs: u64,
-    #[envconfig(from = "CONNECTION_MODEL_DEFINITION_CACHE_TTL_SECS", default = "3600")]
+    #[envconfig(from = "CONNECTION_MODEL_DEFINITION_CACHE_TTL_SECS", default = "86400")]
     pub connection_model_definition_cache_ttl_secs: u64,
     #[envconfig(from = "SECRET_CACHE_TTL_SECS", default = "300")]
     pub secret_cache_ttl_secs: u64,
