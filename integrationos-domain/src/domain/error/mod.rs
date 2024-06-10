@@ -951,13 +951,11 @@ impl IntegrationOSError {
     #[allow(dead_code)]
     pub(crate) fn as_json(&self) -> serde_json::Value {
         serde_json::json!({
-            "passthrough": {
-                "type": self.as_ref(),
-                "code": self.code().as_u16(),
-                "status": StatusCode::from(self).as_u16(),
-                "key": self.key().to_string(),
-                "message": self.message().to_string()
-            }
+            "type": self.as_ref(),
+            "code": self.code().as_u16(),
+            "status": StatusCode::from(self).as_u16(),
+            "key": self.key().to_string(),
+            "message": self.message().to_string()
         })
     }
 
