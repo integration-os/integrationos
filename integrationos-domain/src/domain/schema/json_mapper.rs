@@ -334,21 +334,29 @@ pub fn map_data_by_schema(
         }
 
         if let Some(FieldDefault { value, .. }) = default {
-            let default_num = value
-                .as_deref()
-                .unwrap_or("0")
-                .parse::<f64>()
-                .map(serde_json::Number::from_f64);
+            let default_num = value.as_deref().unwrap_or("0").parse::<f64>();
 
-            match default_num {
-                Ok(Some(num)) => return Ok(Value::Number(num)),
-                _ => {
-                    return Err(InternalError::configuration_error(
-                        &format!("Invalid default value for number field: {}", key),
-                        None,
-                    ));
+            let num = if let Ok(num) = default_num {
+                if num.fract() == 0.0 {
+                    Ok(Value::Number(serde_json::Number::from(num as i64)))
+                } else {
+                    let num_f64 = serde_json::Number::from_f64(num).ok_or_else(|| {
+                        InternalError::configuration_error(
+                            &format!("Invalid default value for number field: {}", key),
+                            None,
+                        )
+                    });
+
+                    num_f64.map(Value::Number)
                 }
-            }
+            } else {
+                Err(InternalError::configuration_error(
+                    &format!("Invalid default value for number field: {}", key),
+                    None,
+                ))
+            };
+
+            return num;
         }
 
         if required {
