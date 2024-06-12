@@ -120,7 +120,8 @@ impl UnifiedDestination {
                     .get_many(
                         Some(doc! {
                             "connectionPlatform": destination.platform.as_ref(),
-                            "action": method.as_str()
+                            "action": method.as_str(),
+                            "supported": true
                         }),
                         None,
                         None,
