@@ -334,21 +334,31 @@ pub fn map_data_by_schema(
         }
 
         if let Some(FieldDefault { value, .. }) = default {
-            let default_num = value
-                .as_deref()
-                .unwrap_or("0")
-                .parse::<f64>()
-                .map(serde_json::Number::from_f64);
+            let num_as_str = value.as_deref().ok_or_else(|| {
+                InternalError::configuration_error(
+                    &format!("Invalid default value for number field: {}", key),
+                    None,
+                )
+            })?;
 
-            match default_num {
-                Ok(Some(num)) => return Ok(Value::Number(num)),
-                _ => {
-                    return Err(InternalError::configuration_error(
-                        &format!("Invalid default value for number field: {}", key),
-                        None,
-                    ));
+            if num_as_str.contains('.') {
+                let num_f64 = num_as_str.parse::<f64>().map(Value::from);
+
+                if let Ok(num) = num_f64 {
+                    return Ok(num);
+                }
+            } else {
+                let num_i64 = num_as_str.parse::<i64>().map(Value::from);
+
+                if let Ok(num) = num_i64 {
+                    return Ok(num);
                 }
             }
+
+            return Err(InternalError::configuration_error(
+                &format!("Invalid default value for number field: {}", key),
+                None,
+            ));
         }
 
         if required {
@@ -660,7 +670,7 @@ mod tests {
             "products_list": [
               {
                 "name": "Product1",
-                "value": 0.0,
+                "value": 0,
                 "id": "789"
               },
               {
