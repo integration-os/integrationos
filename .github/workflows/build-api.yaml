@@ -7,8 +7,11 @@ on:
     paths:
       - .github/workflows/build-api.yaml
       - "integrationos-api/**"
-      - Dockerfile
+      - "integrationos-cache/**"
+      - "integrationos-domain/**"
+      - "integrationos-unified/**"
       - Cargo.lock
+      - Dockerfile
 
 env:
   docker_image_tag: ${{ github.ref == 'refs/heads/main' && github.sha || github.ref_name }}
