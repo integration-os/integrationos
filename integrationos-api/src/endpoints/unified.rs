@@ -1,3 +1,4 @@
+use super::{get_connection, INTEGRATION_OS_PASSTHROUGH_HEADER};
 use crate::{config::Headers, metrics::Metric, server::AppState};
 use axum::{
     extract::{Path, Query, State},
@@ -20,8 +21,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{collections::HashMap, sync::Arc};
 use tracing::error;
-
-use super::{get_connection, INTEGRATION_OS_PASSTHROUGH_HEADER};
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new()

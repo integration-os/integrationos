@@ -18,11 +18,11 @@ pub struct EventCoreConfig {
     pub cache: CacheConfig,
     #[envconfig(nested = true)]
     pub db: DatabaseConfig,
-    #[envconfig(from = "CONNECTION_CACHE_TTL_SECS", default = "3600")]
+    #[envconfig(from = "CONNECTION_CACHE_TTL_SECS", default = "86400")]
     pub connection_cache_ttl_secs: u64,
-    #[envconfig(from = "CONNECTION_MODEL_SCHEMA_TTL_SECS", default = "3600")]
+    #[envconfig(from = "CONNECTION_MODEL_SCHEMA_TTL_SECS", default = "86400")]
     pub connection_model_schema_cache_ttl_secs: u64,
-    #[envconfig(from = "CONNECTION_MODEL_DEFINITION_CACHE_TTL_SECS", default = "3600")]
+    #[envconfig(from = "CONNECTION_MODEL_DEFINITION_CACHE_TTL_SECS", default = "86400")]
     pub connection_model_definition_cache_ttl_secs: u64,
     #[envconfig(from = "SECRET_CACHE_TTL_SECS", default = "300")]
     pub secret_cache_ttl_secs: u64,
