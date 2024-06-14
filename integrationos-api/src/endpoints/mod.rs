@@ -42,6 +42,7 @@ pub mod platform;
 pub mod platform_page;
 pub mod transactions;
 pub mod unified;
+pub mod utils;
 
 const INTEGRATION_OS_PASSTHROUGH_HEADER: &str = "x-integrationos-passthrough";
 
