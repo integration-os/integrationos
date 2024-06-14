@@ -14,7 +14,7 @@ futures = "0.3.30"
 handlebars = { version = "4.4.0" }
 http = "1.1.0"
 http-serde-ext = "1.0.2"
-js-sandbox-ios = "0.1.0"
+js-sandbox-ios.workspace = true
 mongodb = "2.8.0"
 reqwest = { version = "0.12.3", features = [
     "json",
