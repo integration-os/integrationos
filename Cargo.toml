@@ -1,13 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
-  "integrationos-api", 
-  "integrationos-cache",
-  "integrationos-domain",
-  "integrationos-event", 
-  "integrationos-gateway", 
-  "integrationos-watchdog", 
-  "integrationos-unified",
+    "integrationos-api",
+    "integrationos-cache",
+    "integrationos-domain",
+    "integrationos-event",
+    "integrationos-gateway",
+    "integrationos-watchdog",
+    "integrationos-unified",
 ]
 
 [workspace.dependencies]
@@ -31,13 +31,13 @@ fake = { version = "2.9.2", features = [
     "http",
     "serde_json",
     "semver",
-]}
+] }
 futures = "0.3.28"
 futures-util = "0.3.28"
 handlebars = "4.4.0"
 http = "1.1.0"
 http-serde-ext = "1.0.2"
-js-sandbox-ios = "0.1.0"
+js-sandbox-ios = "0.1.1"
 jsonpath_lib = "0.3.0"
 jsonwebtoken = "8.3.0"
 mockito = "1.2.0"

@@ -1944,14 +1944,15 @@ dependencies = [
 
 [[package]]
 name = "js-sandbox-ios"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e3dd0f703d6d50aef7889fe55933fa3110e37d97ceeecab2c1c0a9de2f1eeac"
+checksum = "00f29118a234aca68ae6ddd632ad92d51f10608a5cacc5fb0f08386c86bf5ea9"
 dependencies = [
  "deno_core",
  "js-sandbox-macros",
  "serde",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]
