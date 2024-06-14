@@ -6,9 +6,11 @@ on:
       - "[0-9]+.[0-9]+.[0-9]+"
     paths:
       - .github/workflows/build-watchdog.yaml
+      - "integrationos-cache/**"
+      - "integrationos-domain/**"
       - "integrationos-watchdog/**"
-      - Dockerfile
       - Cargo.lock
+      - Dockerfile
 
 env:
   docker_image_tag: ${{ github.ref == 'refs/heads/main' && github.sha || github.ref_name }}
