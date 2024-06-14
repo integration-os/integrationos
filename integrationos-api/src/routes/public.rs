@@ -2,6 +2,7 @@ use crate::{
     endpoints::{
         common_enum, common_model, connection_definition, connection_model_schema,
         connection_oauth_definition, event_access::create_event_access_for_new_user, openapi, read,
+        utils,
     },
     middleware::jwt_auth::{self, JwtState},
     server::AppState,
@@ -56,5 +57,6 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             "/connection-data/:model/:platform_name",
             get(connection_definition::public_get_connection_details),
         )
+        .route("/generate-id/:prefix", get(utils::generate_id))
         .layer(TraceLayer::new_for_http())
 }
