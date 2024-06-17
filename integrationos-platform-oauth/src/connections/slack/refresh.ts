@@ -1,5 +1,3 @@
-import axios from "axios";
-import qs from "qs";
 import { DataObject, OAuthResponse } from "../../lib/types";
 
 export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
