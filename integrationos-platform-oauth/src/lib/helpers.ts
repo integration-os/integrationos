@@ -26,3 +26,5 @@ export const toCamelCase = async (input: string) => {
 };
 
 export const convertToTimestamp = async (dateString: string): Promise<number> => new Date(dateString).getTime();
+
+export const base64encode = (val: string) => btoa(val);
