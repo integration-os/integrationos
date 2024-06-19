@@ -825,15 +825,29 @@ impl UnifiedDestination {
             "commonModel": config.mapping.as_ref().map(|m| &m.common_model_name),
         }))?;
 
-        if let (Some(body), Value::Object(ref mut response)) = (body, &mut response) {
-            const UNIFIED: &str = "unified";
-            if config.action_name == CrudAction::GetCount {
+        match body {
+            Some(body) => {
+                const UNIFIED: &str = "unified";
                 const COUNT: &str = "count";
-                response.insert(UNIFIED.to_string(), json!({ COUNT: body }));
-            } else {
-                response.insert(UNIFIED.to_string(), body);
+
+                match response {
+                    Value::Object(ref mut response) => {
+                        if config.action_name == CrudAction::GetCount {
+                            response.insert(UNIFIED.to_string(), json!({ COUNT: body }));
+                        } else {
+                            response.insert(UNIFIED.to_string(), body);
+                        }
+                    }
+                    Value::Number(ref mut count) => {
+                        if config.action_name == CrudAction::GetCount {
+                            response = json!({ COUNT: count, UNIFIED: body });
+                        }
+                    }
+                    _ => {}
+                }
             }
-        }
+            None => tracing::info!("There was no response body to map for this action"),
+        };
 
         if let (true, Some(passthrough), Value::Object(ref mut response)) =
             (include_passthrough, passthrough, &mut response)
