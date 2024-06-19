@@ -840,7 +840,7 @@ impl UnifiedDestination {
                     }
                     Value::Number(ref mut count) => {
                         if config.action_name == CrudAction::GetCount {
-                            response = json!({ COUNT: count, UNIFIED: body });
+                            response = json!({ UNIFIED: { COUNT: count } });
                         }
                     }
                     _ => {}
