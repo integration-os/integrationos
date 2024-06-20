@@ -843,6 +843,18 @@ impl UnifiedDestination {
                             response = json!({ UNIFIED: { COUNT: count } });
                         }
                     }
+                    Value::String(ref mut string) => {
+                        if config.action_name == CrudAction::GetCount {
+                            let number = string.parse::<u64>().map_err(|e| {
+                                InternalError::serialize_error(
+                                    &format!("Could not parse count string to number: {e}"),
+                                    None,
+                                )
+                            })?;
+
+                            response = json!({ UNIFIED: { COUNT: number } });
+                        }
+                    }
                     _ => {}
                 }
             }
