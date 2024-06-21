@@ -16,8 +16,6 @@ const URI: &str = "https://api.integrationos.com/v1/unified";
 const OPENAPI_VERSION: &str = "3.0.3";
 const SPEC_VERSION: &str = "1.0.0";
 const TITLE: &str = "Common Models";
-const X_SPEAKEASY_NAME_OVERRIDE: &str = "x-speakeasy-name-override";
-const X_SPEAKEASY_IGNORE: &str = "x-speakeasy-ignore";
 const X_INTEGRATIONOS_SECRET: &str = "X-INTEGRATIONOS-SECRET";
 const X_INTEGRATIONOS_CONNECTION_KEY: &str = "X-INTEGRATIONOS-CONNECTION-KEY";
 const X_INTEGRATIONOS_ENABLE_PASSTHROUGH: &str = "X-INTEGRATIONOS-ENABLE-PASSTHROUGH";
@@ -69,10 +67,6 @@ pub fn generate_openapi_schema(
             schemas,
             ..Default::default()
         }),
-        security: Some(vec![IndexMap::from_iter(vec![(
-            "secret".to_string(),
-            vec![],
-        )])]),
         ..Default::default()
     })
 }
@@ -159,24 +153,6 @@ fn operation(action: &CrudAction, common_model: &CommonModel) -> Operation {
         }),
     )]);
 
-    let extensions = IndexMap::from_iter(vec![(
-        X_SPEAKEASY_NAME_OVERRIDE.to_string(),
-        serde_json::Value::String(
-            {
-                match action {
-                    CrudAction::GetOne => "get",
-                    CrudAction::GetMany => "list",
-                    CrudAction::GetCount => "count",
-                    CrudAction::Create => "create",
-                    CrudAction::Update => "update",
-                    CrudAction::Delete => "delete",
-                    _ => unimplemented!("Not implemented yet"),
-                }
-            }
-            .to_string(),
-        ),
-    )]);
-
     Operation {
         tags: vec![common_model.name.to_owned()],
         summary: Some(summary),
@@ -187,8 +163,19 @@ fn operation(action: &CrudAction, common_model: &CommonModel) -> Operation {
             responses: response,
             ..Default::default()
         },
-        extensions,
         ..Default::default()
+    }
+}
+
+fn get_description(name: &str) -> Option<String> {
+    match name {
+        LIMIT => Some("The maximum number of items to return.".to_string()),
+        CURSOR => Some("A cursor for pagination, indicating the position in the dataset from where to start returning results.".to_string()),
+        CREATED_AFTER => Some("Return items that were created after this date and time (ISO 8601 format).".to_string()),
+        CREATED_BEFORE => Some("Return items that were created before this date and time (ISO 8601 format).".to_string()),
+        UPDATED_AFTER => Some("Return items that were last updated after this date and time (ISO 8601 format).".to_string()),
+            UPDATED_BEFORE => Some("Return items that were last updated before this date and time (ISO 8601 format).".to_string()),
+        _ => None
     }
 }
 
@@ -306,7 +293,7 @@ fn parameter(action: &CrudAction) -> Vec<ReferenceOr<Parameter>> {
             ReferenceOr::Item(Parameter::Query {
                 parameter_data: ParameterData {
                     name: name.to_string(),
-                    description: None,
+                    description: get_description(name),
                     required: false,
                     deprecated: Some(false),
                     format: ParameterSchemaOrContent::Schema(ReferenceOr::Item(Schema {
@@ -341,7 +328,7 @@ fn header() -> Vec<ReferenceOr<Parameter>> {
                 required: true,
                 deprecated: Some(false),
                 format: ParameterSchemaOrContent::Schema(ReferenceOr::Item(Schema {
-                    schema_data: Default::default(),
+                    schema_data: SchemaData { default: Some(serde_json::Value::String("{{integrationos-api-key}}".into())), ..Default::default() },
                     schema_kind: SchemaKind::Type(Type::String(StringType {
                         format: VariantOrUnknownOrEmpty::Unknown("string".to_string()),
                         pattern: None,
@@ -353,10 +340,7 @@ fn header() -> Vec<ReferenceOr<Parameter>> {
                 example: None,
                 examples: Default::default(),
                 explode: Default::default(),
-                extensions: IndexMap::from_iter(vec![(
-                    X_SPEAKEASY_IGNORE.to_string(),
-                    serde_json::Value::Bool(true),
-                )]),
+                extensions: Default::default(),
             },
             style: HeaderStyle::Simple,
         }),
@@ -367,7 +351,7 @@ fn header() -> Vec<ReferenceOr<Parameter>> {
                 required: true,
                 deprecated: Some(false),
                 format: ParameterSchemaOrContent::Schema(ReferenceOr::Item(Schema {
-                    schema_data: Default::default(),
+                    schema_data: SchemaData { default: Some(serde_json::Value::String("{{integrationos-connection-key}}".into())), ..Default::default() },
                     schema_kind: SchemaKind::Type(Type::String(StringType {
                         format: VariantOrUnknownOrEmpty::Unknown("string".to_string()),
                         ..Default::default()
