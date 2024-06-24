@@ -337,10 +337,11 @@ impl UnifiedDestination {
             if let Some(js) = mapping.as_ref().map(|m| m.from_common_model.as_str()) {
                 debug!(
                     "Mapping request body {}\nUsing js {js}",
-                    serde_json::to_string_pretty(&body).map_err(|e| {
-                        error!("Could not convert body to pretty string {body:?}: {e}");
-                        InternalError::invalid_argument(&e.to_string(), None)
-                    })?
+                    serde_json::to_string_pretty(&body)
+                        .map_err(|e| {
+                            error!("Could not convert body to pretty string {body:?}: {e}");
+                        })
+                        .unwrap_or_default(),
                 );
 
                 let ns: String = schema_script_namespace.clone() + "_mapFromCommonModel";
@@ -348,12 +349,15 @@ impl UnifiedDestination {
                     .with_borrow_mut(|script| script.add_script(&ns, "mapFromCommonModel", js))
                     .map_err(|e| {
                         error!("Could not create request schema mapping script: {e}");
-                        InternalError::invalid_argument(&e.to_string(), None)
+                        ApplicationError::bad_request(
+                            &format!("Failed while creating request schema mapping script: {e}"),
+                            None,
+                        )
                     })?;
                 let body = JS_RUNTIME
                     .with_borrow_mut(|script| script.call_namespace(&ns, body))
                     .map_err(|e| {
-                        InternalError::script_error(
+                        ApplicationError::bad_request(
                             &format!("Failed while running request schema mapping script: {e}"),
                             None,
                         )
@@ -365,10 +369,11 @@ impl UnifiedDestination {
 
                 debug!(
                     "Mapped body to {}",
-                    serde_json::to_string_pretty(&body).map_err(|e| {
-                        error!("Could not convert body to pretty string {body:?}: {e}");
-                        InternalError::invalid_argument(&e.to_string(), None)
-                    })?
+                    serde_json::to_string_pretty(&body)
+                        .map_err(|e| {
+                            error!("Could not convert body to pretty string {body:?}: {e}");
+                        })
+                        .unwrap_or_default(),
                 );
 
                 Some(body)
@@ -395,7 +400,7 @@ impl UnifiedDestination {
                     .with_borrow_mut(|script| script.add_script(&ns, "mapCrudRequest", js.as_str()))
                     .map_err(|e| {
                         error!("Could not create request crud mapping script from {js}: {e}");
-                        InternalError::script_error(&e.to_string(), None)
+                        ApplicationError::bad_request(&e.to_string(), None)
                     })?;
 
                 const PASSTHROUGH_PARAMS: &str = "passthroughForward";
@@ -435,16 +440,19 @@ impl UnifiedDestination {
 
                 debug!(
                     "Mapping request crud {}\nUsing js {js}",
-                    serde_json::to_string_pretty(&request).map_err(|e| {
-                        error!("Could not convert request crud to pretty string {request:?}: {e}");
-                        InternalError::invalid_argument(&e.to_string(), None)
-                    })?
+                    serde_json::to_string_pretty(&request)
+                        .map_err(|e| {
+                            error!(
+                                "Could not convert request crud to pretty string {request:?}: {e}"
+                            );
+                        })
+                        .unwrap_or_default(),
                 );
 
                 let res: RequestCrud = JS_RUNTIME
                     .with_borrow_mut(|script| script.call_namespace(&ns, request))
                     .map_err(|e| {
-                        InternalError::script_error(
+                        ApplicationError::bad_request(
                             &format!("Failed while running request crud mapping script: {e}"),
                             None,
                         )
@@ -452,10 +460,11 @@ impl UnifiedDestination {
 
                 debug!(
                     "Mapped request crud to {}",
-                    serde_json::to_string_pretty(&res).map_err(|e| {
-                        error!("Could not convert crud to pretty string {res:?}: {e}");
-                        InternalError::invalid_argument(&e.to_string(), None)
-                    })?
+                    serde_json::to_string_pretty(&res)
+                        .map_err(|e| {
+                            error!("Could not convert crud to pretty string {res:?}: {e}");
+                        })
+                        .unwrap_or_default(),
                 );
 
                 headers = res.headers;
@@ -492,10 +501,11 @@ impl UnifiedDestination {
                 body = body.map(|body| json!({path: body}));
                 debug!(
                     "Mapped request body to {path}: {}",
-                    serde_json::to_string_pretty(&body).map_err(|e| {
-                        error!("Could not convert mapped body to pretty string {body:?}: {e}");
-                        InternalError::invalid_argument(&e.to_string(), None)
-                    })?
+                    serde_json::to_string_pretty(&body)
+                        .map_err(|e| {
+                            error!("Could not convert mapped body to pretty string {body:?}: {e}");
+                        })
+                        .unwrap_or_default(),
                 );
             }
         }
@@ -506,7 +516,7 @@ impl UnifiedDestination {
             None | Some(Value::Null) => None,
             _ => Some(serde_json::to_vec(&body).map_err(|e| {
                 error!("Could not convert body to vec: {e}");
-                InternalError::invalid_argument(&e.to_string(), None)
+                ApplicationError::bad_request(&e.to_string(), None)
             })?),
         };
 
@@ -555,10 +565,11 @@ impl UnifiedDestination {
 
         debug!(
             "Received response body: {}",
-            serde_json::to_string_pretty(&body).map_err(|e| {
-                error!("Could not convert mapped body to pretty string {body:?}: {e}");
-                InternalError::invalid_argument(&e.to_string(), None)
-            })?
+            serde_json::to_string_pretty(&body)
+                .map_err(|e| {
+                    error!("Could not convert mapped body to pretty string {body:?}: {e}");
+                })
+                .unwrap_or_default(),
         );
 
         let pagination = if config.action_name == CrudAction::GetMany {
@@ -575,7 +586,7 @@ impl UnifiedDestination {
                         })
                         .map_err(|e| {
                             error!("Could not create response crud mapping script from {js}: {e}");
-                            InternalError::script_error(&e.to_string(), None)
+                            ApplicationError::bad_request(&e.to_string(), None)
                         })?;
 
                     let pagination = if let (
@@ -593,7 +604,7 @@ impl UnifiedDestination {
                         let mut bodies =
                             jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
                                 error!("Could not select cursor at response path {path}: {e}");
-                                InternalError::invalid_argument(&e.to_string(), None)
+                                ApplicationError::bad_request(&e.to_string(), None)
                             })?;
                         if bodies.len() != 1 {
                             Some(Value::Null)
@@ -616,14 +627,14 @@ impl UnifiedDestination {
                         "Mapping response crud {}\nUsing js {js}",
                         serde_json::to_string_pretty(&res_to_map).map_err(|e| {
                             error!("Could not convert response crud to pretty string {res_to_map:?}: {e}");
-                            InternalError::invalid_argument(&e.to_string(), None)
-                        })?
+                        })
+                        .unwrap_or_default(),
                     );
 
                     let res: ResponseCrud = JS_RUNTIME
                         .with_borrow_mut(|script| script.call_namespace(&ns, &res_to_map))
                         .map_err(|e| {
-                            InternalError::script_error(
+                            ApplicationError::bad_request(
                                 &format!("Failed while running response crud mapping script: {e}"),
                                 None,
                             )
@@ -662,7 +673,7 @@ impl UnifiedDestination {
                 let wrapped_body = json!({"body":body});
                 let mut bodies = jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
                     error!("Could not select body at response path {path}: {e}");
-                    InternalError::invalid_argument(&e.to_string(), None)
+                    ApplicationError::bad_request(&e.to_string(), None)
                 })?;
                 if bodies.is_empty() {
                     let error_string = format!(
@@ -700,10 +711,11 @@ impl UnifiedDestination {
             };
             debug!(
                 "Mapped response body to {path}: {}",
-                serde_json::to_string_pretty(&body).map_err(|e| {
-                    error!("Could not convert mapped body to pretty string {body:?}: {e}");
-                    InternalError::invalid_argument(&e.to_string(), None)
-                })?
+                serde_json::to_string_pretty(&body)
+                    .map_err(|e| {
+                        error!("Could not convert mapped body to pretty string {body:?}: {e}");
+                    })
+                    .unwrap_or_default(),
             );
         }
 
@@ -725,15 +737,16 @@ impl UnifiedDestination {
                 .with_borrow_mut(|script| script.add_script(&ns, "mapToCommonModel", js))
                 .map_err(|e| {
                     error!("Could not create response schema mapping script from {js}: {e}");
-                    InternalError::script_error(&e.to_string(), None)
+                    ApplicationError::bad_request(&e.to_string(), None)
                 })?;
 
             debug!(
                 "Mapping response body {}\nUsing js {js}",
-                serde_json::to_string_pretty(&body).map_err(|e| {
-                    error!("Could not convert body to pretty string {body:?}: {e}");
-                    InternalError::invalid_argument(&e.to_string(), None)
-                })?
+                serde_json::to_string_pretty(&body)
+                    .map_err(|e| {
+                        error!("Could not convert body to pretty string {body:?}: {e}");
+                    })
+                    .unwrap_or_default(),
             );
 
             const ID_KEY: &str = "id";
@@ -749,7 +762,7 @@ impl UnifiedDestination {
                             .add_script(&ns, "mapToCommonModel", js)
                             .and_then(|_| script.call_namespace(&ns, body))
                             .map_err(|e| {
-                                InternalError::script_error(
+                                ApplicationError::bad_request(
                                     &format!("Failed while running response schema mapping script: {e}"),
                                     None,
                                 )
@@ -785,7 +798,7 @@ impl UnifiedDestination {
                         body
                     })
                     .map_err(|e| {
-                        InternalError::script_error(
+                        ApplicationError::bad_request(
                             &format!("Failed while running response schema mapping script: {e}"),
                             None,
                         )
@@ -805,10 +818,11 @@ impl UnifiedDestination {
 
         debug!(
             "Mapped response body to {}",
-            serde_json::to_string_pretty(&body).map_err(|e| {
-                error!("Could not convert body to pretty string {body:?}: {e}");
-                InternalError::invalid_argument(&e.to_string(), None)
-            })?
+            serde_json::to_string_pretty(&body)
+                .map_err(|e| {
+                    error!("Could not convert body to pretty string {body:?}: {e}");
+                })
+                .unwrap_or_default(),
         );
 
         let mut response = json!({});
