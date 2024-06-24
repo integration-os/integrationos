@@ -349,7 +349,10 @@ impl UnifiedDestination {
                     .with_borrow_mut(|script| script.add_script(&ns, "mapFromCommonModel", js))
                     .map_err(|e| {
                         error!("Could not create request schema mapping script: {e}");
-                        InternalError::invalid_argument(&e.to_string(), None)
+                        ApplicationError::bad_request(
+                            &format!("Failed while creating request schema mapping script: {e}"),
+                            None,
+                        )
                     })?;
                 let body = JS_RUNTIME
                     .with_borrow_mut(|script| script.call_namespace(&ns, body))
