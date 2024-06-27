@@ -42,13 +42,14 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
     return {
       accessToken,
       refreshToken,
-      expiresIn,
+      // JWT ExpAt value converted to date - expiresIn * 1000
+      expiresIn: Math.floor((expiresIn * 1000 - new Date().getTime()) / 1000),
       tokenType,
       meta: {
         ...body?.OAUTH_METADATA?.meta,
       },
     };
   } catch (error) {
-    throw new Error(`Error fetching refresh token for xero: ${error}`);
+    throw new Error(`Error fetching refresh token for front: ${error}`);
   }
 };
