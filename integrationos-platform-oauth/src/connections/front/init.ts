@@ -1,5 +1,6 @@
 import axios from "axios";
 import { DataObject, OAuthResponse } from "../../lib/types";
+import { differenceInSeconds } from "../../lib/helpers";
 
 const generateHeaders = (clientId: string, clientSecret: string) => {
   const credentials = clientId + ":" + clientSecret;
@@ -30,18 +31,19 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
     const {
       access_token: accessToken,
       refresh_token: refreshToken,
-      expires_at: expiresIn,
+      expires_at: expiresAt,
       token_type: tokenType,
     } = response.data;
 
     return {
       accessToken,
       refreshToken,
-      expiresIn,
+      // Converting expiresAt to date object and getting difference in seconds
+      expiresIn: differenceInSeconds(new Date(expiresAt * 1000)),
       tokenType,
       meta: {},
     };
   } catch (error) {
-    throw new Error(`Error fetching access token for front: ${error}`);
+    throw new Error(`Error fetching access token for Front: ${error}`);
   }
 };

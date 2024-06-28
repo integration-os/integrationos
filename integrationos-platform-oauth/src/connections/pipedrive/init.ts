@@ -45,6 +45,6 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
       },
     };
   } catch (error) {
-    throw new Error(`Error fetching access token for pipedrive: ${error}`);
+    throw new Error(`Error fetching access token for Pipedrive: ${error}`);
   }
 };

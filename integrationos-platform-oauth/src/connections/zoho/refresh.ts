@@ -21,7 +21,6 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
     const {
       data: {
         access_token: accessToken,
-        refresh_token: refreshToken,
         token_type: tokenType,
         expires_in: expiresIn,
       },
@@ -29,7 +28,8 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
 
     return {
       accessToken,
-      refreshToken,
+      // Refresh token does not expire and stays the same for every request
+      refreshToken: refresh_token,
       expiresIn,
       tokenType,
       meta: {

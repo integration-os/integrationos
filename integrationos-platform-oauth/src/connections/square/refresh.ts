@@ -42,6 +42,6 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
             }
         };
     } catch (error) {
-        throw new Error(`Error fetching access token for ${body.params?.platform}: ${error}`);
+        throw new Error(`Error fetching access token for Square: ${error}`);
     }
 };

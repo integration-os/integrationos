@@ -17,7 +17,6 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
       OAUTH_CLIENT_ID: client_id,
       OAUTH_CLIENT_SECRET: client_secret,
       OAUTH_REFRESH_TOKEN: refresh_token,
-      OAUTH_REQUEST_PAYLOAD: { redirectUri: redirect_uri },
     } = body;
 
     const requestBody = {
@@ -51,6 +50,6 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
       },
     };
   } catch (error) {
-    throw new Error(`Error fetching refresh token for xero: ${error}`);
+    throw new Error(`Error fetching refresh token for Xero: ${error}`);
   }
 };
