@@ -18,7 +18,10 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
             refresh_token,
         };
 
-        const response = await axios.post(`https://connect.squareup.com/oauth2/token`, requestBody);
+        const isSandbox = client_id.startsWith('sandbox-');
+        const baseURL = isSandbox ? 'https://connect.squareupsandbox.com' : 'https://connect.squareup.com';
+
+        const response = await axios.post(`${baseURL}/oauth2/token`, requestBody);
 
         const {
             data: {
