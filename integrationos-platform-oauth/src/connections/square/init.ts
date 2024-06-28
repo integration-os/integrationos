@@ -13,7 +13,10 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
             redirect_uri: body.metadata?.redirectUri,
         };
 
-        const response = await axios.post(`https://connect.squareup.com/oauth2/token`, requestBody);
+        const isSandbox = body.clientId.startsWith('sandbox-');
+        const baseURL = isSandbox ? 'https://connect.squareupsandbox.com' : 'https://connect.squareup.com';
+
+        const response = await axios.post(`${baseURL}/oauth2/token`, requestBody);
 
         const {
             data: {
