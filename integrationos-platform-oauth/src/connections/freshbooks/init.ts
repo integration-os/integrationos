@@ -53,6 +53,6 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
       },
     };
   } catch (error) {
-    throw new Error(`Error fetching access token for freshbooks: ${error}`);
+    throw new Error(`Error fetching access token for Freshbooks: ${error}`);
   }
 };

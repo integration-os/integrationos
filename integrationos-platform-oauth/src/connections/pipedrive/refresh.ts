@@ -49,6 +49,6 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
       },
     };
   } catch (error) {
-    throw new Error(`Error fetching refresh token for pipedrive: ${error}`);
+    throw new Error(`Error fetching refresh token for Pipedrive: ${error}`);
   }
 };
