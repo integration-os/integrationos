@@ -148,12 +148,13 @@ View the full guide [here](https://docs.integrationos.com/docs/quickstart).
     ```shell
     docker-compose up -d
     ```
-3. Run migrations
+3. Run migrations and load seed data
 
     ```shell
     source .env
     docker-compose -f docker-compose.data.yml run --rm migrate-before
     docker-compose -f docker-compose.data.yml run --rm migrate-after
+    docker-compose -f docker-compose.data.yml run --rm seed-data
     ```
 
 **Note:** If you want to run the latest version of the docker image, you can use the latest git commit hash as the tag. For example, `integrationos/integrationos:<commit-hash>`.

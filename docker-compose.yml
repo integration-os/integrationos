@@ -140,14 +140,5 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
       - MONGO_INITDB_ROOT_USERNAME=integrationos
 
-  setup:
-    image: mongo:6.0
-    depends_on:
-      - mongo
-    restart: "no"
-    volumes:
-      - ./resources:/resources:ro
-    entrypoint: ["/bin/bash", "-c", "sleep 10 && mongorestore --host mongo --nsFrom='seed.*' --nsTo='events-service.*' --authenticationDatabase admin -u integrationos -p ${MONGO_PASSWORD} /resources"]
-
   redis:
     image: redis:7.0
