@@ -8,6 +8,7 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
       OAUTH_CLIENT_ID: client_id,
       OAUTH_CLIENT_SECRET: client_secret,
       OAUTH_REQUEST_PAYLOAD: { formData },
+      OAUTH_METADATA,
     } = body;
     const requestBody = {
       grant_type: "client_credentials",
@@ -32,7 +33,9 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
       refreshToken: "",
       expiresIn: +expires_in,
       tokenType: token_type,
-      meta: {},
+      meta: {
+        ...OAUTH_METADATA?.meta,
+      },
     };
   } catch (error) {
     throw new Error(

@@ -22,12 +22,25 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
       data: { access_token, expires_in, token_type },
     } = response;
 
+    const companiesURL = `https://api.businesscentral.dynamics.com/v2.0/${body.metadata?.formData?.ENVIRONMENT_NAME}/api/v2.0/companies`;
+
+    const companies = await axios.get(companiesURL, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+
+    const {
+      data: { value: companiesData },
+    } = companies;
+    const companyId = companiesData[0].id;
+
     return {
       accessToken: access_token,
       refreshToken: "",
       expiresIn: +expires_in,
       tokenType: token_type,
-      meta: {},
+      meta: { companyId },
     };
   } catch (error) {
     throw new Error(
