@@ -37,6 +37,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
 pub struct CreateRequest {
     pub connection_platform: String,
     pub platform_redirect_uri: String,
+    pub sandbox_platform_redirect_uri: Option<String>,
     pub ios_redirect_uri: String,
     pub scopes: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -116,6 +117,7 @@ impl RequestExt for CreateRequest {
             },
             frontend: Frontend {
                 platform_redirect_uri: self.platform_redirect_uri.clone(),
+                sandbox_platform_redirect_uri: self.sandbox_platform_redirect_uri.clone(),
                 ios_redirect_uri: self.ios_redirect_uri.clone(),
                 scopes: self.scopes.clone(),
                 separator: self.separator.clone(),
@@ -176,6 +178,7 @@ impl RequestExt for CreateRequest {
         };
         record.frontend = Frontend {
             platform_redirect_uri: self.platform_redirect_uri.clone(),
+            sandbox_platform_redirect_uri: self.sandbox_platform_redirect_uri.clone(),
             ios_redirect_uri: self.ios_redirect_uri.clone(),
             scopes: self.scopes.clone(),
             separator: self.separator.clone(),
