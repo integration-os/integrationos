@@ -1,28 +1,26 @@
-use std::sync::Arc;
-
-use axum::{
-    extract::{Path, Query, State},
-    routing::get,
-    Json, Router,
-};
-use bson::Document;
-use integrationos_domain::Store;
-use serde::{Deserialize, Serialize};
-use tracing::error;
-
+use super::{ApiResult, ReadResponse};
 use crate::{
     internal_server_error,
     metrics::{DAILY_KEY, MONTHLY_KEY, PLATFORMS_KEY, TOTAL_KEY},
     not_found,
     server::AppState,
 };
-
-use super::ApiResult;
+use axum::{
+    extract::{Path, Query, State},
+    routing::get,
+    Extension, Json, Router,
+};
+use bson::Document;
+use integrationos_domain::{event_access::EventAccess, Store};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tracing::error;
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(get_metrics))
         .route("/:client_id", get(get_metrics))
+        .route("/total", get(get_full_record))
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -57,6 +55,38 @@ pub struct QueryParams {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MetricResponse {
     pub count: i32,
+}
+
+pub async fn get_full_record(
+    state: State<Arc<AppState>>,
+    Extension(user_event_access): Extension<Arc<EventAccess>>,
+) -> ApiResult<ReadResponse<Document>> {
+    let coll = state
+        .app_stores
+        .db
+        .collection::<Document>(&Store::Metrics.to_string());
+
+    let doc = match coll
+        .find_one(
+            bson::doc! { "clientId": user_event_access.ownership.client_id.clone()},
+            None,
+        )
+        .await
+    {
+        Ok(Some(doc)) => doc,
+        Ok(None) => return Err(not_found!("Client")),
+        Err(e) => {
+            error!("Could not fetch metric: {e}");
+            return Err(internal_server_error!());
+        }
+    };
+
+    Ok(Json(ReadResponse {
+        rows: vec![doc],
+        total: 1,
+        skip: 0,
+        limit: 1,
+    }))
 }
 
 pub async fn get_metrics(
