@@ -57,6 +57,8 @@ pub struct CreateRequest {
     pub helper_link: Option<String>,
     pub authentication: Vec<AuthenticationItem>,
     pub auth_method: Option<AuthMethod>,
+    #[serde(default)]
+    pub multi_env: bool,
     pub settings: Settings,
     pub paths: Paths,
     pub test_connection: Option<Id>,
@@ -307,6 +309,7 @@ impl RequestExt for CreateRequest {
             test_connection: self.test_connection,
             auth_secrets,
             auth_method: self.auth_method.clone(),
+            multi_env: self.multi_env.clone(),
             paths: self.paths.clone(),
             settings: self.settings.clone(),
             hidden: false,
@@ -329,6 +332,7 @@ impl RequestExt for CreateRequest {
         record.frontend.spec.tags.clone_from(&self.tags);
         record.test_connection = self.test_connection;
         record.platform.clone_from(&self.platform);
+        record.multi_env = self.multi_env.clone();
         record.record_metadata.active = self.active;
         record
     }

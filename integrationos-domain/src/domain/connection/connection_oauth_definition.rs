@@ -62,6 +62,8 @@ pub struct ComputeRequest {
 #[serde(rename_all = "camelCase")]
 pub struct Frontend {
     pub platform_redirect_uri: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sandbox_platform_redirect_uri: Option<String>,
     pub scopes: String,
     pub ios_redirect_uri: String,
     #[serde(skip_serializing_if = "Option::is_none", default = "default_separator")]

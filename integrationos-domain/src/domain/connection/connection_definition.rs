@@ -20,6 +20,8 @@ pub struct ConnectionDefinition {
     pub name: String,
     pub auth_secrets: Vec<AuthSecret>,
     pub auth_method: Option<AuthMethod>,
+    #[serde(default)]
+    pub multi_env: bool,
     pub frontend: Frontend,
     pub paths: Paths,
     pub settings: Settings,
@@ -101,6 +103,7 @@ impl ConnectionDefinition {
             test_connection: None,
             auth_secrets: vec![],
             auth_method: None,
+            multi_env: false,
             paths: Paths {
                 id: None,
                 event: None,
