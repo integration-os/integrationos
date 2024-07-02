@@ -35,6 +35,7 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
             expiresIn: Math.floor((await convertToTimestamp(expires_at) - (new Date().getTime())) / 1000),
             tokenType: token_type === "bearer" ? "Bearer" : token_type,
             meta: {
+                baseURL,
                 merchantId: merchant_id,
                 shortLived: short_lived
             }
