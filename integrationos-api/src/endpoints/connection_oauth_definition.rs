@@ -37,6 +37,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
 pub struct CreateRequest {
     pub connection_platform: String,
     pub platform_redirect_uri: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sandbox_platform_redirect_uri: Option<String>,
     pub ios_redirect_uri: String,
     pub scopes: String,
