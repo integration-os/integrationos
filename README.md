@@ -151,7 +151,6 @@ View the full guide [here](https://docs.integrationos.com/docs/quickstart).
 3. Run migrations and load seed data
 
     ```shell
-    source .env
     docker-compose -f docker-compose.data.yml run --rm migrate-before
     docker-compose -f docker-compose.data.yml run --rm migrate-after
     docker-compose -f docker-compose.data.yml run --rm seed-data
