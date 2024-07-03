@@ -83,11 +83,13 @@ async fn oauth_handler(
         e
     })?;
 
+    let environment = user_event_access.environment;
+
     let secret = get_secret::<PlatformSecret>(
         &state,
         GetSecretRequest {
             id: setting
-                .platform_secret(&payload.connection_definition_id)
+                .platform_secret(&payload.connection_definition_id, environment)
                 .ok_or_else(|| {
                     error!(
                         "Settings does not have a secret service id for the connection platform"
