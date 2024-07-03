@@ -1,5 +1,6 @@
 use super::api_model_config::{ApiModelConfig, Function};
 use crate::{
+    environment::Environment,
     id::Id,
     prelude::{ownership::Ownership, shared::record_metadata::RecordMetadata},
     Feature, Hook,
@@ -105,10 +106,20 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn platform_secret(&self, connection_definition_id: &Id) -> Option<String> {
+    pub fn platform_secret(
+        &self,
+        connection_definition_id: &Id,
+        environment: Environment,
+    ) -> Option<String> {
         self.connected_platforms
             .iter()
-            .find(|p| p.connection_definition_id == *connection_definition_id)
+            .filter(|p| p.connection_definition_id == *connection_definition_id)
+            .find(|p| p.environment == environment)
+            .or_else(|| {
+                self.connected_platforms
+                    .iter()
+                    .find(|p| p.connection_definition_id == *connection_definition_id)
+            })
             .and_then(|p| p.secrets_service_id.clone())
     }
 }
@@ -129,6 +140,12 @@ pub struct ConnectedPlatform {
     pub secrets_service_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub secret: Option<ConnectedPlatformSecret>,
+    #[serde(default = "default_environment")]
+    pub environment: Environment,
+}
+
+fn default_environment() -> Environment {
+    Environment::Test
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
