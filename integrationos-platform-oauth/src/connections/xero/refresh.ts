@@ -1,15 +1,6 @@
 import axios from "axios";
 import { DataObject, OAuthResponse } from "../../lib/types";
-
-const generateXeroHeaders = (clientId: string, clientSecret: string) => {
-  const credentials = clientId + ":" + clientSecret;
-  const encodedCredentials = Buffer.from(credentials).toString("base64");
-
-  return {
-    authorization: "Basic " + encodedCredentials,
-    "Content-Type": "application/x-www-form-urlencoded",
-  };
-};
+import { generateBasicHeaders } from "../../lib/helpers";
 
 export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
   try {
@@ -29,7 +20,7 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
       "https://identity.xero.com/connect/token",
       requestBody,
       {
-        headers: generateXeroHeaders(client_id, client_secret),
+        headers: generateBasicHeaders(client_id, client_secret),
       }
     );
 
