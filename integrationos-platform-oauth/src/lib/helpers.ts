@@ -42,3 +42,16 @@ export const differenceInSeconds = (argDate: Date) => {
 
   return Math.floor(differenceInSeconds);
 };
+
+export const generateBasicHeaders = (
+  clientId: string,
+  clientSecret: string
+) => {
+  const credentials = clientId + ":" + clientSecret;
+  const encodedCredentials = Buffer.from(credentials).toString("base64");
+
+  return {
+    Authorization: "Basic " + encodedCredentials,
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
+};

@@ -1,15 +1,6 @@
 import axios from "axios";
 import { DataObject, OAuthResponse } from "../../lib/types";
-
-const generateHeaders = (clientId: string, clientSecret: string) => {
-  const credentials = clientId + ":" + clientSecret;
-  const encodedCredentials = Buffer.from(credentials).toString("base64");
-
-  return {
-    authorization: "Basic " + encodedCredentials,
-    "Content-Type": "application/x-www-form-urlencoded",
-  };
-};
+import { generateBasicHeaders } from "../../lib/helpers";
 
 export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
   try {
@@ -23,7 +14,7 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
       "https://oauth.pipedrive.com/oauth/token",
       requestBody,
       {
-        headers: generateHeaders(body.clientId, body.clientSecret),
+        headers: generateBasicHeaders(body.clientId, body.clientSecret),
       }
     );
 

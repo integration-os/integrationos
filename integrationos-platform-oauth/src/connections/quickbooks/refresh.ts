@@ -1,6 +1,6 @@
 import axios from "axios";
 import { DataObject, OAuthResponse } from "../../lib/types";
-import { base64encode } from "../../lib/helpers";
+import { generateBasicHeaders } from "../../lib/helpers";
 
 export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
   try {
@@ -20,9 +20,7 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
       requestBody,
       {
         headers: {
-          Authorization:
-            "Basic " + base64encode(client_id + ":" + client_secret),
-          "Content-Type": "application/x-www-form-urlencoded",
+          ...generateBasicHeaders(client_id, client_secret),
           Accept: "application/json",
         },
       }

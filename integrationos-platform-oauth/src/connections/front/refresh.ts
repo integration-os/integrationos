@@ -1,16 +1,6 @@
 import axios from "axios";
 import { DataObject, OAuthResponse } from "../../lib/types";
-import { differenceInSeconds } from "../../lib/helpers";
-
-const generateHeaders = (clientId: string, clientSecret: string) => {
-  const credentials = clientId + ":" + clientSecret;
-  const encodedCredentials = Buffer.from(credentials).toString("base64");
-
-  return {
-    authorization: "Basic " + encodedCredentials,
-    "Content-Type": "application/x-www-form-urlencoded",
-  };
-};
+import { differenceInSeconds, generateBasicHeaders } from "../../lib/helpers";
 
 export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
   try {
@@ -29,7 +19,7 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
       "https://app.frontapp.com/oauth/token",
       requestBody,
       {
-        headers: generateHeaders(client_id, client_secret),
+        headers: generateBasicHeaders(client_id, client_secret),
       }
     );
 
