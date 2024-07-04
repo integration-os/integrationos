@@ -680,7 +680,7 @@ impl UnifiedDestination {
 
                 let is_returning_error = !environment.is_production()
                     && matches!(config.action_name, CrudAction::GetMany | CrudAction::GetOne);
-                let is_parseable_body = !bodies.is_empty() && !bodies.len() == 1;
+                let is_parseable_body = !bodies.is_empty() && bodies.len() == 1;
 
                 if bodies.is_empty() && is_returning_error {
                     let error_string = format!(
