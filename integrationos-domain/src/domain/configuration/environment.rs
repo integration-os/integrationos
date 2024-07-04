@@ -15,6 +15,15 @@ pub enum Environment {
     Production,
 }
 
+impl Environment {
+    pub fn is_production(&self) -> bool {
+        match self {
+            Environment::Production | Environment::Live => true,
+            _ => false,
+        }
+    }
+}
+
 impl TryFrom<&str> for Environment {
     type Error = IntegrationOSError;
 

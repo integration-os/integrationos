@@ -10,12 +10,9 @@ use bson::doc;
 use convert_case::{Case, Casing};
 use http::{HeaderMap, HeaderName};
 use integrationos_domain::{
-    ApplicationError, InternalError,
-    {
-        connection_model_definition::CrudAction, destination::Action,
-        encrypted_access_key::EncryptedAccessKey, encrypted_data::PASSWORD_LENGTH,
-        event_access::EventAccess, AccessKey, Event,
-    },
+    connection_model_definition::CrudAction, destination::Action,
+    encrypted_access_key::EncryptedAccessKey, encrypted_data::PASSWORD_LENGTH, environment,
+    event_access::EventAccess, AccessKey, ApplicationError, Event, InternalError,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -223,12 +220,15 @@ pub async fn process_request(
         connection.platform, connection.platform_version, model_name, action_name,
     );
 
+    // let environment = state.config.connection_definition_cache_ttl_secs
+
     let mut response = state
         .extractor_caller
         .send_to_destination_unified(
             connection.clone(),
             action,
             include_passthrough,
+            state.config.environment,
             headers,
             query_params,
             body,

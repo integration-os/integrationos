@@ -24,6 +24,7 @@ use integrationos_domain::{
     connection_model_schema::ConnectionModelSchema,
     database::DatabaseConfig,
     destination::{Action, Destination},
+    environment::Environment,
     error::InternalError,
     get_secret_request::GetSecretRequest,
     hashed_secret::HashedSecret,
@@ -36,7 +37,7 @@ use mongodb::{
     options::{Collation, CollationStrength, FindOneOptions},
     Client,
 };
-use serde_json::{json, Number, Value};
+use serde_json::{json, Map, Number, Value};
 use std::{cell::RefCell, collections::HashMap, str::FromStr, sync::Arc};
 use tracing::{debug, error};
 
@@ -221,6 +222,7 @@ impl UnifiedDestination {
         connection: Arc<Connection>,
         action: Action,
         include_passthrough: bool,
+        environment: Environment,
         mut headers: HeaderMap,
         mut query_params: HashMap<String, String>,
         mut body: Option<Value>,
@@ -675,7 +677,12 @@ impl UnifiedDestination {
                     error!("Could not select body at response path {path}: {e}");
                     ApplicationError::bad_request(&e.to_string(), None)
                 })?;
-                if bodies.is_empty() {
+
+                let is_returning_error = !environment.is_production()
+                    && matches!(config.action_name, CrudAction::GetMany | CrudAction::GetOne);
+                let is_parseable_body = !bodies.is_empty() && bodies.len() == 1;
+
+                if bodies.is_empty() && is_returning_error {
                     let error_string = format!(
                         "Could not map unified model. 3rd party Connection returned an invalid response. Expected model at path {path} but found none.",
                     );
@@ -696,7 +703,8 @@ impl UnifiedDestination {
                     *res.headers_mut() = headers;
                     return Ok(res);
                 }
-                if bodies.len() != 1 {
+
+                if bodies.len() != 1 && is_returning_error {
                     return Err(InternalError::invalid_argument(
                         &format!(
                             "Invalid number of selected bodies ({}) at response path {path}",
@@ -705,7 +713,12 @@ impl UnifiedDestination {
                         None,
                     ));
                 }
-                Some(bodies.remove(0).clone())
+
+                if is_parseable_body {
+                    Some(bodies.remove(0).clone())
+                } else {
+                    None
+                }
             } else {
                 None
             };

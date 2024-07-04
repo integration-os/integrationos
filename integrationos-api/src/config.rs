@@ -4,7 +4,7 @@ use std::{
 };
 
 use envconfig::Envconfig;
-use integrationos_domain::cache::CacheConfig;
+use integrationos_domain::{cache::CacheConfig, environment::Environment};
 use integrationos_domain::{
     database::DatabaseConfig, openai::OpenAiConfig, secrets::SecretsConfig,
 };
@@ -85,6 +85,8 @@ pub struct Config {
     pub cache_config: CacheConfig,
     #[envconfig(from = "RATE_LIMIT_ENABLED", default = "true")]
     pub rate_limit_enabled: bool,
+    #[envconfig(from = "ENVIRONMENT", default = "development")]
+    pub environment: Environment,
 }
 
 impl Display for Config {
@@ -146,7 +148,8 @@ impl Display for Config {
         writeln!(f, "{}", self.db_config)?;
         writeln!(f, "{}", self.openai_config)?;
         writeln!(f, "{}", self.cache_config)?;
-        writeln!(f, "RATE_LIMIT_ENABLED: {}", self.rate_limit_enabled)
+        writeln!(f, "RATE_LIMIT_ENABLED: {}", self.rate_limit_enabled)?;
+        writeln!(f, "ENVIRONMENT: {}", self.environment)
     }
 }
 
