@@ -24,6 +24,7 @@ use integrationos_domain::{
     connection_model_schema::ConnectionModelSchema,
     database::DatabaseConfig,
     destination::{Action, Destination},
+    environment::{self, Environment},
     error::InternalError,
     get_secret_request::GetSecretRequest,
     hashed_secret::HashedSecret,
@@ -221,6 +222,7 @@ impl UnifiedDestination {
         connection: Arc<Connection>,
         action: Action,
         include_passthrough: bool,
+        environment: Environment,
         mut headers: HeaderMap,
         mut query_params: HashMap<String, String>,
         mut body: Option<Value>,
@@ -675,37 +677,43 @@ impl UnifiedDestination {
                     error!("Could not select body at response path {path}: {e}");
                     ApplicationError::bad_request(&e.to_string(), None)
                 })?;
-                if bodies.is_empty() {
-                    let error_string = format!(
+                if environment.is_production()
+                    && matches!(config.action_name, CrudAction::GetMany | CrudAction::GetOne)
+                {
+                    if bodies.is_empty() {
+                        let error_string = format!(
                         "Could not map unified model. 3rd party Connection returned an invalid response. Expected model at path {path} but found none.",
                     );
-                    let mut res = Response::builder()
-                        .status(StatusCode::UNPROCESSABLE_ENTITY)
-                        .body(json!({
-                            "message": error_string,
-                            "passthrough": wrapped_body
-                        }))
-                        .map_err(|e| {
-                            error!("Could not create response from builder for missing body");
-                            IntegrationOSError::from_err_code(
-                                StatusCode::UNPROCESSABLE_ENTITY,
-                                &e.to_string(),
-                                None,
-                            )
-                        })?;
-                    *res.headers_mut() = headers;
-                    return Ok(res);
+                        let mut res = Response::builder()
+                            .status(StatusCode::UNPROCESSABLE_ENTITY)
+                            .body(json!({
+                                "message": error_string,
+                                "passthrough": wrapped_body
+                            }))
+                            .map_err(|e| {
+                                error!("Could not create response from builder for missing body");
+                                IntegrationOSError::from_err_code(
+                                    StatusCode::UNPROCESSABLE_ENTITY,
+                                    &e.to_string(),
+                                    None,
+                                )
+                            })?;
+                        *res.headers_mut() = headers;
+                        return Ok(res);
+                    }
+                    if bodies.len() != 1 {
+                        return Err(InternalError::invalid_argument(
+                            &format!(
+                                "Invalid number of selected bodies ({}) at response path {path}",
+                                bodies.len()
+                            ),
+                            None,
+                        ));
+                    }
+                    Some(bodies.remove(0).clone())
+                } else {
+                    None
                 }
-                if bodies.len() != 1 {
-                    return Err(InternalError::invalid_argument(
-                        &format!(
-                            "Invalid number of selected bodies ({}) at response path {path}",
-                            bodies.len()
-                        ),
-                        None,
-                    ));
-                }
-                Some(bodies.remove(0).clone())
             } else {
                 None
             };
