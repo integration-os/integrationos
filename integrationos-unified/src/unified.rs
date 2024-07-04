@@ -677,7 +677,7 @@ impl UnifiedDestination {
                     error!("Could not select body at response path {path}: {e}");
                     ApplicationError::bad_request(&e.to_string(), None)
                 })?;
-                if environment.is_production()
+                if !environment.is_production()
                     && matches!(config.action_name, CrudAction::GetMany | CrudAction::GetOne)
                 {
                     if bodies.is_empty() {
