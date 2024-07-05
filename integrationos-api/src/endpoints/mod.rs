@@ -40,6 +40,7 @@ pub mod passthrough;
 pub mod pipeline;
 pub mod platform;
 pub mod platform_page;
+pub mod schema_generator;
 pub mod transactions;
 pub mod unified;
 pub mod utils;

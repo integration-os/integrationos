@@ -114,6 +114,14 @@ impl Field {
             self.datatype.as_typescript_ref(self.name.clone())
         )
     }
+
+    fn as_typescript_schema(&self) -> String {
+        format!(
+            "{}: {}",
+            replace_reserved_keyword(&self.name, Lang::TypeScript).camel_case(),
+            self.datatype.as_typescript_schema(self.name.clone())
+        )
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, Eq, PartialEq)]
@@ -179,6 +187,21 @@ impl CommonEnum {
         )
     }
 
+    /// Generates a zod schema for the enum
+    pub fn as_typescript_schema(&self) -> String {
+        format!(
+            "export const {} = z.enum([ {} ])\n",
+            replace_reserved_keyword(&self.name, Lang::TypeScript)
+                .replace("::", "")
+                .pascal_case(),
+            self.options
+                .iter()
+                .map(|option| format!("'{}'", option.kebab_case()))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+
     pub fn as_typescript_type(&self) -> String {
         format!(
             "export const enum {} {{ {} }}\n",
@@ -235,6 +258,29 @@ impl DataType {
             DataType::Array { element_type } => {
                 let name = (*element_type).as_typescript_ref(e_name);
                 format!("{}[]", name)
+            }
+        }
+    }
+
+    fn as_typescript_schema(&self, e_name: String) -> String {
+        match self {
+            DataType::String => "z.optional(z.string())".into(),
+            DataType::Number => "z.optional(z.number())".into(),
+            DataType::Boolean => "z.optional(z.boolean())".into(),
+            DataType::Date => "z.optional(z.date())".into(),
+            DataType::Enum { reference, .. } => {
+                if reference.is_empty() {
+                    format!("z.optional({})", e_name.pascal_case())
+                } else {
+                    format!("z.optional({})", reference)
+                }
+            }
+            DataType::Expandable(expandable) => {
+                format!("z.optional({})", expandable.reference())
+            }
+            DataType::Array { element_type } => {
+                let name = (*element_type).as_typescript_schema(e_name);
+                format!("z.array({})", name)
             }
         }
     }
@@ -543,6 +589,10 @@ impl CommonModel {
         }
     }
 
+    pub fn generate_as_typescript_schema(&self) -> String {
+        self.as_typescript_schema()
+    }
+
     /// Generates the model as a string in the specified language
     /// with recursively expanded inner models and enums.
     /// This is useful for generating the entire model and its
@@ -581,6 +631,23 @@ impl CommonModel {
         )
     }
 
+    /// Generates a zod schema for the model in TypeScript
+    fn as_typescript_schema(&self) -> String {
+        format!(
+            "export const {} = z.object({{ {} }});\n",
+            replace_reserved_keyword(&self.name, Lang::TypeScript)
+                .replace("::", "")
+                .pascal_case(),
+            self.fields
+                .iter()
+                .map(|field| field.as_typescript_schema())
+                .collect::<HashSet<String>>()
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(",\n    ")
+        )
+    }
+
     fn as_typescript_ref(&self) -> String {
         format!(
             "export interface {} {{ {} }}\n",
@@ -595,6 +662,69 @@ impl CommonModel {
                 .collect::<Vec<_>>()
                 .join(";\n    ")
         )
+    }
+
+    pub async fn as_typescript_schema_expanded(
+        &self,
+        cm_store: &MongoStore<CommonModel>,
+        ce_store: &MongoStore<CommonEnum>,
+    ) -> String {
+        let mut visited_enums = HashSet::new();
+        let mut visited_common_models = HashSet::new();
+
+        let enums = self
+            .fetch_all_enum_references(cm_store.clone(), ce_store.clone())
+            .await
+            .map(|enums| {
+                enums
+                    .iter()
+                    .filter_map(|enum_model| {
+                        if visited_enums.contains(&enum_model.id) {
+                            return None;
+                        }
+
+                        visited_enums.insert(enum_model.id);
+
+                        Some(enum_model.as_typescript_schema())
+                    })
+                    .collect::<HashSet<String>>()
+                    .into_iter()
+                    .collect::<Vec<_>>()
+            })
+            .ok()
+            .unwrap_or_default()
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        let children = self
+            .fetch_all_children_common_models(cm_store.clone())
+            .await
+            .ok()
+            .unwrap_or_default();
+
+        let children_types = children
+            .0
+            .into_values()
+            .filter_map(|child| {
+                if visited_common_models.contains(&child.id) {
+                    return None;
+                }
+                visited_common_models.insert(child.id);
+
+                Some(child.as_typescript_schema())
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let ce_types = enums.join("\n");
+
+        let cm_types = self.as_typescript_schema();
+
+        if visited_common_models.contains(&self.id) {
+            format!("{}\n{}", ce_types, children_types)
+        } else {
+            format!("{}\n{}\n{}", ce_types, children_types, cm_types)
+        }
     }
 
     async fn as_typescript_expanded(
