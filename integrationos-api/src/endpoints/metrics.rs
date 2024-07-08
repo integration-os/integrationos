@@ -74,7 +74,7 @@ pub async fn get_full_record(
         .await
     {
         Ok(Some(doc)) => doc,
-        Ok(None) => return Err(not_found!("Client")),
+        Ok(None) => return Ok(Json(ReadResponse::default())),
         Err(e) => {
             error!("Could not fetch metric: {e}");
             return Err(internal_server_error!());
