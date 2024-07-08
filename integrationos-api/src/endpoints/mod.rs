@@ -155,7 +155,7 @@ where
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Default)]
 pub struct ReadResponse<T> {
     pub rows: Vec<T>,
     pub total: u64,
