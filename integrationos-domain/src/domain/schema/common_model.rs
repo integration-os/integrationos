@@ -187,19 +187,26 @@ impl CommonEnum {
         )
     }
 
-    /// Generates a zod schema for the enum
+    /// Generates a effect Schema for the enum
     pub fn as_typescript_schema(&self) -> String {
-        format!(
-            "export const {} = z.enum([ {} ])\n",
-            replace_reserved_keyword(&self.name, Lang::TypeScript)
-                .replace("::", "")
-                .pascal_case(),
+        let name = replace_reserved_keyword(&self.name, Lang::TypeScript)
+            .replace("::", "")
+            .pascal_case();
+        let native_enum = format!(
+            "export enum {}Enum {{ {} }}\n",
+            name,
             self.options
                 .iter()
-                .map(|option| format!("'{}'", option.kebab_case()))
+                .map(|option| format!("{} = '{}'", option.pascal_case(), option.kebab_case()))
+                .collect::<HashSet<_>>()
+                .into_iter()
                 .collect::<Vec<_>>()
                 .join(", ")
-        )
+        );
+
+        let schema = format!("export const {} = Schema.Enums({}Enum)\n", name, name);
+
+        format!("{}\n{}", native_enum, schema)
     }
 
     pub fn as_typescript_type(&self) -> String {
@@ -264,23 +271,23 @@ impl DataType {
 
     fn as_typescript_schema(&self, e_name: String) -> String {
         match self {
-            DataType::String => "z.optional(z.string())".into(),
-            DataType::Number => "z.optional(z.number())".into(),
-            DataType::Boolean => "z.optional(z.boolean())".into(),
-            DataType::Date => "z.optional(z.date())".into(),
+            DataType::String => "Schema.UndefinedOr(Schema.String)".into(),
+            DataType::Number => "Schema.UndefinedOr(Schema.Number)".into(),
+            DataType::Boolean => "Schema.UndefinedOr(Schema.Boolean)".into(),
+            DataType::Date => "Schema.UndefinedOr(Schema.Date)".into(),
             DataType::Enum { reference, .. } => {
                 if reference.is_empty() {
-                    format!("z.optional({})", e_name.pascal_case())
+                    format!("Schema.UndefinedOr({})", e_name.pascal_case())
                 } else {
-                    format!("z.optional({})", reference)
+                    format!("Schema.UndefinedOr({})", reference)
                 }
             }
             DataType::Expandable(expandable) => {
-                format!("z.optional({})", expandable.reference())
+                format!("Schema.UndefinedOr({})", expandable.reference())
             }
             DataType::Array { element_type } => {
                 let name = (*element_type).as_typescript_schema(e_name);
-                format!("z.array({})", name)
+                format!("Schema.Array({})", name)
             }
         }
     }
@@ -634,7 +641,7 @@ impl CommonModel {
     /// Generates a zod schema for the model in TypeScript
     fn as_typescript_schema(&self) -> String {
         format!(
-            "export const {} = z.object({{ {} }});\n",
+            "export const {} = Schema.Struct({{ {} }});\n",
             replace_reserved_keyword(&self.name, Lang::TypeScript)
                 .replace("::", "")
                 .pascal_case(),
@@ -714,16 +721,22 @@ impl CommonModel {
                 Some(child.as_typescript_schema())
             })
             .collect::<Vec<_>>()
-            .join("\n");
+            .join("\n // __SEPARATOR__ \n");
 
-        let ce_types = enums.join("\n");
+        let ce_types = enums.join("\n // __SEPARATOR__ \n");
 
         let cm_types = self.as_typescript_schema();
 
         if visited_common_models.contains(&self.id) {
-            format!("{}\n{}", ce_types, children_types)
+            format!(
+                "// __SEPARATOR \n {}\n // __SEPARATOR__ \n {}",
+                ce_types, children_types
+            )
         } else {
-            format!("{}\n{}\n{}", ce_types, children_types, cm_types)
+            format!(
+                "// __SEPARATOR__ \n {}\n{}\n // __SEPARATOR__ \n{}",
+                ce_types, children_types, cm_types
+            )
         }
     }
 
