@@ -37,7 +37,7 @@ use mongodb::{
     options::{Collation, CollationStrength, FindOneOptions},
     Client,
 };
-use serde_json::{json, Map, Number, Value};
+use serde_json::{json, Number, Value};
 use std::{cell::RefCell, collections::HashMap, str::FromStr, sync::Arc};
 use tracing::{debug, error};
 
