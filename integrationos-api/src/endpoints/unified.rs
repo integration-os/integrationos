@@ -1,4 +1,4 @@
-use super::{common_model, get_connection, INTEGRATION_OS_PASSTHROUGH_HEADER};
+use super::{get_connection, INTEGRATION_OS_PASSTHROUGH_HEADER};
 use crate::{config::Headers, metrics::Metric, server::AppState};
 use axum::{
     extract::{Path, Query, State},
