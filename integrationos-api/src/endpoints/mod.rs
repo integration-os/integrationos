@@ -183,8 +183,6 @@ where
         Some(headers),
     );
 
-    println!("query: {:?}", query);
-
     let store = T::get_store(state.app_stores.clone());
     let count = store.count(query.filter.clone(), None);
     let find = store.get_many(
