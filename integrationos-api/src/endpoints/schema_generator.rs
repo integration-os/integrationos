@@ -18,7 +18,7 @@ pub async fn generate_schema(
     let cm_store = state.app_stores.common_model.clone();
     let ce_store = state.app_stores.common_enum.clone();
 
-    let one_common_model = cm_store
+    let common_model = cm_store
         .get_one_by_id(&id.to_string())
         .await
         .map_err(|e| IntegrationOSError::from(e))?
@@ -27,7 +27,7 @@ pub async fn generate_schema(
             None,
         ))?;
 
-    let schema = one_common_model
+    let schema = common_model
         .as_typescript_schema_expanded(&cm_store, &ce_store)
         .await;
 
