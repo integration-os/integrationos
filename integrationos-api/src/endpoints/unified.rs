@@ -303,7 +303,7 @@ pub async fn process_request(
         }
     };
 
-    let metric = Metric::unified(connection.clone(), action.clone());
+    let metric = Metric::unified(connection.clone(), action);
     if let Err(e) = state.metric_tx.send(metric).await {
         error!("Could not send metric to receiver: {e}");
     }
