@@ -271,23 +271,40 @@ impl DataType {
 
     fn as_typescript_schema(&self, e_name: String) -> String {
         match self {
-            DataType::String => "Schema.UndefinedOr(Schema.String)".into(),
-            DataType::Number => "Schema.UndefinedOr(Schema.Number)".into(),
-            DataType::Boolean => "Schema.UndefinedOr(Schema.Boolean)".into(),
-            DataType::Date => "Schema.UndefinedOr(Schema.Date)".into(),
+            DataType::String => "Schema.optional(Schema.NullishOr(Schema.String))".into(),
+            DataType::Number => "Schema.optional(Schema.NullishOr(Schema.Number))".into(),
+            DataType::Boolean => "Schema.optional(Schema.NullishOr(Schema.Boolean))".into(),
+            DataType::Date => "Schema.optional(Schema.NullishOr(Schema.Date))".into(),
             DataType::Enum { reference, .. } => {
                 if reference.is_empty() {
-                    format!("Schema.UndefinedOr({})", e_name.pascal_case())
+                    format!(
+                        "Schema.optional(Schema.NullishOr({}))",
+                        e_name.pascal_case()
+                    )
                 } else {
-                    format!("Schema.UndefinedOr({})", reference)
+                    format!("Schema.optional(Schema.NullishOr({}))", reference)
                 }
             }
             DataType::Expandable(expandable) => {
-                format!("Schema.UndefinedOr({})", expandable.reference())
+                format!(
+                    "Schema.optional(Schema.NullishOr({}))",
+                    expandable.reference()
+                )
             }
             DataType::Array { element_type } => {
                 let name = (*element_type).as_typescript_schema(e_name);
-                format!("Schema.Array({})", name)
+                let refined = if name.contains("Schema.optional") {
+                    name.replace("Schema.optional(", "")
+                        .replace(")", "")
+                        .replace("Schema.NullishOr(", "")
+                        .replace(")", "")
+                } else {
+                    name
+                };
+                format!(
+                    "Schema.optional(Schema.NullishOr(Schema.Array({})))",
+                    refined
+                )
             }
         }
     }

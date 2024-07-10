@@ -30,7 +30,9 @@ pub async fn get_common_model_proj(
         "primary": true,
         "active": true,
     };
-    let options = FindOptions::builder().projection(doc! { "_id": 1 }).build();
+    let options = FindOptions::builder()
+        .projection(doc! { "_id": 1, "name": 1 })
+        .build();
 
     let mut cursor = collection.find(filter, options).await?;
     let mut common_models: Vec<Document> = Vec::new();
