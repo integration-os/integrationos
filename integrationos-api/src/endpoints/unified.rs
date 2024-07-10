@@ -226,7 +226,7 @@ pub async fn process_request(
         .extractor_caller
         .send_to_destination_unified(
             connection.clone(),
-            action,
+            action.clone(),
             include_passthrough,
             state.config.environment,
             headers,
@@ -303,7 +303,7 @@ pub async fn process_request(
         }
     };
 
-    let metric = Metric::unified(connection.clone());
+    let metric = Metric::unified(connection.clone(), action);
     if let Err(e) = state.metric_tx.send(metric).await {
         error!("Could not send metric to receiver: {e}");
     }

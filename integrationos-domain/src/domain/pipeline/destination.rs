@@ -22,6 +22,22 @@ pub enum Action {
     },
 }
 
+impl Action {
+    pub fn name(&self) -> &str {
+        match self {
+            Action::Passthrough { path, .. } => path,
+            Action::Unified { name, .. } => name,
+        }
+    }
+
+    pub fn action(&self) -> Option<&CrudAction> {
+        match self {
+            Action::Passthrough { .. } => None,
+            Action::Unified { action, .. } => Some(action),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]

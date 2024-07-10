@@ -1,6 +1,8 @@
 use chrono::{DateTime, Datelike, Utc};
 use http::HeaderValue;
-use integrationos_domain::{event_access::EventAccess, ownership::Ownership, Connection};
+use integrationos_domain::{
+    destination::Action, event_access::EventAccess, ownership::Ownership, Connection,
+};
 use segment::message::{Track, User};
 use serde::Deserialize;
 use serde_json::json;
@@ -39,6 +41,7 @@ impl MetricType {
 pub struct Metric {
     pub metric_type: MetricType,
     pub date: DateTime<Utc>,
+    pub action: Option<Action>,
 }
 
 impl Metric {
@@ -46,13 +49,15 @@ impl Metric {
         Self {
             metric_type: MetricType::Passthrough(connection),
             date: Utc::now(),
+            action: None,
         }
     }
 
-    pub fn unified(connection: Arc<Connection>) -> Self {
+    pub fn unified(connection: Arc<Connection>, action: Action) -> Self {
         Self {
             metric_type: MetricType::Unified(connection),
             date: Utc::now(),
+            action: Some(action),
         }
     }
 
@@ -60,6 +65,7 @@ impl Metric {
         Self {
             metric_type: MetricType::RateLimited(event_access, key),
             date: Utc::now(),
+            action: None,
         }
     }
 
@@ -123,7 +129,9 @@ impl Metric {
                     "platform": self.platform(),
                     "platformVersion": &conn.platform_version,
                     "clientId": self.ownership().client_id,
-                    "version": &conn.record_metadata.version
+                    "version": &conn.record_metadata.version,
+                    "commonModel": self.action.as_ref().map(|a| a.name()),
+                    "action": self.action.as_ref().map(|a| a.action()),
                 }),
                 ..Default::default()
             },
