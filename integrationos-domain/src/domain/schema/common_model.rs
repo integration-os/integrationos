@@ -204,7 +204,10 @@ impl CommonEnum {
                 .join(", ")
         );
 
-        let schema = format!("export const {} = Schema.Enums({}Enum)\n", name, name);
+        let schema = format!(
+            "export const {} = Schema.Enums({}Enum)\n // __SEPARATOR__\n",
+            name, name
+        );
 
         format!("{}\n{}", native_enum, schema)
     }
@@ -740,7 +743,7 @@ impl CommonModel {
             .collect::<Vec<_>>()
             .join("\n // __SEPARATOR__ \n");
 
-        let ce_types = enums.join("\n // __SEPARATOR__ \n");
+        let ce_types = enums.join("\n");
 
         let cm_types = self.as_typescript_schema();
 
