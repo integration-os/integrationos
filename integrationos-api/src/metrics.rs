@@ -112,6 +112,7 @@ impl Metric {
 
     pub fn segment_track(&self) -> Track {
         use MetricType::*;
+
         match &self.metric_type {
             Unified(conn) => Track {
                 user: User::UserId {

@@ -309,7 +309,7 @@ impl RequestExt for CreateRequest {
             test_connection: self.test_connection,
             auth_secrets,
             auth_method: self.auth_method.clone(),
-            multi_env: self.multi_env.clone(),
+            multi_env: self.multi_env,
             paths: self.paths.clone(),
             settings: self.settings.clone(),
             hidden: false,
@@ -332,7 +332,7 @@ impl RequestExt for CreateRequest {
         record.frontend.spec.tags.clone_from(&self.tags);
         record.test_connection = self.test_connection;
         record.platform.clone_from(&self.platform);
-        record.multi_env = self.multi_env.clone();
+        record.multi_env = self.multi_env;
         record.record_metadata.active = self.active;
         record
     }

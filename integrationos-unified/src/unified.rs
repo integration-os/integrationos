@@ -37,12 +37,17 @@ use mongodb::{
     options::{Collation, CollationStrength, FindOneOptions},
     Client,
 };
-use serde_json::{json, Map, Number, Value};
+use serde_json::{json, Number, Value};
 use std::{cell::RefCell, collections::HashMap, str::FromStr, sync::Arc};
 use tracing::{debug, error};
 
 thread_local! {
     static JS_RUNTIME: RefCell<Script> = RefCell::new(Script::new());
+}
+
+pub struct UnifiedResponse {
+    pub response: Response<Value>,
+    pub metadata: Value,
 }
 
 #[derive(Clone)]
@@ -226,7 +231,7 @@ impl UnifiedDestination {
         mut headers: HeaderMap,
         mut query_params: HashMap<String, String>,
         mut body: Option<Value>,
-    ) -> Result<Response<Value>, IntegrationOSError> {
+    ) -> Result<UnifiedResponse, IntegrationOSError> {
         let key = Destination {
             platform: connection.platform.clone(),
             action: action.clone(),
@@ -334,6 +339,25 @@ impl UnifiedDestination {
         } else {
             schema_id.to_string().replace([':', '-'], "_")
         };
+
+        let mut metadata = json!({
+            "timestamp": Utc::now().timestamp_millis(),
+            "platformRateLimitRemaining": 0,
+            "rateLimitRemaining": 0,
+            "host": headers.get("host").map(|v| v.to_str().unwrap_or("")),
+            "cache": {
+                "hit": false,
+                "ttl": 0,
+                "key": ""
+            },
+            "transactionKey": Id::now(IdPrefix::Transaction),
+            "platform": connection.platform,
+            "platformVersion": connection.platform_version,
+            "action": config.action_name,
+            "commonModel": config.mapping.as_ref().map(|m| &m.common_model_name),
+            "commonModelVersion": "v1",
+            "connectionKey": connection.key,
+        });
 
         body = if let Some(body) = body {
             if let Some(js) = mapping.as_ref().map(|m| m.from_common_model.as_str()) {
@@ -552,7 +576,10 @@ impl UnifiedDestination {
                     IntegrationOSError::from_err_code(status, &e.to_string(), None)
                 })?;
             *res.headers_mut() = headers;
-            return Ok(res);
+            return Ok(UnifiedResponse {
+                metadata: metadata.clone(),
+                response: res,
+            });
         }
 
         let status = res.status();
@@ -701,7 +728,10 @@ impl UnifiedDestination {
                             )
                         })?;
                     *res.headers_mut() = headers;
-                    return Ok(res);
+                    return Ok(UnifiedResponse {
+                        metadata: metadata.clone(),
+                        response: res,
+                    });
                 }
 
                 if bodies.len() != 1 && is_returning_error {
@@ -900,27 +930,13 @@ impl UnifiedDestination {
         }
 
         if let Value::Object(ref mut response) = &mut response {
-            let meta = json!({
-                "timestamp": Utc::now().timestamp_millis(),
-                "latency": latency,
-                "platformRateLimitRemaining": 0,
-                "rateLimitRemaining": 0,
-                "cache": {
-                    "hit": false,
-                    "ttl": 0,
-                    "key": ""
-                },
-                "transactionKey": Id::now(IdPrefix::Transaction),
-                "platform": connection.platform,
-                "platformVersion": connection.platform_version,
-                "action": config.action_name,
-                "commonModel": config.mapping.as_ref().map(|m| &m.common_model_name),
-                "commonModelVersion": "v1",
-                "connectionKey": connection.key,
-                "hash": hash.inner(),
-            });
+            if let Some(meta) = metadata.as_object_mut() {
+                meta.insert("latency".to_string(), Value::Number(Number::from(latency)));
+                meta.insert("hash".to_string(), Value::String(hash.inner().into()));
+            }
+
             const META: &str = "meta";
-            response.insert(META.to_string(), meta);
+            response.insert(META.to_string(), metadata.clone());
         }
 
         let mut builder = Response::builder();
@@ -947,7 +963,10 @@ impl UnifiedDestination {
             IntegrationOSError::from_err_code(status, &e.to_string(), None)
         })?;
 
-        Ok(res)
+        Ok(UnifiedResponse {
+            metadata: metadata.clone(),
+            response: res,
+        })
     }
 
     pub async fn send_to_destination(
