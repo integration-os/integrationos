@@ -281,7 +281,7 @@ pub async fn process_request(
             })?;
             let status_code = parts.status.as_u16();
 
-            let mut metadata = body.get(META).unwrap_or(&Value::Null).to_owned();
+            let mut metadata = body.get(META).unwrap_or(&response.metadata).clone();
             if let Some(meta) = metadata.as_object_mut() {
                 meta.insert("status_code".to_string(), json!(status_code));
             };
