@@ -44,6 +44,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
+    pub _id: Option<Id>,
     pub platform: String,
     pub platform_version: String,
     #[serde(default)]

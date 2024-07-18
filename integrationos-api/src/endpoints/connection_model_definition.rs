@@ -268,6 +268,7 @@ pub async fn test_connection_model_definition(
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
+    pub _id: Option<Id>,
     pub connection_platform: String,
     pub connection_definition_id: Id,
     pub platform_version: String,
