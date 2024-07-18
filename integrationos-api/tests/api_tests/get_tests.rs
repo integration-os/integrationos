@@ -44,6 +44,7 @@ async fn test_get_expanded_common_model() {
     let reference: String = Faker.fake();
 
     let base = common_model::CreateRequest {
+        _id: None,
         name: Faker.fake(),
         version: Faker.fake(),
         fields: vec![
@@ -72,6 +73,7 @@ async fn test_get_expanded_common_model() {
     };
 
     let expandable = common_model::CreateRequest {
+        _id: None,
         name: reference.clone(),
         version: Faker.fake(),
         fields: vec![],

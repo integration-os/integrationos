@@ -547,6 +547,7 @@ async fn create_connection_model_definition(
         .await;
 
     let create_model_definition_payload = CreateConnectionModelDefinitionRequest {
+        _id: None,
         connection_platform: connection.platform.to_string(),
         connection_definition_id: connection.connection_definition_id,
         platform_version: connection.record_metadata.version.to_string(),
