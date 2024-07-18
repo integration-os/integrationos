@@ -43,10 +43,10 @@ pub async fn get_common_model_proj(
                 common_models.push(document);
             }
             _ => {
-                return Err(IntegrationOSError::from(InternalError::unknown(
+                return Err(InternalError::unknown(
                     "Error while fetching common models",
                     None,
-                )));
+                ));
             }
         }
     }
@@ -71,7 +71,7 @@ pub async fn generate_schema(
     let common_model = cm_store
         .get_one_by_id(&id.to_string())
         .await
-        .map_err(|e| IntegrationOSError::from(e))?
+        .map_err(IntegrationOSError::from)?
         .ok_or(ApplicationError::not_found(
             &format!("CommonModel with id {} not found", id),
             None,

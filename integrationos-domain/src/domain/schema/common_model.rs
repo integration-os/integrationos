@@ -197,7 +197,16 @@ impl CommonEnum {
             name,
             self.options
                 .iter()
-                .map(|option| format!("{} = '{}'", option.pascal_case(), option.kebab_case()))
+                .map(|option| {
+                    let option_name = option.pascal_case();
+                    let option_value = if option.chars().all(char::is_uppercase) {
+                        option.to_lowercase()
+                    } else {
+                        option.kebab_case()
+                    };
+
+                    format!("{} = '{}'", option_name, option_value)
+                })
                 .collect::<HashSet<_>>()
                 .into_iter()
                 .collect::<Vec<_>>()
@@ -277,7 +286,7 @@ impl DataType {
             DataType::String => "Schema.optional(Schema.NullishOr(Schema.String))".into(),
             DataType::Number => "Schema.optional(Schema.NullishOr(Schema.Number))".into(),
             DataType::Boolean => "Schema.optional(Schema.NullishOr(Schema.Boolean))".into(),
-            DataType::Date => "Schema.optional(Schema.NullishOr(Schema.Date))".into(),
+            DataType::Date => "Schema.optional(Schema.NullishOr(Schema.String.pipe(Schema.filter((d) => !isNaN(new Date(d).getTime())))))".into(),
             DataType::Enum { reference, .. } => {
                 if reference.is_empty() {
                     format!(
@@ -298,9 +307,9 @@ impl DataType {
                 let name = (*element_type).as_typescript_schema(e_name);
                 let refined = if name.contains("Schema.optional") {
                     name.replace("Schema.optional(", "")
-                        .replace(")", "")
+                        .replace(')', "")
                         .replace("Schema.NullishOr(", "")
-                        .replace(")", "")
+                        .replace(')', "")
                 } else {
                     name
                 };

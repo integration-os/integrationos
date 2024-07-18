@@ -17,10 +17,7 @@ pub enum Environment {
 
 impl Environment {
     pub fn is_production(&self) -> bool {
-        match self {
-            Environment::Production | Environment::Live => true,
-            _ => false,
-        }
+        matches!(self, Environment::Production | Environment::Live)
     }
 }
 
