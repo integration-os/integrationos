@@ -13,7 +13,11 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[derive(Serialize, Deserialize)]
 pub struct CreateEventRequest;
 
-impl PublicExt<Event> for CreateEventRequest {}
+impl PublicExt<Event> for CreateEventRequest {
+    fn public(input: Event) -> serde_json::Value {
+        serde_json::to_value(input.to_public()).unwrap_or_default()
+    }
+}
 impl RequestExt for CreateEventRequest {
     type Output = Event;
 
