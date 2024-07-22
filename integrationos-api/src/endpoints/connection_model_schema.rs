@@ -152,6 +152,7 @@ pub async fn get_platform_models(
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
+    pub _id: Option<Id>,
     pub platform_id: Id,
     pub platform_page_id: Id,
     pub connection_platform: String,

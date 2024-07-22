@@ -35,6 +35,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
+    pub _id: Option<Id>,
     pub connection_platform: String,
     pub platform_redirect_uri: String,
     #[serde(skip_serializing_if = "Option::is_none")]
