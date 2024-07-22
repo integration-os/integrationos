@@ -667,7 +667,7 @@ impl CommonModel {
         )
     }
 
-    /// Generates a zod schema for the model in TypeScript
+    /// Generates an effect schema for the model in TypeScript
     fn as_typescript_schema(&self) -> String {
         format!(
             "export const {} = Schema.Struct({{ {} }}).annotations({{ title: '{}' }});\n",
