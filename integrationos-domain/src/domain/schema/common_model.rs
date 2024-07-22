@@ -670,7 +670,7 @@ impl CommonModel {
     /// Generates a zod schema for the model in TypeScript
     fn as_typescript_schema(&self) -> String {
         format!(
-            "export const {} = Schema.Struct({{ {} }});\n",
+            "export const {} = Schema.Struct({{ {} }}).annotations({{ title: '{}' }});\n",
             replace_reserved_keyword(&self.name, Lang::TypeScript)
                 .replace("::", "")
                 .pascal_case(),
@@ -680,7 +680,8 @@ impl CommonModel {
                 .collect::<HashSet<String>>()
                 .into_iter()
                 .collect::<Vec<_>>()
-                .join(",\n    ")
+                .join(",\n    "),
+            self.name
         )
     }
 
