@@ -284,6 +284,7 @@ pub async fn process_request(
             let mut metadata = body.get(META).unwrap_or(&response.metadata).clone();
             if let Some(meta) = metadata.as_object_mut() {
                 meta.insert("status_code".to_string(), json!(status_code));
+                meta.insert("path".to_string(), json!("v1/unified"));
             };
 
             let body = serde_json::to_string(&json!({

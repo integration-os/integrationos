@@ -52,6 +52,34 @@ pub struct Event {
     pub record_metadata: RecordMetadata,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[serde(rename_all = "camelCase")]
+pub struct PublicEvent {
+    #[serde(rename = "_id")]
+    pub id: Id,
+    pub key: Id,
+    pub name: String,
+    pub r#type: String,
+    pub group: String,
+    pub topic: String,
+    pub environment: Environment,
+    pub body: String,
+    #[serde(with = "http_serde_ext::header_map")]
+    pub headers: HeaderMap,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    pub arrived_at: DateTime<Utc>,
+    pub arrived_date: DateTime<Utc>,
+    pub state: EventState,
+    pub ownership: Ownership,
+    pub hashes: [HashValue; 3],
+    pub payload_byte_length: usize,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub duplicates: Option<Duplicates>,
+    #[serde(flatten, default)]
+    pub record_metadata: RecordMetadata,
+}
+
 struct IntermediateEventFields<'a> {
     access_key: &'a AccessKey,
     encrypted_access_key: &'a EncryptedAccessKey<'a>,
@@ -134,6 +162,28 @@ impl Event {
             payload_byte_length,
             duplicates: None,
             record_metadata: Default::default(),
+        }
+    }
+
+    pub fn to_public(self) -> PublicEvent {
+        PublicEvent {
+            id: self.id,
+            key: self.key,
+            name: self.name.clone(),
+            r#type: self.r#type.clone(),
+            group: self.group.clone(),
+            topic: self.topic.clone(),
+            environment: self.environment,
+            body: self.body.clone(),
+            headers: self.headers.clone(),
+            arrived_at: self.arrived_at,
+            arrived_date: self.arrived_date,
+            state: self.state,
+            ownership: self.ownership.clone(),
+            hashes: self.hashes,
+            payload_byte_length: self.payload_byte_length,
+            duplicates: self.duplicates.clone(),
+            record_metadata: self.record_metadata.clone(),
         }
     }
 }
