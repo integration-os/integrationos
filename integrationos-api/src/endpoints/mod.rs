@@ -21,6 +21,7 @@ use mongodb::options::FindOneOptions;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::{collections::BTreeMap, fmt::Debug, sync::Arc};
+use tokio::try_join;
 use tracing::error;
 
 pub mod common_enum;
@@ -183,20 +184,23 @@ where
     );
 
     let store = T::get_store(state.app_stores.clone());
-    let find = store.get_many_with_count(
+    let total = store.count(query.filter.clone(), None);
+    let find = store.get_many(
         Some(query.filter),
         None,
-        None,
+        Some(doc! {
+            "createdAt": -1
+        }),
         Some(query.limit),
         Some(query.skip),
     );
 
-    let res = match find.await {
+    let res = match try_join!(find, total) {
         Ok((rows, total)) => ReadResponse {
             rows: rows.into_iter().map(T::public).collect(),
             skip: query.skip,
             limit: query.limit,
-            total: total as u64,
+            total,
         },
         Err(e) => {
             error!("Error reading from store: {e}");

@@ -1,7 +1,6 @@
 use crate::IntegrationOSError;
 use crate::Store;
 use bson::doc;
-use futures::StreamExt;
 use futures::TryStreamExt;
 use mongodb::bson::Document;
 use mongodb::options::CountOptions;
@@ -57,19 +56,6 @@ impl<T: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static> MongoStore
         limit: Option<u64>,
         skip: Option<u64>,
     ) -> Result<Vec<T>, IntegrationOSError> {
-        self.get_many_with_count(filter, selection, sort, limit, skip)
-            .await
-            .map(|(r, _)| r)
-    }
-
-    pub async fn get_many_with_count(
-        &self,
-        filter: Option<Document>,
-        selection: Option<Document>,
-        sort: Option<Document>,
-        limit: Option<u64>,
-        skip: Option<u64>,
-    ) -> Result<(Vec<T>, usize), IntegrationOSError> {
         let mut filter_options = mongodb::options::FindOptions::default();
         filter_options.sort = sort;
         filter_options.projection = selection;
@@ -80,11 +66,10 @@ impl<T: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static> MongoStore
             filter_options.sort = Some(doc! { "createdAt": -1 });
         }
 
-        let mut cursor = self.collection.find(filter.clone(), filter_options).await?;
-        let count = cursor.by_ref().count().await;
+        let cursor = self.collection.find(filter, filter_options).await?;
         let records = cursor.try_collect().await?;
 
-        Ok((records, count.to_owned()))
+        Ok(records)
     }
 
     pub async fn create_one(&self, data: &T) -> Result<(), IntegrationOSError> {
