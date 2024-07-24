@@ -7,17 +7,22 @@ use axum::{
 };
 use bson::{doc, Document};
 use futures::StreamExt;
-use integrationos_domain::{ApplicationError, Id, IntegrationOSError, InternalError, Store};
+use integrationos_domain::{
+    api_model_config::Lang, ApplicationError, Id, IntegrationOSError, InternalError, Store,
+};
 use mongodb::options::FindOptions;
+use serde::Deserialize;
 use std::sync::Arc;
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/projection", get(get_common_model_proj))
+        .route("/projection", get(get_common_models_projections))
         .route("/:id", get(generate_schema))
+        .route("/types/:id/:lang", get(generate_types))
 }
 
-pub async fn get_common_model_proj(
+#[tracing::instrument(name = "generate::schema::projection", skip(state))]
+pub async fn get_common_models_projections(
     state: State<Arc<AppState>>,
 ) -> Result<Json<ReadResponse<Document>>, IntegrationOSError> {
     let collection = state
@@ -61,6 +66,39 @@ pub async fn get_common_model_proj(
     }))
 }
 
+#[derive(Debug, Deserialize)]
+struct TypeParams {
+    id: Id,
+    lang: Lang,
+}
+
+#[tracing::instrument(name = "generate::schema::types", skip(state), fields(id = %id, lang = %lang))]
+pub async fn generate_types(
+    state: State<Arc<AppState>>,
+    Path(TypeParams { id, lang }): Path<TypeParams>,
+) -> Result<String, IntegrationOSError> {
+    println!("id: {}, lang: {}", id, lang);
+
+    let cm_store = state.app_stores.common_model.clone();
+    let ce_store = state.app_stores.common_enum.clone();
+
+    let common_model = cm_store
+        .get_one_by_id(&id.to_string())
+        .await
+        .map_err(IntegrationOSError::from)?
+        .ok_or(ApplicationError::not_found(
+            &format!("CommonModel with id {} not found", id),
+            None,
+        ))?;
+
+    let schema = common_model
+        .generate_as_expanded(&lang, &cm_store, &ce_store)
+        .await;
+
+    Ok(schema)
+}
+
+#[tracing::instrument(name = "generate::schema", skip(state, id), fields(id = %id))]
 pub async fn generate_schema(
     state: State<Arc<AppState>>,
     Path(id): Path<Id>,

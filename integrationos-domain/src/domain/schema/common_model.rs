@@ -187,6 +187,61 @@ impl CommonEnum {
         )
     }
 
+    /// Generates a napi annotated enum for the enum rust type
+    pub fn as_rust_schema(&self) -> String {
+        format!(
+            "{} pub enum {} {{ {} }}\n",
+            "#[napi(string_enum = \"kebab-case\", js_name = {})]",
+            replace_reserved_keyword(&self.name, Lang::Rust)
+                .replace("::", "")
+                .pascal_case(),
+            self.options
+                .iter()
+                .map(|option| {
+                    let option_name = option.pascal_case();
+                    let option_value = if option.chars().all(char::is_uppercase) {
+                        option.to_lowercase()
+                    } else {
+                        option.kebab_case()
+                    };
+
+                    let option_annotation = format!("#[napi(value = \"{}\")]", option_value);
+
+                    format!("{} {}", option_annotation, option_name)
+                })
+                .collect::<HashSet<String>>()
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+
+    pub fn as_typescript_type(&self) -> String {
+        // let's add the value directly to the enum
+        format!(
+            "export const enum {} {{ {} }}\n",
+            replace_reserved_keyword(&self.name, Lang::TypeScript)
+                .replace("::", "")
+                .pascal_case(),
+            self.options
+                .iter()
+                .map(|option| {
+                    let option_name = option.pascal_case();
+                    let option_value = if option.chars().all(char::is_uppercase) {
+                        option.to_lowercase()
+                    } else {
+                        option.kebab_case()
+                    };
+
+                    format!("{} = '{}'", option_name, option_value)
+                })
+                .collect::<HashSet<String>>()
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+
     /// Generates a effect Schema for the enum
     pub fn as_typescript_schema(&self) -> String {
         let name = replace_reserved_keyword(&self.name, Lang::TypeScript)
@@ -219,22 +274,6 @@ impl CommonEnum {
         );
 
         format!("{}\n{}", native_enum, schema)
-    }
-
-    pub fn as_typescript_type(&self) -> String {
-        format!(
-            "export const enum {} {{ {} }}\n",
-            replace_reserved_keyword(&self.name, Lang::TypeScript)
-                .replace("::", "")
-                .pascal_case(),
-            self.options
-                .iter()
-                .map(|option| option.pascal_case())
-                .collect::<HashSet<String>>()
-                .into_iter()
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
     }
 }
 
@@ -623,10 +662,6 @@ impl CommonModel {
             Lang::TypeScript => self.as_typescript_ref(),
             _ => unimplemented!(),
         }
-    }
-
-    pub fn generate_as_typescript_schema(&self) -> String {
-        self.as_typescript_schema()
     }
 
     /// Generates the model as a string in the specified language

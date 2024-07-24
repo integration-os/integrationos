@@ -184,7 +184,8 @@ where
     );
 
     let store = T::get_store(state.app_stores.clone());
-    let count = store.count(query.filter.clone(), None);
+    // TODO: Investigate how to improve performance here
+    let total = store.count(query.filter.clone(), None);
     let find = store.get_many(
         Some(query.filter),
         None,
@@ -193,8 +194,8 @@ where
         Some(query.skip),
     );
 
-    let res = match try_join!(count, find) {
-        Ok((total, rows)) => ReadResponse {
+    let res = match try_join!(find, total) {
+        Ok((rows, total)) => ReadResponse {
             rows: rows.into_iter().map(T::public).collect(),
             skip: query.skip,
             limit: query.limit,

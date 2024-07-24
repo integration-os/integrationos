@@ -45,7 +45,7 @@ async fn test_pagination() {
         assert_eq!(config, pipeline.config.as_ref().unwrap());
 
         pipelines.push(pipeline);
-        sleep(Duration::from_millis(1)).await;
+        sleep(Duration::from_millis(100)).await;
     }
 
     let pipelines: Vec<Pipeline> = pipelines.into_iter().rev().collect();
@@ -68,6 +68,7 @@ async fn check_response(server: &TestServer, limit: u64, skip: u64, pipelines: &
         )
         .await
         .unwrap();
+
     assert_eq!(res.code, StatusCode::OK);
 
     let res: ReadResponse<Pipeline> = serde_json::from_value(res.data).unwrap();
