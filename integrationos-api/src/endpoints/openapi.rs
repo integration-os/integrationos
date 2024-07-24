@@ -103,7 +103,7 @@ impl PathIter {
 
 type StreamResult = Pin<Box<dyn Stream<Item = Result<CommonModel, MongoError>> + Send>>;
 
-#[tracing::instrument(name = "Refresh OpenAPI schema", skip(state))]
+#[tracing::instrument(name = "refresh::openapi::schema", skip(state))]
 pub async fn refresh_openapi(
     state: State<Arc<AppState>>,
 ) -> Result<(StatusCode, Json<OpenApiSchema>), ApiError> {
