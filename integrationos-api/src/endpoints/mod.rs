@@ -11,6 +11,7 @@ use axum::{
     Extension, Json,
 };
 use bson::{doc, SerializerOptions};
+use futures::TryFutureExt;
 use http::{HeaderMap, HeaderValue, StatusCode};
 use integrationos_cache::local::connection_cache::ConnectionCacheArcStrHeaderKey;
 use integrationos_domain::{
@@ -184,17 +185,26 @@ where
     );
 
     let store = T::get_store(state.app_stores.clone());
-    let count = store.count(query.filter.clone(), None);
+    let total = store
+        .collection
+        .estimated_document_count(None)
+        .map_err(|e| {
+            error!("Error counting documents: {e}");
+            internal_server_error!()
+        })
+        .await?;
     let find = store.get_many(
         Some(query.filter),
         None,
-        None,
+        Some(doc! {
+            "createdAt": -1
+        }),
         Some(query.limit),
         Some(query.skip),
     );
 
-    let res = match try_join!(count, find) {
-        Ok((total, rows)) => ReadResponse {
+    let res = match try_join!(find) {
+        Ok((rows,)) => ReadResponse {
             rows: rows.into_iter().map(T::public).collect(),
             skip: query.skip,
             limit: query.limit,

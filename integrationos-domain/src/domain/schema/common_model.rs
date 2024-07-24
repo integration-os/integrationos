@@ -187,6 +187,35 @@ impl CommonEnum {
         )
     }
 
+    /// Generates a napi annotated enum for the enum rust type
+    pub fn as_rust_schema(&self) -> String {
+        format!(
+            "{} pub enum {} {{ {} }}\n",
+            "#[napi(string_enum = \"kebab-case\", js_name = {})]",
+            replace_reserved_keyword(&self.name, Lang::Rust)
+                .replace("::", "")
+                .pascal_case(),
+            self.options
+                .iter()
+                .map(|option| {
+                    let option_name = option.pascal_case();
+                    let option_value = if option.chars().all(char::is_uppercase) {
+                        option.to_lowercase()
+                    } else {
+                        option.kebab_case()
+                    };
+
+                    let option_annotation = format!("#[napi(value = \"{}\")]", option_value);
+
+                    format!("{} {}", option_annotation, option_name)
+                })
+                .collect::<HashSet<String>>()
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+
     pub fn as_typescript_type(&self) -> String {
         // let's add the value directly to the enum
         format!(
@@ -883,7 +912,7 @@ impl CommonModel {
                         }
 
                         visited_enums.insert(enum_model.id);
-                        Some(enum_model.as_rust_type())
+                        Some(enum_model.as_rust_schema())
                     })
                     .collect::<HashSet<String>>()
                     .into_iter()
