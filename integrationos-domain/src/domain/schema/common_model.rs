@@ -912,7 +912,7 @@ impl CommonModel {
                         }
 
                         visited_enums.insert(enum_model.id);
-                        Some(enum_model.as_rust_schema())
+                        Some(enum_model.as_rust_type())
                     })
                     .collect::<HashSet<String>>()
                     .into_iter()
