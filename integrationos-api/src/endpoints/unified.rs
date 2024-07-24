@@ -36,7 +36,7 @@ pub struct PathParams {
 }
 
 #[tracing::instrument(
-    name = "unified::process_request",
+    name = "unified::get_request",
     skip(event_access, state, params, headers, query_params)
 )]
 pub async fn get_request(
@@ -64,7 +64,7 @@ pub async fn get_request(
 const META: &str = "meta";
 
 #[tracing::instrument(
-    name = "unified::process_request",
+    name = "unified::create_request",
     skip(event_access, state, params, headers, query_params, body)
 )]
 pub async fn update_request(
@@ -91,7 +91,7 @@ pub async fn update_request(
 }
 
 #[tracing::instrument(
-    name = "unified::process_request",
+    name = "unified::list_request",
     skip(event_access, state, model, headers, query_params)
 )]
 pub async fn list_request(
@@ -117,7 +117,7 @@ pub async fn list_request(
 }
 
 #[tracing::instrument(
-    name = "unified::process_request",
+    name = "unified::count_request",
     skip(event_access, state, model, headers, query_params)
 )]
 pub async fn count_request(
@@ -143,7 +143,7 @@ pub async fn count_request(
 }
 
 #[tracing::instrument(
-    name = "unified::process_request",
+    name = "unified::create_request",
     skip(event_access, state, model, headers, query_params, body)
 )]
 pub async fn create_request(
@@ -170,7 +170,7 @@ pub async fn create_request(
 }
 
 #[tracing::instrument(
-    name = "unified::process_request",
+    name = "unified::delete_request",
     skip(event_access, state, params, headers, query_params)
 )]
 pub async fn delete_request(
