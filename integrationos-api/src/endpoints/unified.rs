@@ -35,6 +35,10 @@ pub struct PathParams {
     pub model: String,
 }
 
+#[tracing::instrument(
+    name = "unified::process_request",
+    skip(event_access, state, params, headers, query_params)
+)]
 pub async fn get_request(
     event_access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
@@ -59,6 +63,10 @@ pub async fn get_request(
 
 const META: &str = "meta";
 
+#[tracing::instrument(
+    name = "unified::process_request",
+    skip(event_access, state, params, headers, query_params, body)
+)]
 pub async fn update_request(
     event_access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
@@ -82,6 +90,10 @@ pub async fn update_request(
     .await
 }
 
+#[tracing::instrument(
+    name = "unified::process_request",
+    skip(event_access, state, model, headers, query_params)
+)]
 pub async fn list_request(
     event_access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
@@ -104,6 +116,10 @@ pub async fn list_request(
     .await
 }
 
+#[tracing::instrument(
+    name = "unified::process_request",
+    skip(event_access, state, model, headers, query_params)
+)]
 pub async fn count_request(
     event_access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
@@ -126,6 +142,10 @@ pub async fn count_request(
     .await
 }
 
+#[tracing::instrument(
+    name = "unified::process_request",
+    skip(event_access, state, model, headers, query_params, body)
+)]
 pub async fn create_request(
     event_access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
@@ -149,6 +169,10 @@ pub async fn create_request(
     .await
 }
 
+#[tracing::instrument(
+    name = "unified::process_request",
+    skip(event_access, state, params, headers, query_params)
+)]
 pub async fn delete_request(
     event_access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
@@ -171,6 +195,10 @@ pub async fn delete_request(
     .await
 }
 
+#[tracing::instrument(
+    name = "unified::process_request",
+    skip(user_event_access, state, headers, query_params, body)
+)]
 pub async fn process_request(
     Extension(user_event_access): Extension<Arc<EventAccess>>,
     State(state): State<Arc<AppState>>,

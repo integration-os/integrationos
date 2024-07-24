@@ -56,6 +56,7 @@ impl PublicExt<CommonModel> for CreateRequest {}
 
 #[async_trait]
 impl HookExt<CommonModel> for CreateRequest {
+    #[tracing::instrument(name = "common_model::hook::after_create", skip(stores, record))]
     async fn after_create_hook(
         record: &CommonModel,
         stores: &AppStores,
@@ -68,6 +69,7 @@ impl HookExt<CommonModel> for CreateRequest {
         update_interface(interface, record, &stores.common_model).await
     }
 
+    #[tracing::instrument(name = "common_model::hook::after_update", skip(stores, record))]
     async fn after_update_hook(
         record: &CommonModel,
         stores: &AppStores,

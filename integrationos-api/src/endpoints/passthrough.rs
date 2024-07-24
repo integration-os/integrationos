@@ -28,6 +28,10 @@ pub fn get_router() -> Router<Arc<AppState>> {
     )
 }
 
+#[tracing::instrument(
+    name = "passthrough::request",
+    skip(user_event_access, state, headers, query_params, uri, method, body)
+)]
 pub async fn passthrough_request(
     Extension(user_event_access): Extension<Arc<EventAccess>>,
     State(state): State<Arc<AppState>>,
