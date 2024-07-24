@@ -70,7 +70,9 @@ impl RequestExt for CreateRequest {
 
     fn from(&self) -> Option<Self::Output> {
         Some(Self::Output {
-            id: Id::new(IdPrefix::ConnectionOAuthDefinition, Utc::now()),
+            id: self
+                ._id
+                .unwrap_or_else(|| Id::now(IdPrefix::ConnectionOAuthDefinition)),
             connection_platform: self.connection_platform.clone(),
             configuration: OAuthApiConfig {
                 init: self.init.configuration.clone(),
