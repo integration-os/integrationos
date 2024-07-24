@@ -25,11 +25,8 @@ use http::HeaderName;
 use integrationos_domain::connection_model_schema::PublicConnectionModelSchema;
 use std::{iter::once, sync::Arc};
 use tower::{filter::FilterLayer, ServiceBuilder};
-use tower_http::{
-    sensitive_headers::SetSensitiveRequestHeadersLayer,
-    trace::{DefaultOnRequest, TraceLayer},
-};
-use tracing::{warn, Level};
+use tower_http::{sensitive_headers::SetSensitiveRequestHeadersLayer, trace::TraceLayer};
+use tracing::warn;
 
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let routes = Router::new()

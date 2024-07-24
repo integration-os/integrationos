@@ -71,7 +71,7 @@ struct TypeParams {
     lang: Lang,
 }
 
-pub async fn generate_types(
+async fn generate_types(
     state: State<Arc<AppState>>,
     Path(TypeParams { id, lang }): Path<TypeParams>,
 ) -> Result<String, IntegrationOSError> {
