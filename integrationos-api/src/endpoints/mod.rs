@@ -119,7 +119,6 @@ where
     }
 }
 
-#[tracing::instrument(name = "create::request", skip(event_access, state, req))]
 pub async fn create<T, U>(
     event_access: Option<Extension<Arc<EventAccess>>>,
     State(state): State<Arc<AppState>>,
@@ -165,7 +164,6 @@ pub struct ReadResponse<T> {
     pub limit: u64,
 }
 
-#[tracing::instrument(name = "read::request", skip(event_access, state, query, headers))]
 pub async fn read<T, U>(
     headers: HeaderMap,
     event_access: Option<Extension<Arc<EventAccess>>>,
@@ -217,7 +215,6 @@ pub struct SuccessResponse {
     success: bool,
 }
 
-#[tracing::instrument(name = "update::request", skip(event_access, state, req))]
 pub async fn update<T, U>(
     event_access: Option<Extension<Arc<EventAccess>>>,
     Path(id): Path<String>,
@@ -282,7 +279,6 @@ where
     }
 }
 
-#[tracing::instrument(name = "delete::request", skip(event_access, state))]
 pub async fn delete<T, U>(
     event_access: Option<Extension<Arc<EventAccess>>>,
     Path(id): Path<String>,
@@ -340,10 +336,6 @@ struct SparseConnection {
     secrets_service_id: String,
 }
 
-#[tracing::instrument(
-    name = "get_connection::request",
-    skip(stores, cache, access, connection_key)
-)]
 async fn get_connection(
     access: &EventAccess,
     connection_key: &HeaderValue,

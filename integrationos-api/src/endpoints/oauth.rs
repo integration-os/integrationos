@@ -65,10 +65,6 @@ impl OAuthPayload {
     }
 }
 
-#[tracing::instrument(
-    name = "oauth::request",
-    skip(state, user_event_access, platform, payload)
-)]
 async fn oauth_handler(
     state: State<Arc<AppState>>,
     Extension(user_event_access): Extension<Arc<EventAccess>>,

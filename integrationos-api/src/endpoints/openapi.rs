@@ -103,7 +103,6 @@ impl PathIter {
 
 type StreamResult = Pin<Box<dyn Stream<Item = Result<CommonModel, MongoError>> + Send>>;
 
-#[tracing::instrument(name = "refresh::openapi::schema", skip(state))]
 pub async fn refresh_openapi(
     state: State<Arc<AppState>>,
 ) -> Result<(StatusCode, Json<OpenApiSchema>), ApiError> {
@@ -126,7 +125,6 @@ pub async fn refresh_openapi(
     ))
 }
 
-#[tracing::instrument(name = "Get OpenAPI schema YAML", skip(state))]
 pub async fn get_openapi_yaml(
     state: State<Arc<AppState>>,
 ) -> Result<(StatusCode, Vec<u8>), ApiError> {
@@ -150,7 +148,6 @@ pub async fn get_openapi_yaml(
     }
 }
 
-#[tracing::instrument(name = "Get OpenAPI schema", skip(state))]
 pub async fn get_openapi(
     state: State<Arc<AppState>>,
 ) -> Result<(StatusCode, Json<OpenApiSchema>), ApiError> {

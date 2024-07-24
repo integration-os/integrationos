@@ -1,3 +1,4 @@
+use super::log_request_middleware;
 use crate::{
     endpoints::{
         connection,
@@ -24,8 +25,11 @@ use http::HeaderName;
 use integrationos_domain::connection_model_schema::PublicConnectionModelSchema;
 use std::{iter::once, sync::Arc};
 use tower::{filter::FilterLayer, ServiceBuilder};
-use tower_http::{sensitive_headers::SetSensitiveRequestHeadersLayer, trace::TraceLayer};
-use tracing::warn;
+use tower_http::{
+    sensitive_headers::SetSensitiveRequestHeadersLayer,
+    trace::{DefaultOnRequest, TraceLayer},
+};
+use tracing::{warn, Level};
 
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let routes = Router::new()
@@ -48,7 +52,7 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         )
         .nest("/oauth", oauth::get_router())
         .nest("/unified", unified::get_router())
-        .layer(TraceLayer::new_for_http())
+        .layer(TraceLayer::new_for_http().on_request(DefaultOnRequest::new().level(Level::INFO)))
         .nest("/metrics", metrics::get_router());
 
     let routes = match RateLimiter::new(state.clone()).await {
@@ -64,6 +68,7 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
 
     routes
         .layer(from_fn_with_state(state.clone(), auth::auth))
+        .layer(from_fn_with_state(state.clone(), log_request_middleware))
         .layer(TraceLayer::new_for_http())
         .layer(SetSensitiveRequestHeadersLayer::new(once(
             HeaderName::from_lowercase(state.config.headers.auth_header.as_bytes()).unwrap(),

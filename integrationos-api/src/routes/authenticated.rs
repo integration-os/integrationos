@@ -11,6 +11,8 @@ use axum::{middleware::from_fn_with_state, routing::post, Router};
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
+use super::log_request_middleware;
+
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let routes = Router::new()
         .nest(
@@ -39,5 +41,6 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             Arc::new(JwtState::new(state)),
             jwt_auth::jwt_auth,
         ))
+        .layer(from_fn_with_state(state.clone(), log_request_middleware))
         .layer(TraceLayer::new_for_http())
 }

@@ -18,6 +18,8 @@ use integrationos_domain::{
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
+use super::log_request_middleware;
+
 pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     Router::new()
         .route(
@@ -59,5 +61,6 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             get(connection_definition::public_get_connection_details),
         )
         .route("/generate-id/:prefix", get(utils::generate_id))
+        .layer(from_fn_with_state(state.clone(), log_request_middleware))
         .layer(TraceLayer::new_for_http())
 }

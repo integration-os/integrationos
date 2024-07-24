@@ -10,7 +10,6 @@ use std::{collections::BTreeMap, sync::Arc};
 use tokio::try_join;
 use tracing::error;
 
-#[tracing::instrument(name = "read::common_enum", skip(query, state))]
 pub async fn read(
     query: Option<Query<BTreeMap<String, String>>>,
     State(state): State<Arc<AppState>>,
