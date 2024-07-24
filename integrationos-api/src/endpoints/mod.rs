@@ -184,13 +184,12 @@ where
     );
 
     let store = T::get_store(state.app_stores.clone());
+    // TODO: Investigate how to improve performance here
     let total = store.count(query.filter.clone(), None);
     let find = store.get_many(
         Some(query.filter),
         None,
-        Some(doc! {
-            "createdAt": -1
-        }),
+        None,
         Some(query.limit),
         Some(query.skip),
     );
