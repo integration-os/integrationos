@@ -52,7 +52,7 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         )
         .nest("/oauth", oauth::get_router())
         .nest("/unified", unified::get_router())
-        .layer(TraceLayer::new_for_http().on_request(DefaultOnRequest::new().level(Level::INFO)))
+        .layer(TraceLayer::new_for_http())
         .nest("/metrics", metrics::get_router());
 
     let routes = match RateLimiter::new(state.clone()).await {
