@@ -11,7 +11,6 @@ use axum::{
     Extension, Json,
 };
 use bson::{doc, SerializerOptions};
-use futures::TryFutureExt;
 use http::{HeaderMap, HeaderValue, StatusCode};
 use integrationos_cache::local::connection_cache::ConnectionCacheArcStrHeaderKey;
 use integrationos_domain::{
@@ -22,7 +21,6 @@ use mongodb::options::FindOneOptions;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::{collections::BTreeMap, fmt::Debug, sync::Arc};
-use tokio::try_join;
 use tracing::error;
 
 pub mod common_enum;
@@ -185,30 +183,20 @@ where
     );
 
     let store = T::get_store(state.app_stores.clone());
-    let total = store
-        .collection
-        .estimated_document_count(None)
-        .map_err(|e| {
-            error!("Error counting documents: {e}");
-            internal_server_error!()
-        })
-        .await?;
-    let find = store.get_many(
+    let find = store.get_many_with_count(
         Some(query.filter),
         None,
-        Some(doc! {
-            "createdAt": -1
-        }),
+        None,
         Some(query.limit),
         Some(query.skip),
     );
 
-    let res = match try_join!(find) {
-        Ok((rows,)) => ReadResponse {
+    let res = match find.await {
+        Ok((rows, total)) => ReadResponse {
             rows: rows.into_iter().map(T::public).collect(),
             skip: query.skip,
             limit: query.limit,
-            total,
+            total: total as u64,
         },
         Err(e) => {
             error!("Error reading from store: {e}");
