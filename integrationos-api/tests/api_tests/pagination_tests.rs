@@ -36,8 +36,6 @@ async fn test_pagination() {
             ref config,
         } = req;
 
-        println!("{}", serde_json::to_string_pretty(&pipeline).unwrap());
-
         assert_eq!(name, pipeline.name);
         assert_eq!(key, pipeline.key);
         assert_eq!(source, pipeline.source);
@@ -53,11 +51,11 @@ async fn test_pagination() {
     let pipelines: Vec<Pipeline> = pipelines.into_iter().rev().collect();
 
     check_response(&server, 1, 0, &pipelines[..1]).await;
-    // check_response(&server, 10, 0, &pipelines).await;
-    // check_response(&server, 0, 10, &pipelines[10..]).await;
-    // check_response(&server, 5, 0, &pipelines[..5]).await;
-    // check_response(&server, 5, 5, &pipelines[5..]).await;
-    // check_response(&server, 5, 10, &pipelines[10..]).await;
+    check_response(&server, 10, 0, &pipelines).await;
+    check_response(&server, 0, 10, &pipelines[10..]).await;
+    check_response(&server, 5, 0, &pipelines[..5]).await;
+    check_response(&server, 5, 5, &pipelines[5..]).await;
+    check_response(&server, 5, 10, &pipelines[10..]).await;
 }
 
 async fn check_response(server: &TestServer, limit: u64, skip: u64, pipelines: &[Pipeline]) {
@@ -74,9 +72,8 @@ async fn check_response(server: &TestServer, limit: u64, skip: u64, pipelines: &
     assert_eq!(res.code, StatusCode::OK);
 
     let res: ReadResponse<Pipeline> = serde_json::from_value(res.data).unwrap();
-    println!("{:?}", res);
-    // assert_eq!(&res.rows, pipelines);
-    // assert_eq!(res.limit, limit);
-    // assert_eq!(res.skip, skip);
-    // assert_eq!(res.total, 10);
+    assert_eq!(&res.rows, pipelines);
+    assert_eq!(res.limit, limit);
+    assert_eq!(res.skip, skip);
+    assert_eq!(res.total, 10);
 }
