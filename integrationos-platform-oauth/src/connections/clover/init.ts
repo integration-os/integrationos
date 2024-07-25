@@ -11,7 +11,9 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
             client_secret: body.clientSecret,
         };
 
-        const response = await axios.post(`${body.metadata.formData.CLOVER_REGION_DOMAIN}/oauth/token`, requestBody);
+        const baseUrl = body.metadata?.environment === "live" ? "https://api.clover.com" : "https://sandbox.dev.clover.com";
+
+        const response = await axios.post(`${baseUrl}/oauth/token`, requestBody);
 
         const accessToken = response.data?.access_token;
 
@@ -23,6 +25,7 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
             meta: {
                 merchantId: body.metadata?.additionalData?.merchant_id,
                 employeeId: body.metadata?.additionalData?.employee_id,
+                baseUrl
             }
         };
     } catch (error) {
