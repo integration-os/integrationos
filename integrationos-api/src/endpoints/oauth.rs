@@ -114,11 +114,18 @@ async fn oauth_handler(
         e
     })?;
 
-    let oauth_payload = OAuthPayload {
+    let mut oauth_payload = OAuthPayload {
         metadata: payload.payload.clone().unwrap_or(Value::Null),
         client_id: payload.client_id,
         client_secret: secret.client_secret,
     };
+
+    if let Some(metadata) = oauth_payload.metadata.as_object_mut() {
+        metadata.insert(
+            "environment".to_string(),
+            Value::String(environment.to_string()),
+        );
+    }
 
     let conn_oauth_definition = if conn_oauth_definition.is_full_template_enabled {
         state
