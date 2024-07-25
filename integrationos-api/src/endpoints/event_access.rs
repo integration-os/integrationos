@@ -1,16 +1,12 @@
 use super::{delete, read, PublicExt, RequestExt};
 use crate::{
-    api_payloads::ErrorResponse,
-    bad_request,
     config::Config,
-    internal_server_error,
     routes::ServerResponse,
     server::{AppState, AppStores},
 };
 use anyhow::Result;
 use axum::{
     extract::State,
-    http::StatusCode,
     routing::{delete as axum_delete, get, post},
     Extension, Json, Router,
 };
@@ -187,12 +183,12 @@ pub async fn create_event_access(
     Extension(access): Extension<Arc<EventAccess>>,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateEventAccessRequest>,
-) -> Result<Json<EventAccess>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<ServerResponse<EventAccess>>, IntegrationOSError> {
     if let Err(validation_errors) = payload.validate() {
-        return Err(bad_request!(format!(
-            "Invalid payload: {:?}",
-            validation_errors
-        )));
+        return Err(ApplicationError::bad_request(
+            &format!("Invalid payload: {:?}", validation_errors),
+            None,
+        ));
     }
 
     let event_access_payload = CreateEventAccessPayloadWithOwnership {
@@ -210,7 +206,7 @@ pub async fn create_event_access(
         generate_event_access(state.config.clone(), event_access_payload).map_err(|e| {
             error!("Error generating event access for existing user: {:?}", e);
 
-            internal_server_error!()
+            InternalError::io_err("Could not generate event access", None)
         })?;
 
     state
@@ -221,8 +217,8 @@ pub async fn create_event_access(
         .map_err(|e| {
             error!("Error creating event access for existing user: {:?}", e);
 
-            internal_server_error!()
+            InternalError::io_err("Could not create event access", None)
         })?;
 
-    Ok(Json(event_access))
+    Ok(Json(ServerResponse::new("event_access", event_access)))
 }

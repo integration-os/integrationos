@@ -1,9 +1,7 @@
 use super::{create, delete, read, update, HookExt, PublicExt, RequestExt};
 use crate::{
-    api_payloads::ErrorResponse,
-    internal_server_error, not_found,
+    routes::ServerResponse,
     server::{AppState, AppStores},
-    service_unavailable,
 };
 use axum::{
     extract::{Path, State},
@@ -26,6 +24,7 @@ use integrationos_domain::{
     event_access::EventAccess,
     get_secret_request::GetSecretRequest,
     id::{prefix::IdPrefix, Id},
+    ApplicationError, IntegrationOSError, InternalError,
 };
 use mongodb::bson::doc;
 use semver::Version;
@@ -96,29 +95,32 @@ pub struct Meta {
 }
 
 pub async fn test_connection_model_definition(
-    Extension(event_access): Extension<Arc<EventAccess>>,
+    Extension(access): Extension<Arc<EventAccess>>,
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
-    Json(req): Json<TestConnectionPayload>,
-) -> Result<Json<TestConnectionResponse>, (StatusCode, Json<ErrorResponse>)> {
+    Json(payload): Json<TestConnectionPayload>,
+) -> Result<Json<ServerResponse<TestConnectionResponse>>, IntegrationOSError> {
     let connection = match state
         .app_stores
         .connection
         .get_one(doc! {
-            "key": req.connection_key,
-            "ownership.buildableId": event_access.ownership.id.as_ref(),
+            "key": &payload.connection_key,
+            "ownership.buildableId": access.ownership.id.as_ref(),
             "deleted": false
         })
         .await
     {
         Ok(Some(data)) => data,
         Ok(None) => {
-            return Err(not_found!("Connection Record"));
+            return Err(ApplicationError::not_found(
+                &format!("Connection with key {} not found", payload.connection_key),
+                None,
+            ));
         }
         Err(e) => {
             error!("Error fetching connection in testing endpoint: {:?}", e);
 
-            return Err(internal_server_error!());
+            return Err(e);
         }
     };
 
@@ -134,7 +136,10 @@ pub async fn test_connection_model_definition(
     {
         Ok(Some(data)) => data,
         Ok(None) => {
-            return Err(not_found!("Inactive Connection Model Definition Record"));
+            return Err(ApplicationError::not_found(
+                "Inactive Connection Model Definition Record",
+                None,
+            ));
         }
         Err(e) => {
             error!(
@@ -142,7 +147,7 @@ pub async fn test_connection_model_definition(
                 e
             );
 
-            return Err(internal_server_error!());
+            return Err(e);
         }
     };
 
@@ -156,32 +161,35 @@ pub async fn test_connection_model_definition(
         .map_err(|e| {
             error!("Error decripting secret for connection: {:?}", e);
 
-            internal_server_error!()
+            e
         })?;
 
-    let request_string: String = serde_json::to_string(&req.request.clone()).map_err(|e| {
+    let request_string: String = serde_json::to_string(&payload.request.clone()).map_err(|e| {
         error!(
             "Error converting request to json string in testing endpoint: {:?}",
             e
         );
 
-        internal_server_error!()
+        InternalError::script_error("Could not serialize request payload", None)
     })?;
 
     // Add path params to template context
-    if let Some(path_params) = req.request.path_params {
+    if let Some(path_params) = payload.request.path_params {
         for (key, val) in path_params {
             secret_result[key] = Value::String(val);
         }
     }
 
-    let request_body_vec = req.request.body.map(|body| body.to_string().into_bytes());
+    let request_body_vec = payload
+        .request
+        .body
+        .map(|body| body.to_string().into_bytes());
     let model_execution_result = state
         .extractor_caller
         .execute_model_definition(
             &Arc::new(connection_model_definition.clone()),
-            req.request.headers.unwrap_or_default(),
-            &req.request.query_params.unwrap_or(HashMap::new()),
+            payload.request.headers.unwrap_or_default(),
+            &payload.request.query_params.unwrap_or(HashMap::new()),
             &Arc::new(secret_result),
             request_body_vec,
         )
@@ -189,14 +197,15 @@ pub async fn test_connection_model_definition(
         .map_err(|e| {
             error!("Error executing connection model definition: {:?}", e);
 
-            service_unavailable!()
+            e
         })?;
 
     let status_code = model_execution_result.status();
 
     let response_body = model_execution_result.text().await.map_err(|e| {
         error!("Could not get text from test connection failure: {e}");
-        service_unavailable!()
+
+        InternalError::unknown("Could not get text from test connection", None)
     })?;
 
     let status = match status_code {
@@ -222,7 +231,8 @@ pub async fn test_connection_model_definition(
     )
     .map_err(|e| {
         error!("Error serializing status to BSON: {:?}", e);
-        internal_server_error!()
+
+        InternalError::serialize_error("Could not serialize status to BSON", None)
     })?;
 
     state
@@ -243,7 +253,7 @@ pub async fn test_connection_model_definition(
                 e
             );
 
-            internal_server_error!()
+            e
         })?;
 
     let response = TestConnectionResponse {
@@ -261,7 +271,10 @@ pub async fn test_connection_model_definition(
         },
     };
 
-    Ok(Json(response))
+    Ok(Json(ServerResponse::new(
+        "connection_model_definition",
+        response,
+    )))
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
