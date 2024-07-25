@@ -30,6 +30,8 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
       },
     } = response;
 
+    const baseUrl = body.metadata?.environment === "live" ? "https://quickbooks.api.intuit.com" : "https://sandbox-quickbooks.api.intuit.com";
+
     return {
       accessToken,
       refreshToken,
@@ -37,6 +39,7 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
       tokenType,
       meta: {
         realmId: body.metadata?.additionalData?.realmId,
+        baseUrl
       },
     };
   } catch (error) {
