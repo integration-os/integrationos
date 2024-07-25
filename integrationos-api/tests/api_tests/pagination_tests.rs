@@ -1,7 +1,7 @@
 use crate::test_server::TestServer;
 use fake::{Fake, Faker};
 use http::{Method, StatusCode};
-use integrationos_api::endpoints::{pipeline::CreatePipelineRequest, ReadResponse};
+use integrationos_api::logic::{pipeline::CreatePipelineRequest, ReadResponse};
 use integrationos_domain::Pipeline;
 use serde_json::Value;
 use std::time::Duration;

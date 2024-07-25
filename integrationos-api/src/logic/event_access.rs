@@ -1,7 +1,7 @@
 use super::{delete, read, PublicExt, RequestExt};
 use crate::{
     config::Config,
-    routes::ServerResponse,
+    router::ServerResponse,
     server::{AppState, AppStores},
 };
 use anyhow::Result;

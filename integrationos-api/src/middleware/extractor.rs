@@ -1,4 +1,4 @@
-use crate::{metrics::Metric, server::AppState, too_many_requests};
+use crate::{metrics::Metric, server::AppState};
 use anyhow::{Context, Result};
 use axum::{
     body::Body,
@@ -9,7 +9,7 @@ use axum::{
 };
 use http::{HeaderName, Request};
 use integrationos_cache::remote::RedisCache;
-use integrationos_domain::event_access::EventAccess;
+use integrationos_domain::{event_access::EventAccess, ApplicationError};
 use redis::AsyncCommands;
 use std::sync::Arc;
 use tokio::sync::{
@@ -108,7 +108,8 @@ pub async fn rate_limit(
                 req.headers().get(&state.key_header_name).cloned(),
             ))
             .await;
-        let mut res = too_many_requests!().into_response();
+        let mut res =
+            ApplicationError::too_many_requests("Rate limit exceeded", None).into_response();
 
         let headers = res.headers_mut();
 

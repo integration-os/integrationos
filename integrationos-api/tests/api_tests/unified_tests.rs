@@ -5,7 +5,7 @@ use http::{
     header::{AUTHORIZATION, CONTENT_TYPE},
     Method, StatusCode,
 };
-use integrationos_api::endpoints::{
+use integrationos_api::logic::{
     connection_model_definition::CreateRequest as CreateConnectionModelDefinitionRequest,
     connection_model_schema::CreateRequest as CreateConnectionModelSchemaRequest,
     metrics::MetricResponse,

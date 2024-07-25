@@ -2,7 +2,7 @@ use std::{collections::HashMap, ops::Deref};
 
 use fake::{Fake, Faker};
 use http::{Method, StatusCode};
-use integrationos_api::endpoints::{common_model, ReadResponse};
+use integrationos_api::logic::{common_model, ReadResponse};
 use integrationos_domain::{
     common_model::{CommonModel, DataType, Expandable, Field},
     json_schema::JsonSchema,

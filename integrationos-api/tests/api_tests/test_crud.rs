@@ -1,7 +1,7 @@
 use crate::test_server::TestServer;
 use fake::{Fake, Faker};
 use http::{Method, StatusCode};
-use integrationos_api::endpoints::{
+use integrationos_api::logic::{
     common_model, connection_definition, connection_model_definition, connection_model_schema,
     ReadResponse,
 };

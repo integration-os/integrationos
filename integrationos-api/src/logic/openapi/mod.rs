@@ -1,10 +1,9 @@
-use crate::{
-    routes::ServerResponse,
-    server::AppState,
-    util::{generate_openapi_schema, generate_path_item},
-};
+mod builder;
+
+use crate::{router::ServerResponse, server::AppState};
 use axum::extract::{Json, State};
 use bson::doc;
+use builder::{generate_openapi_schema, generate_path_item};
 use convert_case::{Case, Casing};
 use futures::{Stream, StreamExt, TryStreamExt};
 use indexmap::IndexMap;

@@ -1,5 +1,5 @@
 use crate::{
-    endpoints::{
+    logic::{
         common_enum, common_model, connection_definition, connection_model_schema,
         connection_oauth_definition, event_access::create_event_access_for_new_user, openapi, read,
         schema_generator, utils,
@@ -13,7 +13,8 @@ use axum::{
     Router,
 };
 use integrationos_domain::{
-    common_model::CommonModel, connection_definition::ConnectionDefinition,
+    common_model::{CommonEnum, CommonModel},
+    connection_definition::ConnectionDefinition,
 };
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
@@ -54,7 +55,10 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
                     "/common-models",
                     get(read::<common_model::CreateRequest, CommonModel>),
                 )
-                .route("/common-enums", get(common_enum::read)),
+                .route(
+                    "/common-enums",
+                    get(read::<common_enum::GetRequest, CommonEnum>),
+                ),
         )
         .route(
             "/connection-data/:model/:platform_name",

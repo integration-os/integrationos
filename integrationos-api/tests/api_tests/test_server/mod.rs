@@ -4,13 +4,13 @@ use envconfig::Envconfig;
 use fake::{Fake, Faker};
 use http::StatusCode;
 use http::{header::AUTHORIZATION, Method};
-use integrationos_api::endpoints::{
+use integrationos_api::logic::{
     connection::CreateConnectionPayload,
     connection_definition::CreateRequest as CreateConnectionDefinitionRequest,
 };
 use integrationos_api::{
     config::Config,
-    endpoints::{
+    logic::{
         connection_model_definition::CreateRequest as CreateConnectionModelDefinitionRequest,
         ReadResponse,
     },

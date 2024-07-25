@@ -1,6 +1,7 @@
 use crate::{
+    helper::shape_mongo_filter,
+    router::ServerResponse,
     server::{AppState, AppStores},
-    util::shape_mongo_filter,
 };
 use axum::{
     extract::{Path, Query, State},
@@ -69,9 +70,6 @@ pub trait RequestExt: Sized {
     fn get_store(stores: AppStores) -> MongoStore<Self::Output>;
 }
 
-// pub type ApiError = (StatusCode, Json<ErrorResponse>);
-// pub type ApiResult<T> = Result<Json<T>, ApiError>;
-
 pub trait HookExt<Input>
 where
     Input: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
@@ -118,7 +116,7 @@ pub async fn create<T, U>(
     access: Option<Extension<Arc<EventAccess>>>,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<T>,
-) -> Result<Json<Value>, IntegrationOSError>
+) -> Result<Json<ServerResponse<Value>>, IntegrationOSError>
 where
     T: RequestExt<Output = U> + HookExt<U> + PublicExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
@@ -143,7 +141,7 @@ where
                 })
                 .ok();
 
-            Ok(Json(T::public(output)))
+            Ok(Json(ServerResponse::new("create", T::public(output))))
         }
         Err(e) => {
             error!("Error creating object: {e}");
@@ -165,7 +163,7 @@ pub async fn read<T, U>(
     access: Option<Extension<Arc<EventAccess>>>,
     query: Option<Query<BTreeMap<String, String>>>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<ReadResponse<Value>>, IntegrationOSError>
+) -> Result<Json<ServerResponse<ReadResponse<Value>>>, IntegrationOSError>
 where
     T: RequestExt<Output = U> + PublicExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
@@ -203,7 +201,7 @@ where
         }
     };
 
-    Ok(Json(res))
+    Ok(Json(ServerResponse::new("read", res)))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -216,7 +214,7 @@ pub async fn update<T, U>(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<T>,
-) -> Result<Json<SuccessResponse>, IntegrationOSError>
+) -> Result<Json<ServerResponse<SuccessResponse>>, IntegrationOSError>
 where
     T: RequestExt<Output = U> + HookExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
@@ -269,7 +267,10 @@ where
                     error!("Error running after update hook: {:?}", e);
                 })
                 .ok();
-            Ok(Json(SuccessResponse { success: true }))
+            Ok(Json(ServerResponse::new(
+                "update",
+                SuccessResponse { success: true },
+            )))
         }
         Err(e) => {
             error!("Error updating in store: {e}");
@@ -282,7 +283,7 @@ pub async fn delete<T, U>(
     event_access: Option<Extension<Arc<EventAccess>>>,
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<U>, IntegrationOSError>
+) -> Result<Json<ServerResponse<U>>, IntegrationOSError>
 where
     T: RequestExt<Output = U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
@@ -323,7 +324,7 @@ where
         )
         .await
     {
-        Ok(_) => Ok(Json(res)),
+        Ok(_) => Ok(Json(ServerResponse::new("delete", res))),
         Err(e) => {
             error!("Could not update record in store: {e}");
             Err(e)

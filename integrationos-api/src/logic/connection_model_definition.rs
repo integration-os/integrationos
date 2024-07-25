@@ -1,6 +1,6 @@
 use super::{create, delete, read, update, HookExt, PublicExt, RequestExt};
 use crate::{
-    routes::ServerResponse,
+    router::ServerResponse,
     server::{AppState, AppStores},
 };
 use axum::{

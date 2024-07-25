@@ -1,10 +1,8 @@
 use crate::{
     config::Config,
-    endpoints::{
-        connection_oauth_definition::FrontendOauthConnectionDefinition, openapi::OpenAPIData,
-    },
+    logic::{connection_oauth_definition::FrontendOauthConnectionDefinition, openapi::OpenAPIData},
     metrics::Metric,
-    routes,
+    router,
 };
 use anyhow::{anyhow, Context, Result};
 use axum::Router;
@@ -299,7 +297,7 @@ impl Server {
     }
 
     pub async fn run(&self) -> Result<()> {
-        let app = routes::get_router(&self.state).await;
+        let app = router::get_router(&self.state).await;
 
         let app: Router<()> = app.with_state(self.state.clone());
 

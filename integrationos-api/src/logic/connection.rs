@@ -1,7 +1,7 @@
 use super::{delete, read, PublicExt, RequestExt};
 use crate::{
-    endpoints::event_access::{generate_event_access, CreateEventAccessPayloadWithOwnership},
-    routes::ServerResponse,
+    logic::event_access::{generate_event_access, CreateEventAccessPayloadWithOwnership},
+    router::ServerResponse,
     server::{AppState, AppStores},
 };
 use anyhow::{bail, Result};
@@ -435,7 +435,7 @@ pub async fn delete_connection(
     )
     .await?;
 
-    let partial_cursor_key = format!("{}::{}::{}", access.ownership.id, id, connection.key);
+    let partial_cursor_key = format!("{}::{}::{}", access.ownership.id, id, connection.args.key);
 
     let mongo_regex = Regex {
         pattern: format!("^{}::", partial_cursor_key.replace('.', "\\.")),
@@ -468,7 +468,7 @@ pub async fn delete_connection(
     Ok(Json(ServerResponse::new(
         "connection",
         json!({
-            id: connection.id,
+            id: connection.args.id,
         }),
     )))
 }

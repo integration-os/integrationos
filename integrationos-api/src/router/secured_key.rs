@@ -1,6 +1,6 @@
 use super::log_request_middleware;
 use crate::{
-    endpoints::{
+    logic::{
         connection,
         connection_model_definition::test_connection_model_definition,
         connection_model_schema::{

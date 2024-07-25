@@ -1,5 +1,5 @@
 use crate::{
-    endpoints::{
+    logic::{
         common_model, connection_definition,
         connection_model_definition::{self},
         connection_model_schema, connection_oauth_definition, openapi, platform, platform_page,

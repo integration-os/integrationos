@@ -75,8 +75,6 @@ async fn generate_types(
     state: State<Arc<AppState>>,
     Path(TypeParams { id, lang }): Path<TypeParams>,
 ) -> Result<String, IntegrationOSError> {
-    println!("id: {}, lang: {}", id, lang);
-
     let cm_store = state.app_stores.common_model.clone();
     let ce_store = state.app_stores.common_enum.clone();
 

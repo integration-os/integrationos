@@ -1,7 +1,7 @@
 use super::ReadResponse;
 use crate::{
     metrics::{DAILY_KEY, MONTHLY_KEY, PLATFORMS_KEY, TOTAL_KEY},
-    routes::ServerResponse,
+    router::ServerResponse,
     server::AppState,
 };
 use axum::{
