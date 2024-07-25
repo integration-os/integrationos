@@ -8,7 +8,7 @@ use crate::{
     server::AppState,
 };
 use axum::{
-    middleware::from_fn_with_state,
+    middleware::{from_fn, from_fn_with_state},
     routing::{get, post},
     Router,
 };
@@ -61,6 +61,6 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             get(connection_definition::public_get_connection_details),
         )
         .route("/generate-id/:prefix", get(utils::generate_id))
-        .layer(from_fn_with_state(state.clone(), log_request_middleware))
+        .layer(from_fn(log_request_middleware))
         .layer(TraceLayer::new_for_http())
 }

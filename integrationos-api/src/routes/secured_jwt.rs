@@ -7,7 +7,11 @@ use crate::{
     middleware::jwt_auth::{self, JwtState},
     server::AppState,
 };
-use axum::{middleware::from_fn_with_state, routing::post, Router};
+use axum::{
+    middleware::{from_fn, from_fn_with_state},
+    routing::post,
+    Router,
+};
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
@@ -41,6 +45,6 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             Arc::new(JwtState::new(state)),
             jwt_auth::jwt_auth,
         ))
-        .layer(from_fn_with_state(state.clone(), log_request_middleware))
+        .layer(from_fn(log_request_middleware))
         .layer(TraceLayer::new_for_http())
 }

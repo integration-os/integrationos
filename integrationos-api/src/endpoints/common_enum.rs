@@ -1,10 +1,10 @@
-use super::{ApiError, ReadResponse};
-use crate::{internal_server_error, server::AppState, util::shape_mongo_filter};
+use super::ReadResponse;
+use crate::{server::AppState, util::shape_mongo_filter};
 use axum::{
     extract::{Query, State},
     Json,
 };
-use integrationos_domain::common_model::CommonEnum;
+use integrationos_domain::{common_model::CommonEnum, IntegrationOSError};
 use shape_mongo_filter::DELETED_STR;
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::try_join;
@@ -13,7 +13,7 @@ use tracing::error;
 pub async fn read(
     query: Option<Query<BTreeMap<String, String>>>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<ReadResponse<CommonEnum>>, ApiError> {
+) -> Result<Json<ReadResponse<CommonEnum>>, IntegrationOSError> {
     let mut query = shape_mongo_filter(query, None, None);
     query.filter.remove(DELETED_STR);
 
@@ -36,7 +36,7 @@ pub async fn read(
         },
         Err(e) => {
             error!("Error reading from store: {e}");
-            return Err(internal_server_error!());
+            return Err(e);
         }
     };
 

@@ -38,7 +38,7 @@ async fn test_unified_api_get_many() {
             from_common_model: Some(
                 "function mapCrudRequest(data) {
                 data.queryParams = undefined;
-                return data; 
+                return data;
             }"
                 .to_string(),
             ),
@@ -96,7 +96,7 @@ async fn test_unified_api_get_one() {
             common_model_name: name.clone(),
             from_common_model: Some(
                 "function mapCrudRequest(data) {
-                return data; 
+                return data;
             }"
                 .to_string(),
             ),
@@ -152,7 +152,7 @@ async fn test_unified_api_get_count() {
             common_model_name: name.clone(),
             from_common_model: Some(
                 "function mapCrudRequest(data) {
-                return data; 
+                return data;
             }"
                 .to_string(),
             ),
@@ -210,7 +210,7 @@ async fn test_unified_api_update() {
             common_model_name: name.clone(),
             from_common_model: Some(
                 "function mapCrudRequest(data) {
-                return data; 
+                return data;
             }"
                 .to_string(),
             ),
@@ -246,7 +246,7 @@ async fn test_unified_api_update() {
             ),
         )
         .await
-        .unwrap();
+        .expect("Failed to send request");
 
     assert_eq!(res.code, StatusCode::OK);
 
@@ -270,7 +270,7 @@ async fn test_unified_api_delete() {
             common_model_name: name.clone(),
             from_common_model: Some(
                 "function mapCrudRequest(data) {
-                return data; 
+                return data;
             }"
                 .to_string(),
             ),
@@ -326,7 +326,7 @@ async fn test_unified_api_create() {
             common_model_name: name.clone(),
             from_common_model: Some(
                 "function mapCrudRequest(data) {
-                return data; 
+                return data;
             }"
                 .to_string(),
             ),

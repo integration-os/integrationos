@@ -40,7 +40,7 @@ async fn test_404() {
             res,
             ApiResponse {
                 code: StatusCode::NOT_FOUND,
-                data: json!({"error": "Not found"})
+                data: json!({"type": "error", "error": "Not found"})
             }
         );
     }

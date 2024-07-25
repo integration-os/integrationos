@@ -1,9 +1,6 @@
-use super::{
-    create, delete, read, update, ApiError, ApiResult, HookExt, PublicExt, ReadResponse, RequestExt,
-};
+use super::{create, delete, read, update, HookExt, PublicExt, ReadResponse, RequestExt};
 use crate::{
-    api_payloads::ErrorResponse,
-    internal_server_error,
+    routes::ServerResponse,
     server::{AppState, AppStores},
     util::shape_mongo_filter,
 };
@@ -13,7 +10,6 @@ use axum::{
     Extension, Json, Router,
 };
 use futures::try_join;
-use http::StatusCode;
 use integrationos_domain::{
     algebra::MongoStore,
     connection_model_schema::{
@@ -22,6 +18,7 @@ use integrationos_domain::{
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     json_schema::JsonSchema,
+    ApplicationError, IntegrationOSError,
 };
 use mongodb::bson::doc;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -49,10 +46,10 @@ pub fn get_router() -> Router<Arc<AppState>> {
 pub struct PublicGetConnectionModelSchema;
 
 pub async fn public_get_connection_model_schema<T, U>(
-    event_access: Option<Extension<Arc<EventAccess>>>,
+    access: Option<Extension<Arc<EventAccess>>>,
     query: Option<Query<BTreeMap<String, String>>>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<ReadResponse<U>>, ApiError>
+) -> Result<Json<ServerResponse<ReadResponse<U>>>, IntegrationOSError>
 where
     T: RequestExt<Output = U>,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
@@ -60,18 +57,16 @@ where
     match query.as_ref().and_then(|q| q.get("connectionDefinitionId")) {
         Some(id) => id.to_string(),
         None => {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    error: "connectionDefinitionId is required".to_string(),
-                }),
-            ))
+            return Err(ApplicationError::bad_request(
+                "connectionDefinitionId is required",
+                None,
+            ));
         }
     };
 
     let mut query = shape_mongo_filter(
         query,
-        event_access.map(|e| {
+        access.map(|e| {
             let Extension(e) = e;
             e
         }),
@@ -101,11 +96,11 @@ where
         },
         Err(e) => {
             error!("Error reading from store: {e}");
-            return Err(internal_server_error!());
+            return Err(e);
         }
     };
 
-    Ok(Json(res))
+    Ok(Json(ServerResponse::new("connection_model_schema", res)))
 }
 
 impl RequestExt for PublicGetConnectionModelSchema {
@@ -119,7 +114,7 @@ impl RequestExt for PublicGetConnectionModelSchema {
 pub async fn get_platform_models(
     Path(platform_name): Path<String>,
     State(state): State<Arc<AppState>>,
-) -> ApiResult<Vec<String>> {
+) -> Result<Json<ServerResponse<Vec<String>>>, IntegrationOSError> {
     let store = state.app_stores.public_model_schema.clone();
 
     let res = store
@@ -136,7 +131,7 @@ pub async fn get_platform_models(
         .await
         .map_err(|e| {
             error!("Error reading from connection model schema store: {e}");
-            internal_server_error!()
+            e
         })?;
 
     let common_model_names = res
@@ -145,7 +140,10 @@ pub async fn get_platform_models(
         .map(|m| m.common_model_name)
         .collect::<Vec<String>>();
 
-    Ok(Json(common_model_names))
+    Ok(Json(ServerResponse::new(
+        "connection_model_schema",
+        common_model_names,
+    )))
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

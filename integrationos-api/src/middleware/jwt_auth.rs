@@ -1,7 +1,7 @@
-use crate::{endpoints::ApiError, server::AppState, unauthorized};
+use crate::server::AppState;
 use axum::{body::Body, extract::State, middleware::Next, response::Response};
 use http::Request;
-use integrationos_domain::Claims;
+use integrationos_domain::{ApplicationError, Claims, IntegrationOSError};
 use jsonwebtoken::{DecodingKey, Validation};
 use std::sync::Arc;
 use tracing::info;
@@ -30,20 +30,29 @@ pub async fn jwt_auth(
     State(state): State<Arc<JwtState>>,
     mut req: Request<Body>,
     next: Next,
-) -> Result<Response, ApiError> {
+) -> Result<Response, IntegrationOSError> {
     let Some(auth_header) = req.headers().get(http::header::AUTHORIZATION) else {
         info!("missing authorization header");
-        return Err(unauthorized!());
+        return Err(ApplicationError::unauthorized(
+            "You are not authorized to access this resource",
+            None,
+        ));
     };
 
     let Ok(auth_header) = auth_header.to_str() else {
         info!("invalid authorization header");
-        return Err(unauthorized!());
+        return Err(ApplicationError::unauthorized(
+            "You are not authorized to access this resource",
+            None,
+        ));
     };
 
     if !auth_header.starts_with(BEARER_PREFIX) {
         info!("invalid authorization header");
-        return Err(unauthorized!());
+        return Err(ApplicationError::unauthorized(
+            "You are not authorized to access this resource",
+            None,
+        ));
     }
 
     let token = &auth_header[BEARER_PREFIX.len()..];
@@ -55,7 +64,10 @@ pub async fn jwt_auth(
         }
         Err(e) => {
             info!("invalid JWT token : {:?}", e);
-            Err(unauthorized!())
+            Err(ApplicationError::forbidden(
+                "You are not authorized to access this resource",
+                None,
+            ))
         }
     }
 }

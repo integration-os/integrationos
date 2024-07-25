@@ -1,8 +1,7 @@
-use super::{ApiResult, ReadResponse};
+use super::ReadResponse;
 use crate::{
-    internal_server_error,
     metrics::{DAILY_KEY, MONTHLY_KEY, PLATFORMS_KEY, TOTAL_KEY},
-    not_found,
+    routes::ServerResponse,
     server::AppState,
 };
 use axum::{
@@ -11,7 +10,9 @@ use axum::{
     Extension, Json, Router,
 };
 use bson::Document;
-use integrationos_domain::{event_access::EventAccess, Store};
+use integrationos_domain::{
+    event_access::EventAccess, ApplicationError, IntegrationOSError, InternalError, Store,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::error;
@@ -59,8 +60,8 @@ pub struct MetricResponse {
 
 pub async fn get_full_record(
     state: State<Arc<AppState>>,
-    Extension(user_event_access): Extension<Arc<EventAccess>>,
-) -> ApiResult<ReadResponse<Document>> {
+    Extension(access): Extension<Arc<EventAccess>>,
+) -> Result<Json<ServerResponse<ReadResponse<Document>>>, IntegrationOSError> {
     let coll = state
         .app_stores
         .db
@@ -68,32 +69,40 @@ pub async fn get_full_record(
 
     let doc = match coll
         .find_one(
-            bson::doc! { "clientId": user_event_access.ownership.client_id.clone()},
+            bson::doc! { "clientId": access.ownership.client_id.clone()},
             None,
         )
         .await
     {
         Ok(Some(doc)) => doc,
-        Ok(None) => return Ok(Json(ReadResponse::default())),
+        Ok(None) => {
+            return Ok(Json(ServerResponse::new(
+                "metrics",
+                ReadResponse::default(),
+            )))
+        }
         Err(e) => {
             error!("Could not fetch metric: {e}");
-            return Err(internal_server_error!());
+            return Err(InternalError::unknown("Could not fetch metric", None));
         }
     };
 
-    Ok(Json(ReadResponse {
-        rows: vec![doc],
-        total: 1,
-        skip: 0,
-        limit: 1,
-    }))
+    Ok(Json(ServerResponse::new(
+        "metrics",
+        ReadResponse {
+            rows: vec![doc],
+            total: 1,
+            skip: 0,
+            limit: 1,
+        },
+    )))
 }
 
 pub async fn get_metrics(
     state: State<Arc<AppState>>,
     path: Option<Path<String>>,
     query_params: Option<Query<QueryParams>>,
-) -> ApiResult<MetricResponse> {
+) -> Result<Json<ServerResponse<MetricResponse>>, IntegrationOSError> {
     let coll = state
         .app_stores
         .db
@@ -105,14 +114,19 @@ pub async fn get_metrics(
         .unwrap_or(state.config.metric_system_id.clone());
 
     let doc = match coll
-        .find_one(bson::doc! { "clientId": client_id }, None)
+        .find_one(bson::doc! { "clientId": &client_id }, None)
         .await
     {
         Ok(Some(doc)) => doc,
-        Ok(None) => return Err(not_found!("Client")),
+        Ok(None) => {
+            return Err(ApplicationError::not_found(
+                &format!("The client {client_id} you provided does not exist"),
+                None,
+            ))
+        }
         Err(e) => {
             error!("Could not fetch metric: {e}");
-            return Err(internal_server_error!());
+            return Err(InternalError::unknown("Could not fetch metric", None));
         }
     };
 
@@ -120,7 +134,10 @@ pub async fn get_metrics(
 
     let metric_type = query_params.metric_type.unwrap_or(MetricType::Unified);
     let Ok(doc) = doc.get_document(metric_type.to_string()) else {
-        return Ok(Json(MetricResponse { count: 0 }));
+        return Ok(Json(ServerResponse::new(
+            "metrics",
+            MetricResponse { count: 0 },
+        )));
     };
 
     let doc = if let Some(platform) = &query_params.platform {
@@ -128,7 +145,10 @@ pub async fn get_metrics(
             .get_document(PLATFORMS_KEY)
             .and_then(|d| d.get_document(platform))
         else {
-            return Ok(Json(MetricResponse { count: 0 }));
+            return Ok(Json(ServerResponse::new(
+                "metrics",
+                MetricResponse { count: 0 },
+            )));
         };
         doc
     } else {
@@ -145,7 +165,10 @@ pub async fn get_metrics(
         Granularity::Total => doc.get_i32(TOTAL_KEY),
     };
 
-    Ok(Json(MetricResponse {
-        count: result.unwrap_or_default(),
-    }))
+    Ok(Json(ServerResponse::new(
+        "metrics",
+        MetricResponse {
+            count: result.unwrap_or_default(),
+        },
+    )))
 }

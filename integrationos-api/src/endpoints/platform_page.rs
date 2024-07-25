@@ -1,6 +1,6 @@
-use super::{delete, read, update, ApiResult, HookExt, PublicExt, RequestExt};
+use super::{delete, read, update, HookExt, PublicExt, RequestExt};
 use crate::{
-    bad_request, internal_server_error,
+    routes::ServerResponse,
     server::{AppState, AppStores},
 };
 use axum::{
@@ -17,6 +17,7 @@ use integrationos_domain::{
     ownership::Owners,
     page::PlatformPage,
     r#type::PageType,
+    ApplicationError, IntegrationOSError, InternalError,
 };
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
@@ -60,7 +61,7 @@ pub async fn create_platform_page(
     event_access: Option<Extension<Arc<EventAccess>>>,
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateRequest>,
-) -> ApiResult<PlatformPage> {
+) -> Result<Json<ServerResponse<PlatformPage>>, IntegrationOSError> {
     let output = if let Some(Extension(event_access)) = event_access {
         req.clone().access(event_access)
     } else {
@@ -69,7 +70,7 @@ pub async fn create_platform_page(
 
     let mut output = match output {
         Some(output) => output,
-        None => return Err(bad_request!("Invalid request")),
+        None => return Err(ApplicationError::bad_request("Invalid request", None)),
     };
 
     output.model_name = output.model_name.to_case(Case::Pascal);
@@ -78,14 +79,15 @@ pub async fn create_platform_page(
         .create_one(&output)
         .await
     {
-        Ok(_) => Ok(Json(output)),
+        Ok(_) => Ok(output),
         Err(e) => {
             error!("Error creating object: {e}");
-            Err(internal_server_error!())
+
+            Err(InternalError::unknown("Error creating object", None))
         }
     }?;
 
-    Ok(res)
+    Ok(Json(ServerResponse::new("platform_page", res)))
 }
 
 impl RequestExt for CreateRequest {

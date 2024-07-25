@@ -222,6 +222,7 @@ impl UnifiedDestination {
 
     // FIXME: This function is way too long. It should be broken down into smaller more manageable
     // pieces.
+    #[allow(clippy::too_many_arguments)]
     pub async fn send_to_destination_unified(
         &self,
         connection: Arc<Connection>,

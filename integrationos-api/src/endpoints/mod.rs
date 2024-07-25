@@ -1,26 +1,22 @@
 use crate::{
-    api_payloads::ErrorResponse,
-    internal_server_error, not_found,
     server::{AppState, AppStores},
     util::shape_mongo_filter,
 };
-use anyhow::Result;
 use axum::{
-    async_trait,
     extract::{Path, Query, State},
     Extension, Json,
 };
 use bson::{doc, SerializerOptions};
-use http::{HeaderMap, HeaderValue, StatusCode};
+use http::{HeaderMap, HeaderValue};
 use integrationos_cache::local::connection_cache::ConnectionCacheArcStrHeaderKey;
 use integrationos_domain::{
     algebra::MongoStore, event_access::EventAccess, ApplicationError, Connection,
-    IntegrationOSError, InternalError, OAuth, Store,
+    IntegrationOSError, InternalError, OAuth, Store, Unit,
 };
 use mongodb::options::FindOneOptions;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
-use std::{collections::BTreeMap, fmt::Debug, sync::Arc};
+use std::{collections::BTreeMap, fmt::Debug, future::Future, sync::Arc};
 use tokio::try_join;
 use tracing::error;
 
@@ -73,40 +69,39 @@ pub trait RequestExt: Sized {
     fn get_store(stores: AppStores) -> MongoStore<Self::Output>;
 }
 
-pub type ApiError = (StatusCode, Json<ErrorResponse>);
-pub type ApiResult<T> = Result<Json<T>, ApiError>;
+// pub type ApiError = (StatusCode, Json<ErrorResponse>);
+// pub type ApiResult<T> = Result<Json<T>, ApiError>;
 
-#[async_trait]
 pub trait HookExt<Input>
 where
     Input: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
 {
-    async fn after_create_hook(
+    fn after_create_hook(
         _record: &Input,
         _stores: &AppStores,
-    ) -> Result<(), IntegrationOSError> {
-        Ok(())
+    ) -> impl std::future::Future<Output = Result<Unit, IntegrationOSError>> + Send {
+        async { Ok(()) }
     }
 
-    async fn after_update_hook(
+    fn after_update_hook(
         _record: &Input,
         _stores: &AppStores,
-    ) -> Result<(), IntegrationOSError> {
-        Ok(())
+    ) -> impl std::future::Future<Output = Result<Unit, IntegrationOSError>> + Send {
+        async { Ok(()) }
     }
 
-    async fn after_delete_hook(
+    fn after_delete_hook(
         _record: &Input,
         _stores: &AppStores,
-    ) -> Result<(), IntegrationOSError> {
-        Ok(())
+    ) -> impl std::future::Future<Output = Result<Unit, IntegrationOSError>> + Send {
+        async { Ok(()) }
     }
 
-    async fn after_read_hook(
+    fn after_read_hook(
         _record: &Input,
         _stores: &AppStores,
-    ) -> Result<(), IntegrationOSError> {
-        Ok(())
+    ) -> impl Future<Output = Result<Unit, IntegrationOSError>> {
+        async { Ok(()) }
     }
 }
 
@@ -120,20 +115,21 @@ where
 }
 
 pub async fn create<T, U>(
-    event_access: Option<Extension<Arc<EventAccess>>>,
+    access: Option<Extension<Arc<EventAccess>>>,
     State(state): State<Arc<AppState>>,
-    Json(req): Json<T>,
-) -> Result<Json<Value>, ApiError>
+    Json(payload): Json<T>,
+) -> Result<Json<Value>, IntegrationOSError>
 where
     T: RequestExt<Output = U> + HookExt<U> + PublicExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
 {
-    let output = event_access
-        .map_or_else(
-            || req.from(),
-            |event_access| req.access(event_access.0).or(req.from()),
-        )
-        .ok_or_else(|| not_found!("Record"))?;
+    let output = access
+        .map(|e| payload.access(e.0))
+        .unwrap_or_else(|| payload.from())
+        .ok_or_else(|| {
+            error!("Could not generate output from payload");
+            ApplicationError::bad_request("Could not generate output from payload", None)
+        })?;
 
     match T::get_store(state.app_stores.clone())
         .create_one(&output)
@@ -151,7 +147,7 @@ where
         }
         Err(e) => {
             error!("Error creating object: {e}");
-            Err(internal_server_error!())
+            Err(e)
         }
     }
 }
@@ -166,17 +162,17 @@ pub struct ReadResponse<T> {
 
 pub async fn read<T, U>(
     headers: HeaderMap,
-    event_access: Option<Extension<Arc<EventAccess>>>,
+    access: Option<Extension<Arc<EventAccess>>>,
     query: Option<Query<BTreeMap<String, String>>>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<ReadResponse<Value>>, ApiError>
+) -> Result<Json<ReadResponse<Value>>, IntegrationOSError>
 where
     T: RequestExt<Output = U> + PublicExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
 {
     let query = shape_mongo_filter(
         query,
-        event_access.map(|e| {
+        access.map(|e| {
             let Extension(e) = e;
             e
         }),
@@ -203,7 +199,7 @@ where
         },
         Err(e) => {
             error!("Error reading from store: {e}");
-            return Err(internal_server_error!());
+            return Err(e);
         }
     };
 
@@ -216,18 +212,18 @@ pub struct SuccessResponse {
 }
 
 pub async fn update<T, U>(
-    event_access: Option<Extension<Arc<EventAccess>>>,
+    access: Option<Extension<Arc<EventAccess>>>,
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
-    Json(req): Json<T>,
-) -> Result<Json<SuccessResponse>, ApiError>
+    Json(payload): Json<T>,
+) -> Result<Json<SuccessResponse>, IntegrationOSError>
 where
     T: RequestExt<Output = U> + HookExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
 {
     let mut query = shape_mongo_filter(
         None,
-        event_access.map(|e| {
+        access.map(|e| {
             let Extension(e) = e;
             e
         }),
@@ -241,13 +237,16 @@ where
         Ok(ret) => ret,
         Err(e) => {
             error!("Error getting record in store: {e}");
-            return Err(internal_server_error!());
+            return Err(e);
         }
     }) else {
-        return Err(not_found!("Record"));
+        return Err(ApplicationError::not_found(
+            &format!("Record with id {id} not found"),
+            None,
+        ));
     };
 
-    let record = req.update(record);
+    let record = payload.update(record);
 
     let bson = bson::to_bson_with_options(
         &record,
@@ -255,7 +254,7 @@ where
     )
     .map_err(|e| {
         error!("Could not serialize record into document: {e}");
-        internal_server_error!()
+        InternalError::serialize_error(e.to_string().as_str(), None)
     })?;
 
     let document = doc! {
@@ -274,7 +273,7 @@ where
         }
         Err(e) => {
             error!("Error updating in store: {e}");
-            Err(internal_server_error!())
+            Err(e)
         }
     }
 }
@@ -283,7 +282,7 @@ pub async fn delete<T, U>(
     event_access: Option<Extension<Arc<EventAccess>>>,
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<U>, ApiError>
+) -> Result<Json<U>, IntegrationOSError>
 where
     T: RequestExt<Output = U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static,
@@ -304,10 +303,13 @@ where
         Ok(ret) => ret,
         Err(e) => {
             error!("Could not get record from store: {e}");
-            return Err(internal_server_error!());
+            return Err(e);
         }
     }) else {
-        return Err(not_found!("Record"));
+        return Err(ApplicationError::not_found(
+            &format!("Record with id {id} not found"),
+            None,
+        ));
     };
 
     match store
@@ -324,7 +326,7 @@ where
         Ok(_) => Ok(Json(res)),
         Err(e) => {
             error!("Could not update record in store: {e}");
-            Err(internal_server_error!())
+            Err(e)
         }
     }
 }
