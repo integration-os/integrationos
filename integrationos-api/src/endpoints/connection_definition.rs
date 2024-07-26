@@ -288,7 +288,9 @@ impl RequestExt for CreateRequest {
         let key = format!("api::{}::{}", self.platform, self.platform_version);
 
         let mut record = Self::Output {
-            id: Id::now(IdPrefix::ConnectionDefinition),
+            id: self
+                ._id
+                .unwrap_or_else(|| Id::now(IdPrefix::ConnectionDefinition)),
             platform_version: self.platform_version.clone(),
             platform: self.platform.clone(),
             status: self.status.clone(),

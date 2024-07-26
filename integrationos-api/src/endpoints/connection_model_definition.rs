@@ -319,7 +319,9 @@ impl RequestExt for CreateRequest {
         .to_lowercase();
 
         let mut record = Self::Output {
-            id: Id::new(IdPrefix::ConnectionModelDefinition, Utc::now()),
+            id: self
+                ._id
+                .unwrap_or_else(|| Id::now(IdPrefix::ConnectionModelDefinition)),
             connection_platform: self.connection_platform.clone(),
             connection_definition_id: self.connection_definition_id,
             platform_version: self.platform_version.clone(),
