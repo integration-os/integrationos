@@ -3,7 +3,6 @@ use js_sandbox_ios::Script;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
-use strum::Display;
 
 use crate::{prelude::schema::json_schema::JsonSchema, IntegrationOSError, InternalError};
 
@@ -170,7 +169,7 @@ pub struct Compute {
     pub language: Lang,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize, Default, Display)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize, Default)]
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "lowercase")]
 pub enum Lang {

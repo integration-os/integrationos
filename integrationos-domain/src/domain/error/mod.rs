@@ -1,6 +1,3 @@
-#[cfg(feature = "actix-error")]
-pub mod actix_error;
-#[cfg(feature = "axum-error")]
 pub mod axum_error;
 
 use crate::prelude::StringExt;

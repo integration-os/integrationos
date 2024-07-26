@@ -1,5 +1,5 @@
 use crate::{
-    endpoints::{
+    logic::{
         common_model, connection_definition,
         connection_model_definition::{self},
         connection_model_schema, connection_oauth_definition, openapi, platform, platform_page,
@@ -7,9 +7,15 @@ use crate::{
     middleware::jwt_auth::{self, JwtState},
     server::AppState,
 };
-use axum::{middleware::from_fn_with_state, routing::post, Router};
+use axum::{
+    middleware::{from_fn, from_fn_with_state},
+    routing::post,
+    Router,
+};
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
+
+use super::log_request_middleware;
 
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let routes = Router::new()
@@ -39,5 +45,6 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             Arc::new(JwtState::new(state)),
             jwt_auth::jwt_auth,
         ))
+        .layer(from_fn(log_request_middleware))
         .layer(TraceLayer::new_for_http())
 }

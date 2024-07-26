@@ -1,10 +1,6 @@
-use super::{create, delete, read, update, ApiResult, HookExt, PublicExt, RequestExt};
-use crate::{
-    internal_server_error, not_found,
-    server::{AppState, AppStores},
-};
+use super::{create, delete, read, update, HookExt, PublicExt, RequestExt};
+use crate::server::{AppState, AppStores};
 use axum::{
-    async_trait,
     extract::{Json, Path, State},
     routing::{get, patch, post},
     Router,
@@ -15,7 +11,7 @@ use integrationos_domain::{
     common_model::{CommonModel, Field},
     id::{prefix::IdPrefix, Id},
     json_schema::JsonSchema,
-    IntegrationOSError,
+    ApplicationError, IntegrationOSError, Unit,
 };
 use mongodb::bson::doc;
 use semver::Version;
@@ -54,12 +50,11 @@ pub struct CreateRequest {
 
 impl PublicExt<CommonModel> for CreateRequest {}
 
-#[async_trait]
 impl HookExt<CommonModel> for CreateRequest {
     async fn after_create_hook(
         record: &CommonModel,
         stores: &AppStores,
-    ) -> Result<(), IntegrationOSError> {
+    ) -> Result<Unit, IntegrationOSError> {
         let rust = record.generate_as(&Lang::Rust);
         let typescript = record.generate_as(&Lang::TypeScript);
         let interface =
@@ -113,21 +108,31 @@ impl RequestExt for CreateRequest {
     }
 }
 
-async fn expand(Path(id): Path<Id>, State(state): State<Arc<AppState>>) -> ApiResult<CommonModel> {
-    let Some(cm) = state
+async fn expand(
+    Path(id): Path<Id>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<CommonModel>, IntegrationOSError> {
+    let common_model = state
         .app_stores
         .common_model
         .get_one_by_id(&id.to_string())
         .await
         .map_err(|e| {
             error!("Could not fetch common model: {e}");
-            internal_server_error!()
-        })?
-    else {
-        return Err(not_found!("Common model"));
+            e
+        })?;
+
+    let common_model = match common_model {
+        Some(cm) => cm,
+        None => {
+            return Err(ApplicationError::not_found(
+                &format!("CommonModel with id {id} not found"),
+                None,
+            ));
+        }
     };
 
-    let expanded = cm
+    let expanded = common_model
         .expand_all(
             state.app_stores.common_model.clone(),
             state.app_stores.common_enum.clone(),
@@ -135,20 +140,23 @@ async fn expand(Path(id): Path<Id>, State(state): State<Arc<AppState>>) -> ApiRe
         .await
         .map_err(|e| {
             error!("Could not expand all: {e}");
-            internal_server_error!()
+            e
         })?;
 
     Ok(Json(expanded))
 }
 
-async fn as_json_schema(path: Path<Id>, state: State<Arc<AppState>>) -> ApiResult<JsonSchema> {
+async fn as_json_schema(
+    path: Path<Id>,
+    state: State<Arc<AppState>>,
+) -> Result<Json<JsonSchema>, IntegrationOSError> {
     let Json(cm) = expand(path, state).await?;
 
     match CommonModel::try_into(cm) {
         Ok(schema) => Ok(Json(schema)),
         Err(e) => {
             error!("Could not convert to json schema: {e}");
-            Err(internal_server_error!())
+            Err(e)
         }
     }
 }

@@ -36,14 +36,14 @@ pub struct PathParams {
 }
 
 pub async fn get_request(
-    event_access: Extension<Arc<EventAccess>>,
+    access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
     Path(params): Path<PathParams>,
     headers: HeaderMap,
     query_params: Option<Query<HashMap<String, String>>>,
 ) -> impl IntoResponse {
     process_request(
-        event_access,
+        access,
         state,
         headers,
         query_params,
@@ -60,7 +60,7 @@ pub async fn get_request(
 const META: &str = "meta";
 
 pub async fn update_request(
-    event_access: Extension<Arc<EventAccess>>,
+    access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
     Path(params): Path<PathParams>,
     headers: HeaderMap,
@@ -68,7 +68,7 @@ pub async fn update_request(
     Json(body): Json<Value>,
 ) -> impl IntoResponse {
     process_request(
-        event_access,
+        access,
         state,
         headers,
         query_params,
@@ -83,14 +83,14 @@ pub async fn update_request(
 }
 
 pub async fn list_request(
-    event_access: Extension<Arc<EventAccess>>,
+    access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
     Path(model): Path<String>,
     headers: HeaderMap,
     query_params: Option<Query<HashMap<String, String>>>,
 ) -> impl IntoResponse {
     process_request(
-        event_access,
+        access,
         state,
         headers,
         query_params,
@@ -105,14 +105,14 @@ pub async fn list_request(
 }
 
 pub async fn count_request(
-    event_access: Extension<Arc<EventAccess>>,
+    access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
     Path(model): Path<String>,
     headers: HeaderMap,
     query_params: Option<Query<HashMap<String, String>>>,
 ) -> impl IntoResponse {
     process_request(
-        event_access,
+        access,
         state,
         headers,
         query_params,
@@ -127,7 +127,7 @@ pub async fn count_request(
 }
 
 pub async fn create_request(
-    event_access: Extension<Arc<EventAccess>>,
+    access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
     Path(model): Path<String>,
     headers: HeaderMap,
@@ -135,7 +135,7 @@ pub async fn create_request(
     Json(body): Json<Value>,
 ) -> impl IntoResponse {
     process_request(
-        event_access,
+        access,
         state,
         headers,
         query_params,
@@ -150,14 +150,14 @@ pub async fn create_request(
 }
 
 pub async fn delete_request(
-    event_access: Extension<Arc<EventAccess>>,
+    access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
     Path(params): Path<PathParams>,
     headers: HeaderMap,
     query_params: Option<Query<HashMap<String, String>>>,
 ) -> impl IntoResponse {
     process_request(
-        event_access,
+        access,
         state,
         headers,
         query_params,
@@ -172,12 +172,12 @@ pub async fn delete_request(
 }
 
 pub async fn process_request(
-    Extension(user_event_access): Extension<Arc<EventAccess>>,
+    Extension(access): Extension<Arc<EventAccess>>,
     State(state): State<Arc<AppState>>,
     mut headers: HeaderMap,
     query_params: Option<Query<HashMap<String, String>>>,
     action: Action,
-    body: Option<Value>,
+    payload: Option<Value>,
 ) -> impl IntoResponse {
     let Some(connection_key_header) = headers.get(&state.config.headers.connection_header) else {
         return Err(ApplicationError::bad_request(
@@ -186,7 +186,7 @@ pub async fn process_request(
         ));
     };
     let connection = get_connection(
-        user_event_access.as_ref(),
+        access.as_ref(),
         connection_key_header,
         &state.app_stores,
         &state.connections_cache,
@@ -233,7 +233,7 @@ pub async fn process_request(
             state.config.environment,
             headers,
             query_params,
-            body,
+            payload,
         )
         .await
         .map_err(|e| {

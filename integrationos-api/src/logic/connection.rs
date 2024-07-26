@@ -1,15 +1,12 @@
 use super::{delete, read, PublicExt, RequestExt};
 use crate::{
-    api_payloads::{DeleteResponse, ErrorResponse, UpdateResponse},
-    bad_request,
-    endpoints::event_access::{generate_event_access, CreateEventAccessPayloadWithOwnership},
-    internal_server_error, not_found,
+    logic::event_access::{generate_event_access, CreateEventAccessPayloadWithOwnership},
+    router::ServerResponse,
     server::{AppState, AppStores},
 };
 use anyhow::{bail, Result};
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
     routing::{delete as axum_delete, get, patch, post},
     Extension, Json, Router,
 };
@@ -24,12 +21,12 @@ use integrationos_domain::{
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
     settings::Settings,
-    Connection, Throughput,
+    ApplicationError, Connection, IntegrationOSError, InternalError, Throughput,
 };
 use mongodb::bson::doc;
 use mongodb::bson::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::{collections::HashMap, sync::Arc};
 use tracing::error;
 use validator::Validate;
@@ -125,29 +122,35 @@ impl RequestExt for CreateConnectionPayload {
 }
 
 pub async fn create_connection(
-    Extension(user_event_access): Extension<Arc<EventAccess>>,
+    Extension(access): Extension<Arc<EventAccess>>,
     State(state): State<Arc<AppState>>,
-    Json(req): Json<CreateConnectionPayload>,
-) -> Result<Json<SanitizedConnection>, (StatusCode, Json<ErrorResponse>)> {
-    if let Err(validation_errors) = req.validate() {
-        return Err(bad_request!(format!(
-            "Invalid payload: {:?}",
-            validation_errors
-        )));
+    Json(payload): Json<CreateConnectionPayload>,
+) -> Result<Json<SanitizedConnection>, IntegrationOSError> {
+    if let Err(validation_errors) = payload.validate() {
+        return Err(ApplicationError::not_found(
+            &format!("Invalid payload: {:?}", validation_errors),
+            None,
+        ));
     }
 
     let connection_config = match state
         .app_stores
         .connection_config
         .get_one(doc! {
-            "_id": req.connection_definition_id.to_string(),
+            "_id": payload.connection_definition_id.to_string(),
             "deleted": false
         })
         .await
     {
         Ok(Some(data)) => data,
         Ok(None) => {
-            return Err(not_found!("Connection definition"));
+            return Err(ApplicationError::not_found(
+                &format!(
+                    "Connection definition with id {} not found",
+                    payload.connection_definition_id
+                ),
+                None,
+            ));
         }
         Err(e) => {
             error!(
@@ -155,41 +158,42 @@ pub async fn create_connection(
                 e
             );
 
-            return Err(internal_server_error!());
+            return Err(e);
         }
     };
 
     let key = format!(
         "{}::{}::{}",
-        user_event_access.environment,
+        access.environment,
         connection_config.platform,
-        req.group.to_case(Case::Kebab)
+        payload.group.to_case(Case::Kebab)
     );
 
     let event_access = generate_event_access(
         state.config.clone(),
         CreateEventAccessPayloadWithOwnership {
-            name: req.name.clone(),
-            group: Some(req.group.clone()),
+            name: payload.name.clone(),
+            group: Some(payload.group.clone()),
             platform: connection_config.platform.clone(),
             namespace: None,
             connection_type: connection_config.r#type.clone(),
-            environment: user_event_access.environment,
+            environment: access.environment,
             paths: connection_config.paths.clone(),
-            ownership: user_event_access.ownership.clone(),
+            ownership: access.ownership.clone(),
         },
     )
     .map_err(|e| {
         error!("Error creating event access for connection: {:?}", e);
 
-        internal_server_error!()
+        e
     })?;
 
-    let auth_form_data_value = serde_json::to_value(req.auth_form_data.clone()).map_err(|e| {
-        error!("Error serializing auth form data for connection: {:?}", e);
+    let auth_form_data_value =
+        serde_json::to_value(payload.auth_form_data.clone()).map_err(|e| {
+            error!("Error serializing auth form data for connection: {:?}", e);
 
-        internal_server_error!()
-    })?;
+            ApplicationError::bad_request(&format!("Invalid auth form data: {:?}", e), None)
+        })?;
 
     test_connection(&state, &connection_config, &auth_form_data_value)
         .await
@@ -199,30 +203,27 @@ pub async fn create_connection(
             e
         );
 
-            bad_request!("Invalid connection credentials")
+            ApplicationError::bad_request("Invalid connection credentials: {:?}", None)
         })?;
 
     let secret_result = state
         .secrets_client
-        .encrypt(
-            user_event_access.ownership.id.to_string(),
-            &auth_form_data_value,
-        )
+        .encrypt(access.ownership.id.to_string(), &auth_form_data_value)
         .await
         .map_err(|e| {
             error!("Error creating secret for connection: {:?}", e);
 
-            internal_server_error!()
+            e
         })?;
 
     let connection = Connection {
         id: Id::new(IdPrefix::Connection, Utc::now()),
         platform_version: connection_config.clone().platform_version,
-        connection_definition_id: req.connection_definition_id,
+        connection_definition_id: payload.connection_definition_id,
         r#type: connection_config.to_connection_type(),
-        name: req.name,
+        name: payload.name,
         key: key.clone().into(),
-        group: req.group,
+        group: payload.group,
         platform: connection_config.platform.into(),
         environment: event_access.environment,
         secrets_service_id: secret_result.id,
@@ -243,10 +244,9 @@ pub async fn create_connection(
         .map_err(|e| {
             error!("Error creating connection: {:?}", e);
 
-            internal_server_error!()
+            e
         })?;
 
-    // TODO: This should be a From impl on integrationosdomain::connection
     Ok(Json(SanitizedConnection {
         id: connection.id,
         platform_version: connection.platform_version,
@@ -283,22 +283,28 @@ pub async fn update_connection(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
     Json(req): Json<UpdateConnectionPayload>,
-) -> Result<Json<UpdateResponse>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<ServerResponse<Value>>, IntegrationOSError> {
     let Some(mut connection) = (match state.app_stores.connection.get_one_by_id(&id).await {
         Ok(connection) => connection,
         Err(e) => {
             error!("Error fetching connection for update: {:?}", e);
 
-            return Err(internal_server_error!());
+            return Err(e);
         }
     }) else {
-        return Err(not_found!("Connection"));
+        return Err(ApplicationError::not_found(
+            &format!("Connection with id {id} not found"),
+            None,
+        ));
     };
 
     if connection.ownership != event_access.ownership
         || connection.environment != event_access.environment
     {
-        return Err(not_found!("Connection"));
+        return Err(ApplicationError::forbidden(
+            "You do not have permission to update this connection",
+            None,
+        ));
     }
 
     if let Some(name) = req.name {
@@ -325,7 +331,7 @@ pub async fn update_connection(
                 e
             );
 
-            internal_server_error!()
+            ApplicationError::bad_request(&format!("Invalid auth form data: {:?}", e), None)
         })?;
 
         let connection_config = match state
@@ -339,7 +345,10 @@ pub async fn update_connection(
         {
             Ok(Some(data)) => data,
             Ok(None) => {
-                return Err(not_found!("Connection definition"));
+                return Err(ApplicationError::not_found(
+                    "Connection definition not found",
+                    None,
+                ));
             }
             Err(e) => {
                 error!(
@@ -347,7 +356,7 @@ pub async fn update_connection(
                     e
                 );
 
-                return Err(internal_server_error!());
+                return Err(e);
             }
         };
 
@@ -356,7 +365,7 @@ pub async fn update_connection(
             .map_err(|e| {
                 error!("Error executing model definition in connections update for connection testing: {:?}", e);
 
-                bad_request!("Invalid connection credentials")
+                ApplicationError::bad_request(&format!("Invalid auth form data: {:?}", e), None)
             })?;
 
         let secret_result = state
@@ -366,7 +375,7 @@ pub async fn update_connection(
             .map_err(|e| {
                 error!("Error creating secret for connection update: {:?}", e);
 
-                internal_server_error!()
+                e
             })?;
 
         connection.secrets_service_id = secret_result.id;
@@ -379,7 +388,10 @@ pub async fn update_connection(
     let Ok(document) = bson::to_document(&connection) else {
         error!("Could not serialize connection into document");
 
-        return Err(internal_server_error!());
+        return Err(InternalError::serialize_error(
+            "Could not serialize connection into document",
+            None,
+        ));
     };
 
     connection
@@ -397,31 +409,33 @@ pub async fn update_connection(
         )
         .await
     {
-        Ok(_) => Ok(Json(UpdateResponse { id })),
+        Ok(_) => Ok(Json(ServerResponse::new(
+            "connection",
+            json!({
+                id: connection.id,
+            }),
+        ))),
         Err(e) => {
             error!("Error updating connection: {:?}", e);
 
-            Err(internal_server_error!())
+            Err(e)
         }
     }
 }
 
 pub async fn delete_connection(
-    Extension(user_event_access): Extension<Arc<EventAccess>>,
+    Extension(access): Extension<Arc<EventAccess>>,
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<DeleteResponse>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<ServerResponse<Value>>, IntegrationOSError> {
     let connection = delete::<CreateConnectionPayload, Connection>(
-        Some(Extension(user_event_access.clone())),
+        Some(Extension(access.clone())),
         Path(id.clone()),
         State(state.clone()),
     )
     .await?;
 
-    let partial_cursor_key = format!(
-        "{}::{}::{}",
-        user_event_access.ownership.id, id, connection.key
-    );
+    let partial_cursor_key = format!("{}::{}::{}", access.ownership.id, id, connection.args.key);
 
     let mongo_regex = Regex {
         pattern: format!("^{}::", partial_cursor_key.replace('.', "\\.")),
@@ -448,8 +462,13 @@ pub async fn delete_connection(
         .map_err(|e| {
             error!("Error deleting cursors for connection {:?}: {:?}", id, e);
 
-            internal_server_error!()
+            e
         })?;
 
-    Ok(Json(DeleteResponse { id }))
+    Ok(Json(ServerResponse::new(
+        "connection",
+        json!({
+            id: connection.args.id,
+        }),
+    )))
 }

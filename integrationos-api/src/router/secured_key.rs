@@ -1,5 +1,6 @@
+use super::log_request_middleware;
 use crate::{
-    endpoints::{
+    logic::{
         connection,
         connection_model_definition::test_connection_model_definition,
         connection_model_schema::{
@@ -8,15 +9,15 @@ use crate::{
         event_access, events, metrics, oauth, passthrough, pipeline, transactions, unified,
     },
     middleware::{
-        auth,
         blocker::{handle_blocked_error, BlockInvalidHeaders},
         extractor::{rate_limit, RateLimiter},
+        header_auth,
     },
     server::AppState,
 };
 use axum::{
     error_handling::HandleErrorLayer,
-    middleware::from_fn_with_state,
+    middleware::{from_fn, from_fn_with_state},
     routing::{get, post},
     Router,
 };
@@ -63,7 +64,8 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     };
 
     routes
-        .layer(from_fn_with_state(state.clone(), auth::auth))
+        .layer(from_fn_with_state(state.clone(), header_auth::header_auth))
+        .layer(from_fn(log_request_middleware))
         .layer(TraceLayer::new_for_http())
         .layer(SetSensitiveRequestHeadersLayer::new(once(
             HeaderName::from_lowercase(state.config.headers.auth_header.as_bytes()).unwrap(),

@@ -21,7 +21,6 @@ pub fn get_router() -> Router<Arc<AppState>> {
         .route("/types/:id/:lang", get(generate_types))
 }
 
-#[tracing::instrument(name = "generate::schema::projection", skip(state))]
 pub async fn get_common_models_projections(
     state: State<Arc<AppState>>,
 ) -> Result<Json<ReadResponse<Document>>, IntegrationOSError> {
@@ -72,13 +71,10 @@ struct TypeParams {
     lang: Lang,
 }
 
-#[tracing::instrument(name = "generate::schema::types", skip(state), fields(id = %id, lang = %lang))]
-pub async fn generate_types(
+async fn generate_types(
     state: State<Arc<AppState>>,
     Path(TypeParams { id, lang }): Path<TypeParams>,
 ) -> Result<String, IntegrationOSError> {
-    println!("id: {}, lang: {}", id, lang);
-
     let cm_store = state.app_stores.common_model.clone();
     let ce_store = state.app_stores.common_enum.clone();
 
@@ -98,7 +94,6 @@ pub async fn generate_types(
     Ok(schema)
 }
 
-#[tracing::instrument(name = "generate::schema", skip(state, id), fields(id = %id))]
 pub async fn generate_schema(
     state: State<Arc<AppState>>,
     Path(id): Path<Id>,

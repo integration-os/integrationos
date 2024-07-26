@@ -1,5 +1,5 @@
 use crate::{
-    endpoints::{
+    logic::{
         common_enum, common_model, connection_definition, connection_model_schema,
         connection_oauth_definition, event_access::create_event_access_for_new_user, openapi, read,
         schema_generator, utils,
@@ -8,15 +8,18 @@ use crate::{
     server::AppState,
 };
 use axum::{
-    middleware::from_fn_with_state,
+    middleware::{from_fn, from_fn_with_state},
     routing::{get, post},
     Router,
 };
 use integrationos_domain::{
-    common_model::CommonModel, connection_definition::ConnectionDefinition,
+    common_model::{CommonEnum, CommonModel},
+    connection_definition::ConnectionDefinition,
 };
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
+
+use super::log_request_middleware;
 
 pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     Router::new()
@@ -52,12 +55,16 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
                     "/common-models",
                     get(read::<common_model::CreateRequest, CommonModel>),
                 )
-                .route("/common-enums", get(common_enum::read)),
+                .route(
+                    "/common-enums",
+                    get(read::<common_enum::GetRequest, CommonEnum>),
+                ),
         )
         .route(
             "/connection-data/:model/:platform_name",
             get(connection_definition::public_get_connection_details),
         )
         .route("/generate-id/:prefix", get(utils::generate_id))
+        .layer(from_fn(log_request_middleware))
         .layer(TraceLayer::new_for_http())
 }

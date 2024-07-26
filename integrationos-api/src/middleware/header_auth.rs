@@ -6,7 +6,7 @@ use mongodb::bson::doc;
 use std::sync::Arc;
 use tracing::error;
 
-pub async fn auth(
+pub async fn header_auth(
     State(state): State<Arc<AppState>>,
     mut req: Request<Body>,
     next: Next,

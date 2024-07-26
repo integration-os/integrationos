@@ -1,18 +1,16 @@
-use super::ApiError;
-use crate::{
-    debug_error, internal_server_error,
-    server::AppState,
-    util::{generate_openapi_schema, generate_path_item},
-};
+mod builder;
+
+use crate::{router::ServerResponse, server::AppState};
 use axum::extract::{Json, State};
 use bson::doc;
+use builder::{generate_openapi_schema, generate_path_item};
 use convert_case::{Case, Casing};
 use futures::{Stream, StreamExt, TryStreamExt};
-use http::StatusCode;
 use indexmap::IndexMap;
 use integrationos_domain::{
     algebra::{MongoStore, TimedExt},
     common_model::{CommonEnum, CommonModel},
+    IntegrationOSError, InternalError,
 };
 use mongodb::error::Error as MongoError;
 use openapiv3::*;
@@ -103,13 +101,12 @@ impl PathIter {
 
 type StreamResult = Pin<Box<dyn Stream<Item = Result<CommonModel, MongoError>> + Send>>;
 
-#[tracing::instrument(name = "Refresh OpenAPI schema", skip(state))]
 pub async fn refresh_openapi(
     state: State<Arc<AppState>>,
-) -> Result<(StatusCode, Json<OpenApiSchema>), ApiError> {
+) -> Result<Json<ServerResponse<OpenApiSchema>>, IntegrationOSError> {
     state.openapi_data.clone().clear().map_err(|e| {
         error!("Could not clear openapi schema from cache: {:?}", e);
-        internal_server_error!()
+        InternalError::io_err("Could not clear openapi schema", None)
     })?;
 
     spawn_openapi_generation(
@@ -118,55 +115,52 @@ pub async fn refresh_openapi(
         state.openapi_data.clone(),
     );
 
-    Ok((
-        StatusCode::ACCEPTED,
-        Json(OpenApiSchema::Accepted(
-            "OpenAPI schema is being regenerated".to_string(),
-        )),
-    ))
+    Ok(Json(ServerResponse::new(
+        "openapi",
+        OpenApiSchema::Accepted("OpenAPI schema is being regenerated".to_string()),
+    )))
 }
 
-#[tracing::instrument(name = "Get OpenAPI schema YAML", skip(state))]
 pub async fn get_openapi_yaml(
     state: State<Arc<AppState>>,
-) -> Result<(StatusCode, Vec<u8>), ApiError> {
+) -> Result<Json<ServerResponse<Vec<u8>>>, IntegrationOSError> {
     let spec = get_openapi(state).await;
 
     match spec {
-        Ok((status_code, Json(spec))) => {
-            let try_yaml: serde_yaml::Value = serde_yaml::to_value(spec).map_err(|e| {
+        Ok(Json(spec)) => {
+            let try_yaml: serde_yaml::Value = serde_yaml::to_value(spec.args).map_err(|e| {
                 error!("Could not serialize openapi schema to yaml: {:?}", e);
-                internal_server_error!()
+
+                InternalError::io_err("Could not serialize openapi schema to yaml", None)
             })?;
 
             let text = serde_yaml::to_string(&try_yaml).map_err(|e| {
                 error!("Could not serialize openapi schema to yaml: {:?}", e);
-                internal_server_error!()
+
+                InternalError::io_err("Could not serialize openapi schema to yaml", None)
             })?;
 
-            Ok((status_code, text.into_bytes()))
+            Ok(Json(ServerResponse::new("openapi", text.into_bytes())))
         }
         Err(e) => Err(e),
     }
 }
 
-#[tracing::instrument(name = "Get OpenAPI schema", skip(state))]
 pub async fn get_openapi(
     state: State<Arc<AppState>>,
-) -> Result<(StatusCode, Json<OpenApiSchema>), ApiError> {
+) -> Result<Json<ServerResponse<OpenApiSchema>>, IntegrationOSError> {
     let schema = state.openapi_data.get().map_err(|e| {
         error!("Could not get openapi schema from cache: {:?}", e);
-        internal_server_error!()
+
+        InternalError::io_err("Could not get openapi schema", None)
     })?;
 
     if schema.is_generating {
         info!("OpenAPI schema is being generated");
-        return Ok((
-            StatusCode::ACCEPTED,
-            Json(OpenApiSchema::Accepted(
-                "You're early, the schema is being generated".to_string(),
-            )),
-        ));
+        return Ok(Json(ServerResponse::new(
+            "openapi",
+            OpenApiSchema::Accepted("You're early, the schema is being generated".to_string()),
+        )));
     }
 
     if let Some(error) = &schema.error {
@@ -176,18 +170,22 @@ pub async fn get_openapi(
             state.app_stores.common_enum.clone(),
             state.openapi_data.clone(),
         );
-        return Err(debug_error!(format!(
-            "OpenAPI schema generation failed: {}",
-            error
-        )));
+        return Err(InternalError::unknown(
+            &format!("OpenAPI schema generation failed: {}", error),
+            None,
+        ));
     }
 
     let openapi = serde_json::from_slice(schema.schema.as_ref()).map_err(|e| {
         error!("Could not deserialize openapi schema: {:?}", e);
-        internal_server_error!()
+
+        InternalError::io_err("Could not deserialize openapi schema", None)
     })?;
 
-    Ok((StatusCode::OK, Json(OpenApiSchema::OpenAPI(openapi))))
+    Ok(Json(ServerResponse::new(
+        "openapi",
+        OpenApiSchema::OpenAPI(openapi),
+    )))
 }
 
 fn spawn_openapi_generation(

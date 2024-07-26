@@ -74,7 +74,7 @@ pub fn shape_mongo_filter(
 #[cfg(test)]
 mod test {
     use super::shape_mongo_filter;
-    use crate::util::shape_mongo_filter::{
+    use crate::helper::shape_mongo_filter::{
         MongoQuery, DELETED_STR, DUAL_ENVIRONMENT_HEADER, ENVIRONMENT_STR, LIMIT_STR,
         OWNERSHIP_STR, SKIP_STR,
     };

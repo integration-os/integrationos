@@ -1,15 +1,12 @@
 use super::{delete, read, PublicExt, RequestExt};
 use crate::{
-    api_payloads::ErrorResponse,
-    bad_request,
     config::Config,
-    internal_server_error,
+    router::ServerResponse,
     server::{AppState, AppStores},
 };
 use anyhow::Result;
 use axum::{
     extract::State,
-    http::StatusCode,
     routing::{delete as axum_delete, get, post},
     Extension, Json, Router,
 };
@@ -24,7 +21,7 @@ use integrationos_domain::{
     id::{prefix::IdPrefix, Id},
     ownership::Ownership,
     record_metadata::RecordMetadata,
-    AccessKey,
+    AccessKey, ApplicationError, IntegrationOSError, InternalError,
 };
 use mongodb::bson::doc;
 use rand::Rng;
@@ -153,19 +150,19 @@ pub fn generate_event_access(
 pub async fn create_event_access_for_new_user(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateEventAccessPayloadWithOwnership>,
-) -> Result<Json<EventAccess>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<ServerResponse<EventAccess>>, IntegrationOSError> {
     if let Err(validation_errors) = req.validate() {
         warn!("Invalid payload: {:?}", validation_errors);
-        return Err(bad_request!(format!(
-            "Invalid payload: {:?}",
-            validation_errors
-        )));
+        return Err(ApplicationError::bad_request(
+            &(format!("Invalid payload: {:?}", validation_errors)),
+            None,
+        ));
     }
 
     let event_access = generate_event_access(state.config.clone(), req).map_err(|e| {
         error!("Error generating event access for new user: {:?}", e);
 
-        internal_server_error!()
+        InternalError::io_err("Could not generate event access", None)
     })?;
 
     state
@@ -176,40 +173,40 @@ pub async fn create_event_access_for_new_user(
         .map_err(|e| {
             error!("Error creating event access for new user: {:?}", e);
 
-            internal_server_error!()
+            e
         })?;
 
-    Ok(Json(event_access))
+    Ok(Json(ServerResponse::new("event_access", event_access)))
 }
 
 pub async fn create_event_access(
-    Extension(user_event_access): Extension<Arc<EventAccess>>,
+    Extension(access): Extension<Arc<EventAccess>>,
     State(state): State<Arc<AppState>>,
-    Json(req): Json<CreateEventAccessRequest>,
-) -> Result<Json<EventAccess>, (StatusCode, Json<ErrorResponse>)> {
-    if let Err(validation_errors) = req.validate() {
-        return Err(bad_request!(format!(
-            "Invalid payload: {:?}",
-            validation_errors
-        )));
+    Json(payload): Json<CreateEventAccessRequest>,
+) -> Result<Json<ServerResponse<EventAccess>>, IntegrationOSError> {
+    if let Err(validation_errors) = payload.validate() {
+        return Err(ApplicationError::bad_request(
+            &format!("Invalid payload: {:?}", validation_errors),
+            None,
+        ));
     }
 
     let event_access_payload = CreateEventAccessPayloadWithOwnership {
-        name: req.name.clone(),
-        group: req.group.clone(),
-        namespace: req.namespace.clone(),
-        platform: req.platform.clone(),
-        connection_type: req.connection_type.clone(),
-        environment: user_event_access.environment,
-        paths: req.paths.clone(),
-        ownership: user_event_access.ownership.clone(),
+        name: payload.name.clone(),
+        group: payload.group.clone(),
+        namespace: payload.namespace.clone(),
+        platform: payload.platform.clone(),
+        connection_type: payload.connection_type.clone(),
+        environment: access.environment,
+        paths: payload.paths.clone(),
+        ownership: access.ownership.clone(),
     };
 
     let event_access =
         generate_event_access(state.config.clone(), event_access_payload).map_err(|e| {
             error!("Error generating event access for existing user: {:?}", e);
 
-            internal_server_error!()
+            InternalError::io_err("Could not generate event access", None)
         })?;
 
     state
@@ -220,8 +217,8 @@ pub async fn create_event_access(
         .map_err(|e| {
             error!("Error creating event access for existing user: {:?}", e);
 
-            internal_server_error!()
+            InternalError::io_err("Could not create event access", None)
         })?;
 
-    Ok(Json(event_access))
+    Ok(Json(ServerResponse::new("event_access", event_access)))
 }

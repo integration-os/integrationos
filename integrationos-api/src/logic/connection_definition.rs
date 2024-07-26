@@ -1,6 +1,6 @@
-use super::{create, delete, read, update, ApiResult, HookExt, PublicExt, RequestExt};
+use super::{create, delete, read, update, HookExt, PublicExt, RequestExt};
 use crate::{
-    internal_server_error, not_found,
+    router::ServerResponse,
     server::{AppState, AppStores},
 };
 use axum::{
@@ -11,15 +11,15 @@ use axum::{
 use integrationos_domain::{
     algebra::MongoStore,
     api_model_config::AuthMethod,
-    connection_definition::ConnectionStatus,
     connection_definition::{
-        AuthSecret, ConnectionDefinition, ConnectionDefinitionType, ConnectionForm, FormDataItem,
-        Frontend, Paths, Spec,
+        AuthSecret, ConnectionDefinition, ConnectionDefinitionType, ConnectionForm,
+        ConnectionStatus, FormDataItem, Frontend, Paths, Spec,
     },
     connection_model_definition::{ConnectionModelDefinition, CrudAction},
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
     settings::Settings,
+    ApplicationError, IntegrationOSError,
 };
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
@@ -112,7 +112,7 @@ pub struct PublicConnectionDataOauth {
 pub async fn public_get_connection_details(
     Path((common_model, platform_name)): Path<(String, String)>,
     State(state): State<Arc<AppState>>,
-) -> ApiResult<PublicGetConnectionDetailsResponse> {
+) -> Result<Json<ServerResponse<PublicGetConnectionDetailsResponse>>, IntegrationOSError> {
     let Some(connection_definition) = state
         .app_stores
         .connection_config
@@ -122,10 +122,14 @@ pub async fn public_get_connection_details(
         .await
         .map_err(|e| {
             error!("Error reading from connection definitions: {e}");
-            internal_server_error!()
+
+            e
         })?
     else {
-        return Err(not_found!("Connection definition"));
+        return Err(ApplicationError::not_found(
+            &format!("Connection definition for platform {}", &platform_name),
+            None,
+        ));
     };
 
     let connection_model_definitions = state
@@ -160,7 +164,7 @@ pub async fn public_get_connection_details(
         .await
         .map_err(|e| {
             error!("Error reading from connection model definitions: {e}");
-            internal_server_error!()
+            e
         })?;
 
     let supported_actions = connection_model_definitions
@@ -181,9 +185,14 @@ pub async fn public_get_connection_details(
             .await
             .map_err(|e| {
                 error!("Error reading from connection definitions: {e}");
-                internal_server_error!()
+                e
             })?
-            .ok_or_else(|| not_found!("Connection OAuth definition"))?;
+            .ok_or_else(|| {
+                ApplicationError::not_found(
+                    &format!("OAuth Config for platform {}", &platform_name),
+                    None,
+                )
+            })?;
 
         connection_oauth_definition.frontend.scopes
     } else {
@@ -199,15 +208,25 @@ pub async fn public_get_connection_details(
         .await
         .map_err(|e| {
             error!("Error reading from public connection details: {e}");
-            internal_server_error!()
+            e
         })?
-        .ok_or_else(|| not_found!("Public Connection Details"))?;
+        .ok_or_else(|| {
+            ApplicationError::not_found(
+                &format!("Public connection details for platform {}", &platform_name),
+                None,
+            )
+        })?;
 
     let model_features = public_connection_details_record
         .models
         .iter()
         .find(|model| model.name.to_lowercase() == common_model.to_lowercase())
-        .ok_or_else(|| not_found!("Model Features"))?;
+        .ok_or_else(|| {
+            ApplicationError::not_found(
+                &format!("Model features for model {}", &common_model),
+                None,
+            )
+        })?;
 
     let caveats =
         public_connection_details_record
@@ -241,19 +260,22 @@ pub async fn public_get_connection_details(
                 v
             });
 
-    Ok(Json(PublicGetConnectionDetailsResponse {
-        platform: connection_definition.platform,
-        status: connection_definition.status,
-        oauth: PublicConnectionDataOauth {
-            enabled: oauth_enabled,
-            scopes,
+    Ok(Json(ServerResponse::new(
+        "connection_definition",
+        PublicGetConnectionDetailsResponse {
+            platform: connection_definition.platform,
+            status: connection_definition.status,
+            oauth: PublicConnectionDataOauth {
+                enabled: oauth_enabled,
+                scopes,
+            },
+            supported_actions,
+            pagination: model_features.pagination,
+            filtration: model_features.filtration,
+            sorting: model_features.sorting,
+            caveats,
         },
-        supported_actions,
-        pagination: model_features.pagination,
-        filtration: model_features.filtration,
-        sorting: model_features.sorting,
-        caveats,
-    }))
+    )))
 }
 
 impl RequestExt for CreateRequest {
