@@ -178,7 +178,9 @@ impl RequestExt for CreateRequest {
         .to_lowercase();
 
         Some(Self::Output {
-            id: Id::now(IdPrefix::ConnectionModelSchema),
+            id: self
+                ._id
+                .unwrap_or_else(|| Id::now(IdPrefix::ConnectionModelSchema)),
             platform_id: self.platform_id,
             platform_page_id: self.platform_page_id,
             connection_platform: self.connection_platform.clone(),

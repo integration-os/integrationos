@@ -81,7 +81,7 @@ impl RequestExt for CreateRequest {
 
     fn from(&self) -> Option<Self::Output> {
         let mut record = Self::Output {
-            id: Id::now(IdPrefix::CommonModel),
+            id: self._id.unwrap_or_else(|| Id::now(IdPrefix::CommonModel)),
             name: self.name.clone(),
             fields: self.fields.clone(),
             sample: self.sample.clone(),
