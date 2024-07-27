@@ -1558,9 +1558,6 @@ impl Expandable {
 
 #[cfg(test)]
 mod tests {
-    use crate::Store;
-    use mongodb::Client;
-
     use super::*;
 
     #[test]
@@ -1606,8 +1603,8 @@ mod tests {
         assert_eq!(data_type.as_rust_ref("String".into()), "Vec<String>");
     }
 
-    #[tokio::test]
-    async fn test_common_model_as_rust_struct_is_correct() {
+    #[test]
+    fn test_common_model_as_rust_struct_is_correct() {
         let common_model = CommonModel {
             id: Id::new(IdPrefix::CommonModel, chrono::Utc::now()),
             name: "Model".to_string(),
@@ -1635,22 +1632,8 @@ mod tests {
             record_metadata: Default::default(),
         };
 
-        let client = Client::with_uri_str("mongodb://localhost:27017/?directConnection=true")
-            .await
-            .expect("Failed to connect to MongoDB");
-        let database = client.database("test");
-
-        let cm_store = MongoStore::new(&database, &Store::CommonModels)
-            .await
-            .expect("Failed to create store");
-        let ce_store = MongoStore::new(&database, &Store::CommonEnums)
-            .await
-            .expect("Failed to create store");
-
-        let rust_struct = common_model.as_rust_expanded(&cm_store, &ce_store).await;
-        let typescript_interface = common_model
-            .as_typescript_expanded(&cm_store, &ce_store)
-            .await;
+        let rust_struct = common_model.as_rust_ref();
+        let typescript_interface = common_model.as_typescript_ref();
 
         assert!(
             rust_struct.contains(
@@ -1665,6 +1648,78 @@ mod tests {
                 .contains("export interface Model { age?: number;\n    name?: string }")
                 || typescript_interface
                     .contains("export interface Model { name?: string;\n    age?: number }")
+        );
+    }
+
+    #[test]
+    fn test_common_model_as_lax_schema_is_correct() {
+        let common_model = CommonModel {
+            id: Id::new(IdPrefix::CommonModel, chrono::Utc::now()),
+            name: "Model".to_string(),
+            fields: vec![
+                Field {
+                    name: "name".to_string(),
+                    datatype: DataType::String,
+                    description: None,
+                    required: true,
+                },
+                Field {
+                    name: "age".to_string(),
+                    datatype: DataType::Number,
+                    description: None,
+                    required: true,
+                },
+            ],
+            sample: json!({
+                "name": "John Doe",
+                "age": 25
+            }),
+            primary: true,
+            category: "Category".to_string(),
+            interface: Default::default(),
+            record_metadata: Default::default(),
+        };
+
+        let lax_schema = common_model.as_typescript_schema(SchemaType::Lax);
+        assert_eq!(
+            lax_schema,
+            "export const Model = Schema.Struct({ age: Schema.optional(Schema.NullishOr(Schema.Number)),\n    name: Schema.optional(Schema.NullishOr(Schema.String)) }).annotations({ title: 'Model' });\n"
+        );
+    }
+
+    #[test]
+    fn test_common_model_as_strict_schema_is_correct() {
+        let common_model = CommonModel {
+            id: Id::new(IdPrefix::CommonModel, chrono::Utc::now()),
+            name: "Model".to_string(),
+            fields: vec![
+                Field {
+                    name: "name".to_string(),
+                    datatype: DataType::String,
+                    description: None,
+                    required: true,
+                },
+                Field {
+                    name: "age".to_string(),
+                    datatype: DataType::Number,
+                    description: None,
+                    required: true,
+                },
+            ],
+            sample: json!({
+                "name": "John Doe",
+                "age": 25
+            }),
+            primary: true,
+            category: "Category".to_string(),
+            interface: Default::default(),
+            record_metadata: Default::default(),
+        };
+
+        let strict_schema = common_model.as_typescript_schema(SchemaType::Strict);
+        assert_eq!(
+            strict_schema,
+            "export const Model = Schema.Struct({ age: Schema.Number,\n    name: Schema.String }).annotations({ title: 'Model' });\n"
         );
     }
 }
