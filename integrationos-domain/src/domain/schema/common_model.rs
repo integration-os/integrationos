@@ -69,6 +69,14 @@ impl Default for CommonModel {
     }
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, Eq, PartialEq, Copy)]
+#[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+pub enum SchemaType {
+    Lax,
+    Strict,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 pub struct Field<T = CommonModel> {
@@ -115,11 +123,12 @@ impl Field {
         )
     }
 
-    fn as_typescript_schema(&self) -> String {
+    fn as_typescript_schema(&self, r#type: SchemaType) -> String {
         format!(
             "{}: {}",
             replace_reserved_keyword(&self.name, Lang::TypeScript).camel_case(),
-            self.datatype.as_typescript_schema(self.name.clone())
+            self.datatype
+                .as_typescript_schema(self.name.clone(), r#type)
         )
     }
 }
@@ -299,7 +308,7 @@ impl DataType {
         }
     }
 
-    fn as_typescript_ref(&self, e_name: String) -> String {
+    fn as_typescript_ref(&self, enum_name: String) -> String {
         match self {
             DataType::String => "string".into(),
             DataType::Number => "number".into(),
@@ -307,55 +316,106 @@ impl DataType {
             DataType::Date => "Date".into(),
             DataType::Enum { reference, .. } => {
                 if reference.is_empty() {
-                    e_name.pascal_case()
+                    enum_name.pascal_case()
                 } else {
                     reference.into()
                 }
             }
             DataType::Expandable(expandable) => expandable.reference(),
             DataType::Array { element_type } => {
-                let name = (*element_type).as_typescript_ref(e_name);
+                let name = (*element_type).as_typescript_ref(enum_name);
                 format!("{}[]", name)
             }
         }
     }
 
-    fn as_typescript_schema(&self, e_name: String) -> String {
+    fn as_typescript_schema(&self, enum_name: String, r#type: SchemaType) -> String {
         match self {
-            DataType::String => "Schema.optional(Schema.NullishOr(Schema.String))".into(),
-            DataType::Number => "Schema.optional(Schema.NullishOr(Schema.Number))".into(),
-            DataType::Boolean => "Schema.optional(Schema.NullishOr(Schema.Boolean))".into(),
-            DataType::Date => "Schema.optional(Schema.NullishOr(Schema.String.pipe(Schema.filter((d) => !isNaN(new Date(d).getTime())))))".into(),
-            DataType::Enum { reference, .. } => {
-                if reference.is_empty() {
-                    format!(
-                        "Schema.optional(Schema.NullishOr({}))",
-                        e_name.pascal_case()
-                    )
-                } else {
-                    format!("Schema.optional(Schema.NullishOr({}))", reference)
+            DataType::String => {
+                match r#type {
+                    SchemaType::Lax => "Schema.optional(Schema.NullishOr(Schema.String))".into(),
+                    SchemaType::Strict => "Schema.String".into()
                 }
+            },
+            DataType::Number => {
+                match r#type {
+                    SchemaType::Lax => "Schema.optional(Schema.NullishOr(Schema.Number))".into(),
+                    SchemaType::Strict => "Schema.Number".into()
+                } },
+            DataType::Boolean => {
+                match r#type {
+                    SchemaType::Lax => "Schema.optional(Schema.NullishOr(Schema.Boolean))".into(),
+                    SchemaType::Strict => "Schema.Boolean".into()
+                }
+
+                },
+            DataType::Date => {
+                match r#type {
+                    SchemaType::Lax => "Schema.optional(Schema.NullishOr(Schema.String.pipe(Schema.filter((d) => !isNaN(new Date(d).getTime())))))".into(),
+                    SchemaType::Strict => "Schema.String.pipe(Schema.filter((d) => !isNaN(new Date(d).getTime())))".into()
+                }
+                },
+            DataType::Enum { reference, .. } => {
+                match r#type {
+                    SchemaType::Lax => {
+                        if reference.is_empty() {
+                            format!(
+                                "Schema.optional(Schema.NullishOr({}))",
+                                enum_name.pascal_case()
+                            )
+                        } else {
+                            format!("Schema.optional(Schema.NullishOr({}))", reference)
+                        }
+                    },
+                    SchemaType::Strict => {
+                        if reference.is_empty() {
+                            enum_name.pascal_case()
+                        } else {
+                            reference.into()
+                        }
+                    }
+                }
+
             }
             DataType::Expandable(expandable) => {
-                format!(
-                    "Schema.optional(Schema.NullishOr({}))",
-                    expandable.reference()
-                )
+                match r#type {
+                    SchemaType::Lax => {
+                        format!(
+                            "Schema.optional(Schema.NullishOr({}))",
+                            expandable.reference()
+                        )
+                    },
+                    SchemaType::Strict => {
+                        expandable.reference()
+                    }
+                }
             }
             DataType::Array { element_type } => {
-                let name = (*element_type).as_typescript_schema(e_name);
-                let refined = if name.contains("Schema.optional") {
-                    name.replace("Schema.optional(", "")
-                        .replace(')', "")
-                        .replace("Schema.NullishOr(", "")
-                        .replace(')', "")
-                } else {
-                    name
-                };
-                format!(
-                    "Schema.optional(Schema.NullishOr(Schema.Array({})))",
-                    refined
-                )
+                match r#type {
+                    SchemaType::Lax => {
+                        let name = (*element_type).as_typescript_schema(enum_name, r#type);
+                        let refined = if name.contains("Schema.optional") {
+                            name.replace("Schema.optional(", "")
+                                .replace(')', "")
+                                .replace("Schema.NullishOr(", "")
+                                .replace(')', "")
+                        } else {
+                            name
+                        };
+                        format!(
+                            "Schema.optional(Schema.NullishOr(Schema.Array({})))",
+                            refined
+                        )
+                    },
+                    SchemaType::Strict => {
+                        let name = (*element_type).as_typescript_schema(enum_name, r#type);
+                        format!(
+                            "Schema.Array({})",
+                            name
+                        )
+                    }
+                }
+
             }
         }
     }
@@ -703,7 +763,7 @@ impl CommonModel {
     }
 
     /// Generates an effect schema for the model in TypeScript
-    fn as_typescript_schema(&self) -> String {
+    fn as_typescript_schema(&self, r#type: SchemaType) -> String {
         format!(
             "export const {} = Schema.Struct({{ {} }}).annotations({{ title: '{}' }});\n",
             replace_reserved_keyword(&self.name, Lang::TypeScript)
@@ -711,7 +771,7 @@ impl CommonModel {
                 .pascal_case(),
             self.fields
                 .iter()
-                .map(|field| field.as_typescript_schema())
+                .map(|field| field.as_typescript_schema(r#type))
                 .collect::<HashSet<String>>()
                 .into_iter()
                 .collect::<Vec<_>>()
@@ -740,6 +800,7 @@ impl CommonModel {
         &self,
         cm_store: &MongoStore<CommonModel>,
         ce_store: &MongoStore<CommonEnum>,
+        r#type: SchemaType,
     ) -> String {
         let mut visited_enums = HashSet::new();
         let mut visited_common_models = HashSet::new();
@@ -783,14 +844,14 @@ impl CommonModel {
                 }
                 visited_common_models.insert(child.id);
 
-                Some(child.as_typescript_schema())
+                Some(child.as_typescript_schema(r#type))
             })
             .collect::<Vec<_>>()
             .join("\n // __SEPARATOR__ \n");
 
         let ce_types = enums.join("\n");
 
-        let cm_types = self.as_typescript_schema();
+        let cm_types = self.as_typescript_schema(r#type);
 
         if visited_common_models.contains(&self.id) {
             format!(
