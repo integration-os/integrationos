@@ -1,0 +1,23 @@
+name: Publish IntegrationOS Domain
+on:
+  push:
+    tags:
+      - "domain-[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+jobs:
+  publish:
+    name: Publish IntegrationOS Domain
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Compare version with Cargo.toml
+        id: version
+        run: if [ "domain-$(cat ./integrationos-domain/Cargo.toml | grep version | head -n 1 | cut -d '"' -f 2)" != "${{ github.ref_name }}" ]; then echo "Version mismatch"; exit 1; fi
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - run: cargo publish --token ${{ secrets.CRATES_TOKEN }}
+        working-directory: ./integrationos-domain
