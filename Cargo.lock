@@ -1750,7 +1750,7 @@ dependencies = [
 
 [[package]]
 name = "integrationos-domain"
-version = "0.1.0"
+version = "5.0.0"
 dependencies = [
  "actix-web",
  "aes",

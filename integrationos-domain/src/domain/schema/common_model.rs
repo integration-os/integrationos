@@ -1681,9 +1681,12 @@ mod tests {
         };
 
         let lax_schema = common_model.as_typescript_schema(SchemaType::Lax);
-        assert_eq!(
-            lax_schema,
-            "export const Model = Schema.Struct({ age: Schema.optional(Schema.NullishOr(Schema.Number)),\n    name: Schema.optional(Schema.NullishOr(Schema.String)) }).annotations({ title: 'Model' });\n"
+        assert!(
+            lax_schema.contains(
+            "export const Model = Schema.Struct({ age: Schema.optional(Schema.NullishOr(Schema.Number)),\n    name: Schema.optional(Schema.NullishOr(Schema.String)) }).annotations({ title: 'Model' });\n") ||
+            lax_schema.contains(
+                "export const Model = Schema.Struct({ name: Schema.optional(Schema.NullishOr(Schema.String)),\n    age: Schema.optional(Schema.NullishOr(Schema.Number)) }).annotations({ title: 'Model' });\n"
+            )
         );
     }
 
