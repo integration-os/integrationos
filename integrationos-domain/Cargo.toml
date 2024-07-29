@@ -10,9 +10,6 @@ repository = "https://github.com/integration-os/integrationos-domain"
 # This feature can be used for tests to provide dummy implementations
 dummy = ["dep:fake"]
 
-# This feature allows you to measure the time it takes to execute a future
-metrics = ["dep:pin-project"]
-
 [dependencies]
 
 jsonpath_lib = "0.3.0"
@@ -36,16 +33,16 @@ fake = { version = "2.9.2", features = [
     "semver",
 ], optional = true }
 futures = "0.3.30"
-handlebars = { version = "4.4.0" }
+handlebars = "4.4.0"
 http = "1.1.0"
 http-serde-ext = "1.0.2"
 indexmap = "2.1.0"
 js-sandbox-ios.workspace = true
 mongodb = "2.8.0"
 napi = { version = "2.14.2", default-features = false, features = ["napi4"] }
-napi-derive = { version = "2.14.6" }
+napi-derive = "2.14.6"
 openapiv3 = "2.0.0"
-pin-project = { version = "1.1.4", optional = true }
+pin-project = "1.1.4" 
 prost = "0.12.3"
 rand = "0.8.5"
 reqwest = { version = "0.12.3", features = [
