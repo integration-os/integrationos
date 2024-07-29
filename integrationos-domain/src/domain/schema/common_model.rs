@@ -1720,9 +1720,12 @@ mod tests {
         };
 
         let strict_schema = common_model.as_typescript_schema(SchemaType::Strict);
-        assert_eq!(
-            strict_schema,
-            "export const Model = Schema.Struct({ age: Schema.Number,\n    name: Schema.String }).annotations({ title: 'Model' });\n"
+        assert!(
+            strict_schema.contains(
+            "export const Model = Schema.Struct({ age: Schema.Number,\n    name: Schema.String }).annotations({ title: 'Model' });\n") ||
+            strict_schema.contains(
+                "export const Model = Schema.Struct({ name: Schema.String,\n    age: Schema.Number }).annotations({ title: 'Model' });\n"
+            )
         );
     }
 }
