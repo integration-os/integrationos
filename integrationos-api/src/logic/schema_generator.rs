@@ -8,7 +8,8 @@ use axum::{
 use bson::{doc, Document};
 use futures::StreamExt;
 use integrationos_domain::{
-    api_model_config::Lang, ApplicationError, Id, IntegrationOSError, InternalError, Store,
+    api_model_config::Lang, common_model::SchemaType, ApplicationError, Id, IntegrationOSError,
+    InternalError, Store,
 };
 use mongodb::options::FindOptions;
 use serde::Deserialize;
@@ -18,6 +19,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/projection", get(get_common_models_projections))
         .route("/:id", get(generate_schema))
+        .route("/:id/:type", get(generate_schema))
         .route("/types/:id/:lang", get(generate_types))
 }
 
@@ -94,9 +96,16 @@ async fn generate_types(
     Ok(schema)
 }
 
+#[derive(Debug, Deserialize)]
+pub struct SchemaParams {
+    id: Id,
+    #[serde(rename = "type")]
+    r#type: Option<SchemaType>,
+}
+
 pub async fn generate_schema(
     state: State<Arc<AppState>>,
-    Path(id): Path<Id>,
+    Path(SchemaParams { id, r#type }): Path<SchemaParams>,
 ) -> Result<String, IntegrationOSError> {
     let cm_store = state.app_stores.common_model.clone();
     let ce_store = state.app_stores.common_enum.clone();
@@ -111,7 +120,7 @@ pub async fn generate_schema(
         ))?;
 
     let schema = common_model
-        .as_typescript_schema_expanded(&cm_store, &ce_store)
+        .as_typescript_schema_expanded(&cm_store, &ce_store, r#type.unwrap_or(SchemaType::Lax))
         .await;
 
     Ok(schema)

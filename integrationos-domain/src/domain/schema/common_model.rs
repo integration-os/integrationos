@@ -69,6 +69,14 @@ impl Default for CommonModel {
     }
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, Eq, PartialEq, Copy)]
+#[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+pub enum SchemaType {
+    Lax,
+    Strict,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 pub struct Field<T = CommonModel> {
@@ -115,11 +123,12 @@ impl Field {
         )
     }
 
-    fn as_typescript_schema(&self) -> String {
+    fn as_typescript_schema(&self, r#type: SchemaType) -> String {
         format!(
             "{}: {}",
             replace_reserved_keyword(&self.name, Lang::TypeScript).camel_case(),
-            self.datatype.as_typescript_schema(self.name.clone())
+            self.datatype
+                .as_typescript_schema(self.name.clone(), r#type)
         )
     }
 }
@@ -299,7 +308,7 @@ impl DataType {
         }
     }
 
-    fn as_typescript_ref(&self, e_name: String) -> String {
+    fn as_typescript_ref(&self, enum_name: String) -> String {
         match self {
             DataType::String => "string".into(),
             DataType::Number => "number".into(),
@@ -307,55 +316,106 @@ impl DataType {
             DataType::Date => "Date".into(),
             DataType::Enum { reference, .. } => {
                 if reference.is_empty() {
-                    e_name.pascal_case()
+                    enum_name.pascal_case()
                 } else {
                     reference.into()
                 }
             }
             DataType::Expandable(expandable) => expandable.reference(),
             DataType::Array { element_type } => {
-                let name = (*element_type).as_typescript_ref(e_name);
+                let name = (*element_type).as_typescript_ref(enum_name);
                 format!("{}[]", name)
             }
         }
     }
 
-    fn as_typescript_schema(&self, e_name: String) -> String {
+    fn as_typescript_schema(&self, enum_name: String, r#type: SchemaType) -> String {
         match self {
-            DataType::String => "Schema.optional(Schema.NullishOr(Schema.String))".into(),
-            DataType::Number => "Schema.optional(Schema.NullishOr(Schema.Number))".into(),
-            DataType::Boolean => "Schema.optional(Schema.NullishOr(Schema.Boolean))".into(),
-            DataType::Date => "Schema.optional(Schema.NullishOr(Schema.String.pipe(Schema.filter((d) => !isNaN(new Date(d).getTime())))))".into(),
-            DataType::Enum { reference, .. } => {
-                if reference.is_empty() {
-                    format!(
-                        "Schema.optional(Schema.NullishOr({}))",
-                        e_name.pascal_case()
-                    )
-                } else {
-                    format!("Schema.optional(Schema.NullishOr({}))", reference)
+            DataType::String => {
+                match r#type {
+                    SchemaType::Lax => "Schema.optional(Schema.NullishOr(Schema.String))".into(),
+                    SchemaType::Strict => "Schema.String".into()
                 }
+            },
+            DataType::Number => {
+                match r#type {
+                    SchemaType::Lax => "Schema.optional(Schema.NullishOr(Schema.Number))".into(),
+                    SchemaType::Strict => "Schema.Number".into()
+                } },
+            DataType::Boolean => {
+                match r#type {
+                    SchemaType::Lax => "Schema.optional(Schema.NullishOr(Schema.Boolean))".into(),
+                    SchemaType::Strict => "Schema.Boolean".into()
+                }
+
+                },
+            DataType::Date => {
+                match r#type {
+                    SchemaType::Lax => "Schema.optional(Schema.NullishOr(Schema.String.pipe(Schema.filter((d) => !isNaN(new Date(d).getTime())))))".into(),
+                    SchemaType::Strict => "Schema.String.pipe(Schema.filter((d) => !isNaN(new Date(d).getTime())))".into()
+                }
+                },
+            DataType::Enum { reference, .. } => {
+                match r#type {
+                    SchemaType::Lax => {
+                        if reference.is_empty() {
+                            format!(
+                                "Schema.optional(Schema.NullishOr({}))",
+                                enum_name.pascal_case()
+                            )
+                        } else {
+                            format!("Schema.optional(Schema.NullishOr({}))", reference)
+                        }
+                    },
+                    SchemaType::Strict => {
+                        if reference.is_empty() {
+                            enum_name.pascal_case()
+                        } else {
+                            reference.into()
+                        }
+                    }
+                }
+
             }
             DataType::Expandable(expandable) => {
-                format!(
-                    "Schema.optional(Schema.NullishOr({}))",
-                    expandable.reference()
-                )
+                match r#type {
+                    SchemaType::Lax => {
+                        format!(
+                            "Schema.optional(Schema.NullishOr({}))",
+                            expandable.reference()
+                        )
+                    },
+                    SchemaType::Strict => {
+                        expandable.reference()
+                    }
+                }
             }
             DataType::Array { element_type } => {
-                let name = (*element_type).as_typescript_schema(e_name);
-                let refined = if name.contains("Schema.optional") {
-                    name.replace("Schema.optional(", "")
-                        .replace(')', "")
-                        .replace("Schema.NullishOr(", "")
-                        .replace(')', "")
-                } else {
-                    name
-                };
-                format!(
-                    "Schema.optional(Schema.NullishOr(Schema.Array({})))",
-                    refined
-                )
+                match r#type {
+                    SchemaType::Lax => {
+                        let name = (*element_type).as_typescript_schema(enum_name, r#type);
+                        let refined = if name.contains("Schema.optional") {
+                            name.replace("Schema.optional(", "")
+                                .replace(')', "")
+                                .replace("Schema.NullishOr(", "")
+                                .replace(')', "")
+                        } else {
+                            name
+                        };
+                        format!(
+                            "Schema.optional(Schema.NullishOr(Schema.Array({})))",
+                            refined
+                        )
+                    },
+                    SchemaType::Strict => {
+                        let name = (*element_type).as_typescript_schema(enum_name, r#type);
+                        format!(
+                            "Schema.Array({})",
+                            name
+                        )
+                    }
+                }
+
             }
         }
     }
@@ -703,7 +763,7 @@ impl CommonModel {
     }
 
     /// Generates an effect schema for the model in TypeScript
-    fn as_typescript_schema(&self) -> String {
+    fn as_typescript_schema(&self, r#type: SchemaType) -> String {
         format!(
             "export const {} = Schema.Struct({{ {} }}).annotations({{ title: '{}' }});\n",
             replace_reserved_keyword(&self.name, Lang::TypeScript)
@@ -711,7 +771,7 @@ impl CommonModel {
                 .pascal_case(),
             self.fields
                 .iter()
-                .map(|field| field.as_typescript_schema())
+                .map(|field| field.as_typescript_schema(r#type))
                 .collect::<HashSet<String>>()
                 .into_iter()
                 .collect::<Vec<_>>()
@@ -740,6 +800,7 @@ impl CommonModel {
         &self,
         cm_store: &MongoStore<CommonModel>,
         ce_store: &MongoStore<CommonEnum>,
+        r#type: SchemaType,
     ) -> String {
         let mut visited_enums = HashSet::new();
         let mut visited_common_models = HashSet::new();
@@ -783,14 +844,14 @@ impl CommonModel {
                 }
                 visited_common_models.insert(child.id);
 
-                Some(child.as_typescript_schema())
+                Some(child.as_typescript_schema(r#type))
             })
             .collect::<Vec<_>>()
             .join("\n // __SEPARATOR__ \n");
 
         let ce_types = enums.join("\n");
 
-        let cm_types = self.as_typescript_schema();
+        let cm_types = self.as_typescript_schema(r#type);
 
         if visited_common_models.contains(&self.id) {
             format!(
@@ -1497,9 +1558,6 @@ impl Expandable {
 
 #[cfg(test)]
 mod tests {
-    use crate::Store;
-    use mongodb::Client;
-
     use super::*;
 
     #[test]
@@ -1545,8 +1603,8 @@ mod tests {
         assert_eq!(data_type.as_rust_ref("String".into()), "Vec<String>");
     }
 
-    #[tokio::test]
-    async fn test_common_model_as_rust_struct_is_correct() {
+    #[test]
+    fn test_common_model_as_rust_struct_is_correct() {
         let common_model = CommonModel {
             id: Id::new(IdPrefix::CommonModel, chrono::Utc::now()),
             name: "Model".to_string(),
@@ -1574,22 +1632,8 @@ mod tests {
             record_metadata: Default::default(),
         };
 
-        let client = Client::with_uri_str("mongodb://localhost:27017/?directConnection=true")
-            .await
-            .expect("Failed to connect to MongoDB");
-        let database = client.database("test");
-
-        let cm_store = MongoStore::new(&database, &Store::CommonModels)
-            .await
-            .expect("Failed to create store");
-        let ce_store = MongoStore::new(&database, &Store::CommonEnums)
-            .await
-            .expect("Failed to create store");
-
-        let rust_struct = common_model.as_rust_expanded(&cm_store, &ce_store).await;
-        let typescript_interface = common_model
-            .as_typescript_expanded(&cm_store, &ce_store)
-            .await;
+        let rust_struct = common_model.as_rust_ref();
+        let typescript_interface = common_model.as_typescript_ref();
 
         assert!(
             rust_struct.contains(
@@ -1604,6 +1648,78 @@ mod tests {
                 .contains("export interface Model { age?: number;\n    name?: string }")
                 || typescript_interface
                     .contains("export interface Model { name?: string;\n    age?: number }")
+        );
+    }
+
+    #[test]
+    fn test_common_model_as_lax_schema_is_correct() {
+        let common_model = CommonModel {
+            id: Id::new(IdPrefix::CommonModel, chrono::Utc::now()),
+            name: "Model".to_string(),
+            fields: vec![
+                Field {
+                    name: "name".to_string(),
+                    datatype: DataType::String,
+                    description: None,
+                    required: true,
+                },
+                Field {
+                    name: "age".to_string(),
+                    datatype: DataType::Number,
+                    description: None,
+                    required: true,
+                },
+            ],
+            sample: json!({
+                "name": "John Doe",
+                "age": 25
+            }),
+            primary: true,
+            category: "Category".to_string(),
+            interface: Default::default(),
+            record_metadata: Default::default(),
+        };
+
+        let lax_schema = common_model.as_typescript_schema(SchemaType::Lax);
+        assert_eq!(
+            lax_schema,
+            "export const Model = Schema.Struct({ age: Schema.optional(Schema.NullishOr(Schema.Number)),\n    name: Schema.optional(Schema.NullishOr(Schema.String)) }).annotations({ title: 'Model' });\n"
+        );
+    }
+
+    #[test]
+    fn test_common_model_as_strict_schema_is_correct() {
+        let common_model = CommonModel {
+            id: Id::new(IdPrefix::CommonModel, chrono::Utc::now()),
+            name: "Model".to_string(),
+            fields: vec![
+                Field {
+                    name: "name".to_string(),
+                    datatype: DataType::String,
+                    description: None,
+                    required: true,
+                },
+                Field {
+                    name: "age".to_string(),
+                    datatype: DataType::Number,
+                    description: None,
+                    required: true,
+                },
+            ],
+            sample: json!({
+                "name": "John Doe",
+                "age": 25
+            }),
+            primary: true,
+            category: "Category".to_string(),
+            interface: Default::default(),
+            record_metadata: Default::default(),
+        };
+
+        let strict_schema = common_model.as_typescript_schema(SchemaType::Strict);
+        assert_eq!(
+            strict_schema,
+            "export const Model = Schema.Struct({ age: Schema.Number,\n    name: Schema.String }).annotations({ title: 'Model' });\n"
         );
     }
 }
