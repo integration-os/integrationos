@@ -198,12 +198,14 @@ impl CommonEnum {
 
     /// Generates a napi annotated enum for the enum rust type
     pub fn as_rust_schema(&self) -> String {
+        let name = replace_reserved_keyword(&self.name, Lang::Rust)
+            .replace("::", "")
+            .pascal_case();
+        let napi = format!("#[napi(string_enum = \"kebab-case\", js_name = {})]", name);
         format!(
             "{} pub enum {} {{ {} }}\n",
-            "#[napi(string_enum = \"kebab-case\", js_name = {})]",
-            replace_reserved_keyword(&self.name, Lang::Rust)
-                .replace("::", "")
-                .pascal_case(),
+            napi,
+            name,
             self.options
                 .iter()
                 .map(|option| {
