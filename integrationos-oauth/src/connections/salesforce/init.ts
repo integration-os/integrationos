@@ -83,6 +83,7 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
     const contactListView = `${listViewBaseUrl}/contact/listviews`;
     const opportunityListView = `${listViewBaseUrl}/opportunity/listviews`;
     const leadListView = `${listViewBaseUrl}/lead/listviews`;
+    const accountListView = `${listViewBaseUrl}/account/listviews`;
 
     const contactListId = await getListAllId(accessToken, contactListView);
     const opportunityListId = await getListAllId(
@@ -90,6 +91,7 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
       opportunityListView
     );
     const leadListId = await getListAllId(accessToken, leadListView);
+    const accountListId = await getListAllId(accessToken, accountListView);
 
     return {
       accessToken,
@@ -100,6 +102,7 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
         contactListId,
         opportunityListId,
         leadListId,
+        accountListId,
       },
     };
   } catch (error) {
