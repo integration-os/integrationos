@@ -9,22 +9,48 @@ use axum::{
 };
 use http::StatusCode;
 use integrationos_domain::TimedExt;
-use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde::{ser::SerializeMap, Deserialize, Serialize, Serializer};
+use serde_json::{json, Value};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct ServerResponse<T>
 where
     T: Serialize,
 {
-    #[serde(rename = "type")]
     pub response_type: String,
-    #[serde(flatten)]
     pub args: T,
 }
 
+impl<T> Serialize for ServerResponse<T>
+where
+    T: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let args_value = match serde_json::to_value(&self.args) {
+            Ok(value) => value,
+            Err(_) => return Err(serde::ser::Error::custom("Serialization of args failed")),
+        };
+
+        if let Value::Object(ref args_map) = args_value {
+            let mut state = serializer.serialize_map(None)?;
+
+            state.serialize_entry("type", &self.response_type)?;
+
+            for (key, value) in args_map {
+                state.serialize_entry(key, value)?;
+            }
+
+            state.end()
+        } else {
+            self.args.serialize(serializer)
+        }
+    }
+}
 impl<T> ServerResponse<T>
 where
     T: Serialize,

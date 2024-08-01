@@ -114,7 +114,7 @@ impl RequestExt for PublicGetConnectionModelSchema {
 pub async fn get_platform_models(
     Path(platform_name): Path<String>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<ServerResponse<Vec<String>>>, IntegrationOSError> {
+) -> Result<Json<Vec<String>>, IntegrationOSError> {
     let store = state.app_stores.public_model_schema.clone();
 
     let res = store
@@ -140,10 +140,7 @@ pub async fn get_platform_models(
         .map(|m| m.common_model_name)
         .collect::<Vec<String>>();
 
-    Ok(Json(ServerResponse::new(
-        "connection_model_schema",
-        common_model_names,
-    )))
+    Ok(Json(common_model_names))
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
