@@ -23,7 +23,7 @@ hyper = "0.14.27"
 indexmap = "2.1.0"
 integrationos-unified = { path = "../integrationos-unified" }
 integrationos-cache = { path = "../integrationos-cache" }
-integrationos-domain = { path = "../integrationos-domain", features = [ "metrics", "axum-error", ] }
+integrationos-domain = { path = "../integrationos-domain" }
 jsonwebtoken.workspace = true
 mongodb.workspace = true
 num_cpus = "1"

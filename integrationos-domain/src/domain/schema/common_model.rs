@@ -412,7 +412,7 @@ impl DataType {
                     SchemaType::Strict => {
                         let name = (*element_type).as_typescript_schema(enum_name, r#type);
                         format!(
-                            "Schema.Array({})",
+                            "Schema.NonEmptyArray({})",
                             name
                         )
                     }

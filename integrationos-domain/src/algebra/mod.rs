@@ -14,5 +14,4 @@ pub use pipeline::*;
 pub use store::*;
 pub use string::*;
 pub use template::*;
-#[cfg(feature = "metrics")]
 pub use timed::*;
