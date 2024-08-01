@@ -83,7 +83,7 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
     const contactListView = `${listViewBaseUrl}/contact/listviews`;
     const opportunityListView = `${listViewBaseUrl}/opportunity/listviews`;
     const leadListView = `${listViewBaseUrl}/lead/listviews`;
-    const accountListView = `${listViewBaseUrl}/lead/listviews`;
+    const accountListView = `${listViewBaseUrl}/account/listviews`;
 
     const contactListId = await getListAllId(accessToken, contactListView);
     const opportunityListId = await getListAllId(
