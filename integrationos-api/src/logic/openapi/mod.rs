@@ -1,6 +1,6 @@
 mod builder;
 
-use crate::{router::ServerResponse, server::AppState};
+use crate::server::AppState;
 use axum::extract::{Json, State};
 use bson::doc;
 use builder::{generate_openapi_schema, generate_path_item};
@@ -103,7 +103,7 @@ type StreamResult = Pin<Box<dyn Stream<Item = Result<CommonModel, MongoError>> +
 
 pub async fn refresh_openapi(
     state: State<Arc<AppState>>,
-) -> Result<Json<ServerResponse<OpenApiSchema>>, IntegrationOSError> {
+) -> Result<Json<OpenApiSchema>, IntegrationOSError> {
     state.openapi_data.clone().clear().map_err(|e| {
         error!("Could not clear openapi schema from cache: {:?}", e);
         InternalError::io_err("Could not clear openapi schema", None)
@@ -115,20 +115,19 @@ pub async fn refresh_openapi(
         state.openapi_data.clone(),
     );
 
-    Ok(Json(ServerResponse::new(
-        "openapi",
-        OpenApiSchema::Accepted("OpenAPI schema is being regenerated".to_string()),
+    Ok(Json(OpenApiSchema::Accepted(
+        "OpenAPI schema is being regenerated".to_string(),
     )))
 }
 
 pub async fn get_openapi_yaml(
     state: State<Arc<AppState>>,
-) -> Result<Json<ServerResponse<Vec<u8>>>, IntegrationOSError> {
+) -> Result<Json<Vec<u8>>, IntegrationOSError> {
     let spec = get_openapi(state).await;
 
     match spec {
         Ok(Json(spec)) => {
-            let try_yaml: serde_yaml::Value = serde_yaml::to_value(spec.args).map_err(|e| {
+            let try_yaml: serde_yaml::Value = serde_yaml::to_value(spec).map_err(|e| {
                 error!("Could not serialize openapi schema to yaml: {:?}", e);
 
                 InternalError::io_err("Could not serialize openapi schema to yaml", None)
@@ -140,7 +139,7 @@ pub async fn get_openapi_yaml(
                 InternalError::io_err("Could not serialize openapi schema to yaml", None)
             })?;
 
-            Ok(Json(ServerResponse::new("openapi", text.into_bytes())))
+            Ok(Json(text.into_bytes()))
         }
         Err(e) => Err(e),
     }
@@ -148,7 +147,7 @@ pub async fn get_openapi_yaml(
 
 pub async fn get_openapi(
     state: State<Arc<AppState>>,
-) -> Result<Json<ServerResponse<OpenApiSchema>>, IntegrationOSError> {
+) -> Result<Json<OpenApiSchema>, IntegrationOSError> {
     let schema = state.openapi_data.get().map_err(|e| {
         error!("Could not get openapi schema from cache: {:?}", e);
 
@@ -157,9 +156,8 @@ pub async fn get_openapi(
 
     if schema.is_generating {
         info!("OpenAPI schema is being generated");
-        return Ok(Json(ServerResponse::new(
-            "openapi",
-            OpenApiSchema::Accepted("You're early, the schema is being generated".to_string()),
+        return Ok(Json(OpenApiSchema::Accepted(
+            "You're early, the schema is being generated".to_string(),
         )));
     }
 
@@ -182,10 +180,7 @@ pub async fn get_openapi(
         InternalError::io_err("Could not deserialize openapi schema", None)
     })?;
 
-    Ok(Json(ServerResponse::new(
-        "openapi",
-        OpenApiSchema::OpenAPI(openapi),
-    )))
+    Ok(Json(OpenApiSchema::OpenAPI(openapi)))
 }
 
 fn spawn_openapi_generation(
