@@ -1,10 +1,12 @@
 use crate::{
-    api_model_config::{ApiModelConfig, AuthMethod},
+    api_model_config::{ApiModelConfig, AuthMethod, OAuthLegacyHashAlgorithm},
+    oauth_secret::OAuthLegacySecret,
     prelude::oauth_secret::OAuthSecret,
-    IntegrationOSError, InternalError,
+    AuthorizationType, IntegrationOSError, InternalError, Nonce, OAuthData, SignableRequest,
 };
 use http::HeaderMap;
-use reqwest::{Client, Response};
+use indexmap::IndexMap;
+use reqwest::{Client, Response, Url};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -71,6 +73,58 @@ impl<'a> CallerClient<'a> {
             AuthMethod::BasicAuth { username, password } => {
                 request_builder.basic_auth(username, Some(password))
             }
+            AuthMethod::OAuthLegacy {
+                hash_algorithm,
+                realm,
+            } => {
+                let secret = serde_json::from_value::<OAuthLegacySecret>(
+                    secret.cloned().unwrap_or_default(),
+                )
+                .map_err(|e| {
+                    InternalError::invalid_argument(&e.to_string(), Some("oauth_secret"))
+                })?;
+
+                let signature_method = match hash_algorithm {
+                    OAuthLegacyHashAlgorithm::HmacSha1 => crate::SignatureMethod::HmacSha1,
+                    OAuthLegacyHashAlgorithm::HmacSha256 => crate::SignatureMethod::HmacSha256,
+                    OAuthLegacyHashAlgorithm::HmacSha512 => crate::SignatureMethod::HmacSha512,
+                    OAuthLegacyHashAlgorithm::PlainText => crate::SignatureMethod::PlainText,
+                };
+
+                let nonce = Nonce::generate()?;
+
+                let oauth_data = OAuthData {
+                    client_id: secret.consumer_key,
+                    token: Some(secret.access_token_id),
+                    signature_method,
+                    nonce,
+                };
+
+                let key = crate::SigningKey {
+                    client_secret: secret.consumer_secret,
+                    token_secret: Some(secret.access_token_secret),
+                };
+
+                let uri = Url::parse(endpoint.as_str()).map_err(|e| {
+                    InternalError::invalid_argument(&e.to_string(), Some("endpoint"))
+                })?;
+
+                let signable_request = SignableRequest {
+                    method: self.action.clone(),
+                    uri,
+                    parameters: IndexMap::new(),
+                };
+
+                let authorization_header = oauth_data.authorization(
+                    signable_request,
+                    AuthorizationType::Request,
+                    &key,
+                    realm.clone(),
+                )?;
+
+                request_builder.header(http::header::AUTHORIZATION, authorization_header)
+            }
+
             AuthMethod::OAuth => {
                 // convert secret into OAuthSecret
                 let secret =
