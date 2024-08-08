@@ -67,3 +67,16 @@ impl OAuthSecret {
         serde_json::to_value(self).unwrap()
     }
 }
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct OAuthLegacySecret {
+    #[serde(rename = "CONSUMER_KEY")]
+    pub consumer_key: String,
+    #[serde(rename = "CONSUMER_SECRET")]
+    pub consumer_secret: String,
+    #[serde(rename = "ACCESS_TOKEN_ID")]
+    pub access_token_id: String,
+    #[serde(rename = "ACCESS_TOKEN_SECRET")]
+    pub access_token_secret: String,
+}

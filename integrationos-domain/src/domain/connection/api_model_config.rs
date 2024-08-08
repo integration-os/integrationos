@@ -121,11 +121,38 @@ pub struct ResponseBody {
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(tag = "type")]
 pub enum AuthMethod {
-    BearerToken { value: String },
-    ApiKey { key: String, value: String },
-    BasicAuth { username: String, password: String },
+    BearerToken {
+        value: String,
+    },
+    ApiKey {
+        key: String,
+        value: String,
+    },
+    BasicAuth {
+        username: String,
+        password: String,
+    },
+    OAuthLegacy {
+        #[serde(rename = "hashAlgorithm")]
+        hash_algorithm: OAuthLegacyHashAlgorithm,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        realm: Option<String>,
+    },
     OAuth,
     None,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
+#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+pub enum OAuthLegacyHashAlgorithm {
+    #[serde(rename = "HMAC-SHA1")]
+    HmacSha1,
+    #[serde(rename = "HMAC-SHA256")]
+    HmacSha256,
+    #[serde(rename = "HMAC-SHA512")]
+    HmacSha512,
+    #[serde(rename = "PLAINTEXT")]
+    PlainText,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]

@@ -1486,15 +1486,18 @@ dependencies = [
  "async-recursion",
  "async-trait",
  "axum",
+ "base64 0.21.7",
  "base64ct",
  "bson",
  "chrono",
  "ctr",
+ "digest",
  "downcast-rs",
  "envconfig",
  "fake",
  "futures",
  "handlebars",
+ "hmac",
  "http 1.1.0",
  "http-serde-ext",
  "indexmap 2.2.6",
@@ -1506,6 +1509,7 @@ dependencies = [
  "napi-derive",
  "once_cell",
  "openapiv3",
+ "percent-encoding",
  "pin-project",
  "prost",
  "rand",
@@ -1514,6 +1518,7 @@ dependencies = [
  "semver 1.0.23",
  "serde",
  "serde_json",
+ "sha1",
  "sha2",
  "sha3",
  "strum",
@@ -3130,6 +3135,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha1"
+version = "0.10.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3bf829a2d51ab4a5ddf1352d8470c140cadc8301b2ae1789db023f01cedd6ba"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "digest",
+]
+
+[[package]]
 name = "sha1_smol"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3144,6 +3160,16 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
+ "sha2-asm",
+]
+
+[[package]]
+name = "sha2-asm"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f27ba7066011e3fb30d808b51affff34f0a66d3a03a58edd787c6e420e40e44e"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
