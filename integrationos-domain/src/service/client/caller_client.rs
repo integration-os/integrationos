@@ -105,14 +105,19 @@ impl<'a> CallerClient<'a> {
                     token_secret: Some(secret.access_token_secret),
                 };
 
-                let uri = Url::parse(endpoint.as_str()).map_err(|e| {
+                let uri = Url::parse(&endpoint).map_err(|e| {
                     InternalError::invalid_argument(&e.to_string(), Some("endpoint"))
                 })?;
+
+                let mut signable_request_params = IndexMap::new();
+                if let Some(query_params) = query_params {
+                    signable_request_params.extend(query_params.clone());
+                }
 
                 let signable_request = SignableRequest {
                     method: self.action.clone(),
                     uri,
-                    parameters: IndexMap::new(),
+                    parameters: signable_request_params,
                 };
 
                 let authorization_header = oauth_data.authorization(

@@ -219,13 +219,21 @@ impl OAuthData {
         let signature = self.signature_method.sign(&req, key)?;
         req.parameters.insert(OAUTH_SIGNATURE.into(), signature);
 
+        // Only include OAuth parameters in the Authorization header
+        let oauth_params: IndexMap<_, _> = req
+            .parameters
+            .iter()
+            .filter(|(k, _)| k.starts_with("oauth_"))
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+
         Ok(match realm {
             Some(realm) => format!(
                 "OAuth realm=\"{}\",{}",
                 realm,
-                encode_auth_header(&req.parameters)
+                encode_auth_header(&oauth_params)
             ),
-            None => format!("OAuth {}", encode_auth_header(&req.parameters)),
+            None => format!("OAuth {}", encode_auth_header(&oauth_params)),
         })
     }
 
