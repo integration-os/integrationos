@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 
 #[derive(Envconfig, Debug, Clone)]
 pub struct CacheConfig {
-    #[envconfig(from = "REDIS_URL", default = "redis://localhost:6379")]
+    #[envconfig(from = "REDIS_URL", default = "redis://127.0.0.1:6379")]
     pub url: String,
     #[envconfig(from = "REDIS_QUEUE_NAME", default = "events")]
     pub queue_name: String,
