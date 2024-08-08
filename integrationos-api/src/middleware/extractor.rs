@@ -30,12 +30,16 @@ pub struct RateLimiter {
 
 impl RateLimiter {
     pub async fn new(state: Arc<AppState>) -> Result<Self> {
-        if state.config.rate_limit_enabled {
+        if !state.config.rate_limit_enabled {
             return Err(anyhow::anyhow!("Rate limiting is disabled"));
         };
 
         let mut redis = RedisCache::new(&state.config.cache_config)
             .await
+            .map(|redis| {
+                tracing::info!("Connected to redis at {}", state.config.cache_config.url);
+                redis
+            })
             .with_context(|| "Could not connect to redis")?;
 
         let (tx, mut rx) = channel::<(Arc<str>, oneshot::Sender<u64>)>(1024);
