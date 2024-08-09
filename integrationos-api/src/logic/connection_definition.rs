@@ -291,25 +291,6 @@ pub async fn public_get_connection_details(
     )))
 }
 
-pub async fn public_get_all_connection_details(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<ServerResponse<Vec<PublicConnectionDetails>>>, IntegrationOSError> {
-    let public_connection_details = state
-        .app_stores
-        .public_connection_details
-        .get_many(None, None, None, None, None)
-        .await
-        .map_err(|e| {
-            error!("Error reading from public connection details: {e}");
-            e
-        })?;
-
-    Ok(Json(ServerResponse::new(
-        "public_connection_details",
-        public_connection_details,
-    )))
-}
-
 impl RequestExt for CreateRequest {
     type Output = ConnectionDefinition;
 
