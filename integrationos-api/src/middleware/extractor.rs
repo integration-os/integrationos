@@ -40,7 +40,10 @@ impl RateLimiter {
                 tracing::info!("Connected to redis at {}", state.config.cache_config.url);
                 redis
             })
-            .with_context(|| "Could not connect to redis")?;
+            .context(format!(
+                "Could not connect to redis at {}",
+                state.config.cache_config.url
+            ))?;
 
         let (tx, mut rx) = channel::<(Arc<str>, oneshot::Sender<u64>)>(1024);
 

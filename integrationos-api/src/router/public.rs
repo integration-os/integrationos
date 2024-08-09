@@ -1,8 +1,10 @@
 use crate::{
     logic::{
-        common_enum, common_model, connection_definition, connection_model_schema,
-        connection_oauth_definition, event_access::create_event_access_for_new_user, openapi, read,
-        schema_generator, utils,
+        common_enum, common_model,
+        connection_definition::{self, GetPublicConnectionDetailsRequest},
+        connection_model_schema, connection_oauth_definition,
+        event_access::create_event_access_for_new_user,
+        openapi, read, schema_generator, utils,
     },
     middleware::jwt_auth::{self, JwtState},
     server::AppState,
@@ -14,7 +16,7 @@ use axum::{
 };
 use integrationos_domain::{
     common_model::{CommonEnum, CommonModel},
-    connection_definition::ConnectionDefinition,
+    connection_definition::{ConnectionDefinition, PublicConnectionDetails},
 };
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
@@ -66,7 +68,7 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         )
         .route(
             "/connection-data",
-            get(connection_definition::public_get_all_connection_details),
+            get(read::<GetPublicConnectionDetailsRequest, PublicConnectionDetails>),
         )
         .route("/generate-id/:prefix", get(utils::generate_id))
         .layer(from_fn(log_request_middleware))

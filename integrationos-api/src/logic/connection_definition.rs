@@ -109,6 +109,19 @@ pub struct PublicConnectionDataOauth {
     pub scopes: String,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct GetPublicConnectionDetailsRequest;
+
+impl HookExt<PublicConnectionDetails> for GetPublicConnectionDetailsRequest {}
+impl PublicExt<PublicConnectionDetails> for GetPublicConnectionDetailsRequest {}
+impl RequestExt for GetPublicConnectionDetailsRequest {
+    type Output = PublicConnectionDetails;
+
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
+        stores.public_connection_details
+    }
+}
+
 pub async fn public_get_connection_details(
     Path((common_model, platform_name)): Path<(String, String)>,
     State(state): State<Arc<AppState>>,

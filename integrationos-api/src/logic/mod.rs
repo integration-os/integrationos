@@ -7,7 +7,7 @@ use axum::{
     extract::{Path, Query, State},
     Extension, Json,
 };
-use bson::{doc, SerializerOptions};
+use bson::doc;
 use http::{HeaderMap, HeaderValue};
 use integrationos_cache::local::connection_cache::ConnectionCacheArcStrHeaderKey;
 use integrationos_domain::{
@@ -246,11 +246,7 @@ where
 
     let record = payload.update(record);
 
-    let bson = bson::to_bson_with_options(
-        &record,
-        SerializerOptions::builder().human_readable(false).build(),
-    )
-    .map_err(|e| {
+    let bson = bson::to_bson_with_options(&record, Default::default()).map_err(|e| {
         error!("Could not serialize record into document: {e}");
         InternalError::serialize_error(e.to_string().as_str(), None)
     })?;

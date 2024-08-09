@@ -4,7 +4,8 @@ use crate::{
 };
 use anyhow::{bail, Context as AnyhowContext, Result};
 use async_trait::async_trait;
-use bson::{doc, SerializerOptions};
+use bson::doc;
+
 use futures::future::join_all;
 use handlebars::Handlebars;
 use http::header::AUTHORIZATION;
@@ -396,14 +397,13 @@ impl EventStore for MongoControlDataStore {
 
     #[tracing::instrument(skip(self, event), fields(event.key = %event.key))]
     async fn set(&self, event: Event) -> Result<()> {
-        let options = SerializerOptions::builder().human_readable(false).build();
         self.event_store
             .update_one(
                 &event.id.to_string(),
                 doc! { "$set": {
-                    "duplicates": bson::to_bson_with_options(&event.duplicates, options.clone())?,
-                    "createdAt": bson::to_bson_with_options(&event.record_metadata.created_at, options.clone())?,
-                    "state": bson::to_bson_with_options(&event.state, options)?
+                    "duplicates": bson::to_bson_with_options(&event.duplicates, Default::default())?,
+                    "createdAt": bson::to_bson_with_options(&event.record_metadata.created_at, Default::default())?,
+                    "state": bson::to_bson_with_options(&event.state, Default::default())?
                 } },
             )
             .await?;

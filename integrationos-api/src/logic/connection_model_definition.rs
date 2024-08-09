@@ -9,7 +9,6 @@ use axum::{
     routing::{patch, post},
     Extension, Json, Router,
 };
-use bson::SerializerOptions;
 use chrono::Utc;
 use http::HeaderMap;
 use integrationos_domain::{
@@ -225,11 +224,7 @@ pub async fn test_connection_model_definition(
         },
     };
 
-    let status_bson = bson::to_bson_with_options(
-        &status,
-        SerializerOptions::builder().human_readable(false).build(),
-    )
-    .map_err(|e| {
+    let status_bson = bson::to_bson_with_options(&status, Default::default()).map_err(|e| {
         error!("Error serializing status to BSON: {:?}", e);
 
         InternalError::serialize_error("Could not serialize status to BSON", None)
