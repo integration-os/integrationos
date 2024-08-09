@@ -64,6 +64,10 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             "/connection-data/:model/:platform_name",
             get(connection_definition::public_get_connection_details),
         )
+        .route(
+            "/connection-data",
+            get(connection_definition::public_get_all_connection_details),
+        )
         .route("/generate-id/:prefix", get(utils::generate_id))
         .layer(from_fn(log_request_middleware))
         .layer(TraceLayer::new_for_http())
