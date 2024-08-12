@@ -110,8 +110,11 @@ impl<'a> CallerClient<'a> {
                 })?;
 
                 let mut signable_request_params = IndexMap::new();
-                if let Some(query_params) = query_params {
-                    signable_request_params.extend(query_params.clone());
+                if let Some(custom_query_params) = query_params {
+                    signable_request_params.extend(custom_query_params.clone());
+                }
+                if let Some(model_query_params) = &self.config.query_params {
+                    signable_request_params.extend(model_query_params.clone());
                 }
 
                 let signable_request = SignableRequest {
