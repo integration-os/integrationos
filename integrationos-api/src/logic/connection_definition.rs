@@ -109,6 +109,19 @@ pub struct PublicConnectionDataOauth {
     pub scopes: String,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct GetPublicConnectionDetailsRequest;
+
+impl HookExt<PublicConnectionDetails> for GetPublicConnectionDetailsRequest {}
+impl PublicExt<PublicConnectionDetails> for GetPublicConnectionDetailsRequest {}
+impl RequestExt for GetPublicConnectionDetailsRequest {
+    type Output = PublicConnectionDetails;
+
+    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
+        stores.public_connection_details
+    }
+}
+
 pub async fn public_get_connection_details(
     Path((common_model, platform_name)): Path<(String, String)>,
     State(state): State<Arc<AppState>>,
@@ -275,25 +288,6 @@ pub async fn public_get_connection_details(
             sorting: model_features.sorting,
             caveats,
         },
-    )))
-}
-
-pub async fn public_get_all_connection_details(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<ServerResponse<Vec<PublicConnectionDetails>>>, IntegrationOSError> {
-    let public_connection_details = state
-        .app_stores
-        .public_connection_details
-        .get_many(None, None, None, None, None)
-        .await
-        .map_err(|e| {
-            error!("Error reading from public connection details: {e}");
-            e
-        })?;
-
-    Ok(Json(ServerResponse::new(
-        "public_connection_details",
-        public_connection_details,
     )))
 }
 

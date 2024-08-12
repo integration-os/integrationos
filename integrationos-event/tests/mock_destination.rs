@@ -1,4 +1,3 @@
-use bson::SerializerOptions;
 use chrono::Utc;
 use envconfig::Envconfig;
 use fake::{
@@ -88,11 +87,8 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
 
     db.collection("connection-model-definitions")
         .insert_one(
-            bson::to_bson_with_options(
-                &stripe_model_config,
-                SerializerOptions::builder().human_readable(false).build(),
-            )
-            .unwrap(),
+            bson::to_bson_with_options(&stripe_model_config, Default::default())
+                .expect("Unable to serialize connection model definition"),
             None,
         )
         .await
@@ -123,11 +119,8 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
 
     db.collection("connections")
         .insert_one(
-            bson::to_bson_with_options(
-                &conn,
-                SerializerOptions::builder().human_readable(false).build(),
-            )
-            .unwrap(),
+            bson::to_bson_with_options(&conn, Default::default())
+                .expect("Unable to serialize connection"),
             None,
         )
         .await

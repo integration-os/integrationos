@@ -1,4 +1,5 @@
 mod auth_tests;
+mod connection_tests;
 mod get_tests;
 mod pagination_tests;
 mod passthrough_tests;
