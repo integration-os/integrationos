@@ -322,37 +322,10 @@ pub async fn process_request(
     let response = Response::from_parts(parts, ());
 
     if response.status().is_client_error() || response.status().is_server_error() {
-        let body = match body {
-            Value::Null => json!({
-                META: metadata,
-            }),
-
-            Value::Bool(v) => json!({
-                META: metadata,
-                "value": v,
-            }),
-            Value::Number(n) => json!({
-                META: metadata,
-                "value": n,
-            }),
-            Value::String(s) => json!({
-                META: metadata,
-                "value": s,
-            }),
-            Value::Array(a) => a
-                .into_iter()
-                .map(|v| {
-                    json!({
-                        META: metadata,
-                        "rows": v,
-                    })
-                })
-                .collect(),
-            Value::Object(mut m) => {
-                m.insert(META.to_string(), json!(metadata));
-                Value::Object(m)
-            }
-        };
+        let body = json!({
+            META: metadata,
+            "error": body,
+        });
 
         Ok((response, Json(body)))
     } else {
