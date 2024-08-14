@@ -380,6 +380,7 @@ impl UnifiedDestination {
                             &format!("Failed while creating request schema mapping script: {e}"),
                             None,
                         )
+                        .set_meta(&metadata)
                     })?;
                 let body = JS_RUNTIME
                     .with_borrow_mut(|script| script.call_namespace(&ns, body))
@@ -388,6 +389,7 @@ impl UnifiedDestination {
                             &format!("Failed while running request schema mapping script: {e}"),
                             None,
                         )
+                        .set_meta(&metadata)
                     })?;
 
                 tokio::task::yield_now().await;
@@ -427,7 +429,7 @@ impl UnifiedDestination {
                     .with_borrow_mut(|script| script.add_script(&ns, "mapCrudRequest", js.as_str()))
                     .map_err(|e| {
                         error!("Could not create request crud mapping script from {js}: {e}");
-                        ApplicationError::bad_request(&e.to_string(), None)
+                        ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
                     })?;
 
                 const PASSTHROUGH_PARAMS: &str = "passthroughForward";
@@ -447,6 +449,7 @@ impl UnifiedDestination {
                         .map_err(|e| {
                             error!("Bad custom headers value: {e}");
                             InternalError::invalid_argument(&e.to_string(), None)
+                                .set_meta(&metadata)
                         })?
                         .split(';')
                         .filter_map(|pair| pair.split_once('='))
@@ -483,6 +486,7 @@ impl UnifiedDestination {
                             &format!("Failed while running request crud mapping script: {e}"),
                             None,
                         )
+                        .set_meta(&metadata)
                     })?;
 
                 debug!(
@@ -543,7 +547,7 @@ impl UnifiedDestination {
             None | Some(Value::Null) => None,
             _ => Some(serde_json::to_vec(&body).map_err(|e| {
                 error!("Could not convert body to vec: {e}");
-                ApplicationError::bad_request(&e.to_string(), None)
+                ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
             })?),
         };
 
@@ -553,7 +557,11 @@ impl UnifiedDestination {
             .timed(|_, duration| {
                 latency = duration.as_millis() as i64;
             })
-            .await?;
+            .await
+            .map_err(|e| {
+                error!("Could not execute model definition: {e}");
+                e.set_meta(&metadata)
+            })?;
 
         debug!(
             "Executed model definition with status code {}, headers: {:#?}",
@@ -571,10 +579,12 @@ impl UnifiedDestination {
                 .body(res.json().await.map_err(|e| {
                     error!("Could not get json body from unsuccessful response");
                     IntegrationOSError::from_err_code(status, &e.to_string(), None)
+                        .set_meta(&metadata)
                 })?)
                 .map_err(|e| {
                     error!("Could not create response from builder for unsucessful response");
                     IntegrationOSError::from_err_code(status, &e.to_string(), None)
+                        .set_meta(&metadata)
                 })?;
             *res.headers_mut() = headers;
             return Ok(UnifiedResponse {
@@ -616,7 +626,7 @@ impl UnifiedDestination {
                         })
                         .map_err(|e| {
                             error!("Could not create response crud mapping script from {js}: {e}");
-                            ApplicationError::bad_request(&e.to_string(), None)
+                            ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
                         })?;
 
                     let pagination = if let (
@@ -635,6 +645,7 @@ impl UnifiedDestination {
                             jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
                                 error!("Could not select cursor at response path {path}: {e}");
                                 ApplicationError::bad_request(&e.to_string(), None)
+                                    .set_meta(&metadata)
                             })?;
                         if bodies.len() != 1 {
                             Some(Value::Null)
@@ -668,6 +679,7 @@ impl UnifiedDestination {
                                 &format!("Failed while running response crud mapping script: {e}"),
                                 None,
                             )
+                            .set_meta(&metadata)
                         })?;
 
                     tokio::task::yield_now().await;
@@ -677,6 +689,7 @@ impl UnifiedDestination {
                         serde_json::to_string_pretty(&res).map_err(|e| {
                             error!("Could not convert crud to pretty string {res:?}: {e}");
                             InternalError::invalid_argument(&e.to_string(), None)
+                                .set_meta(&metadata)
                         })?
                     );
 
@@ -703,7 +716,7 @@ impl UnifiedDestination {
                 let wrapped_body = json!({"body":body});
                 let mut bodies = jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
                     error!("Could not select body at response path {path}: {e}");
-                    ApplicationError::bad_request(&e.to_string(), None)
+                    ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
                 })?;
 
                 let is_returning_error = !environment.is_production()
@@ -727,6 +740,7 @@ impl UnifiedDestination {
                                 &e.to_string(),
                                 None,
                             )
+                            .set_meta(&metadata)
                         })?;
                     *res.headers_mut() = headers;
                     return Ok(UnifiedResponse {
@@ -742,7 +756,8 @@ impl UnifiedDestination {
                             bodies.len()
                         ),
                         None,
-                    ));
+                    )
+                    .set_meta(&metadata));
                 }
 
                 if is_parseable_body {
@@ -774,14 +789,15 @@ impl UnifiedDestination {
                         connection.platform
                     ),
                     None,
-                ));
+                )
+                .set_meta(&metadata));
             };
             let ns: String = schema_script_namespace + "_mapToCommonModel";
             JS_RUNTIME
                 .with_borrow_mut(|script| script.add_script(&ns, "mapToCommonModel", js))
                 .map_err(|e| {
                     error!("Could not create response schema mapping script from {js}: {e}");
-                    ApplicationError::bad_request(&e.to_string(), None)
+                    ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
                 })?;
 
             debug!(
@@ -810,6 +826,7 @@ impl UnifiedDestination {
                                     &format!("Failed while running response schema mapping script: {e}"),
                                     None,
                                 )
+                                .set_meta(&metadata)
                             })
                             });
                         tokio::task::yield_now().await;
@@ -846,6 +863,7 @@ impl UnifiedDestination {
                             &format!("Failed while running response schema mapping script: {e}"),
                             None,
                         )
+                        .set_meta(&metadata)
                     })?
             } else if matches!(config.action_name, CrudAction::GetMany) {
                 Value::Array(Default::default())
@@ -881,7 +899,8 @@ impl UnifiedDestination {
             "response": &body,
             "action": config.action_name,
             "commonModel": config.mapping.as_ref().map(|m| &m.common_model_name),
-        }))?;
+        }))
+        .map_err(|e| e.set_meta(&metadata))?;
 
         match body {
             Some(body) => {
@@ -957,11 +976,12 @@ impl UnifiedDestination {
                 status,
                 "Could not get headers from builder",
                 None,
-            ));
+            )
+            .set_meta(&metadata));
         };
         let res = builder.body(response).map_err(|e| {
             error!("Could not create response from builder");
-            IntegrationOSError::from_err_code(status, &e.to_string(), None)
+            IntegrationOSError::from_err_code(status, &e.to_string(), None).set_meta(&metadata)
         })?;
 
         Ok(UnifiedResponse {

@@ -4,6 +4,7 @@ use crate::prelude::StringExt;
 use http::StatusCode;
 use mongodb::error::WriteFailure;
 use serde::Serialize;
+use serde_json::{json, Value};
 use std::convert::AsRef;
 use std::{
     error::Error as StdError,
@@ -17,6 +18,7 @@ pub trait ErrorMeta {
     fn code(&self) -> ErrorCode;
     fn key(&self) -> ErrorKey;
     fn message(&self) -> ErrorMessage;
+    fn meta(&self) -> Option<Value>;
 }
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize)]
@@ -76,7 +78,7 @@ impl Display for ErrorMessage {
     }
 }
 
-#[derive(ThisError, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize, AsRefStr)]
+#[derive(ThisError, Clone, Hash, Eq, PartialEq, Serialize, AsRefStr)]
 #[serde(rename_all = "camelCase")]
 #[strum(serialize_all = "PascalCase")]
 pub enum InternalError {
@@ -84,66 +86,79 @@ pub enum InternalError {
     UnknownError {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("A unique field violation occurred: {}", .message)]
     UniqueFieldViolation {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("A timeout occurred: {}", .message)]
     Timeout {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("A connection error occurred: {}", .message)]
     ConnectionError {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Entity not found: {}", .message)]
     KeyNotFound {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Argument provided is invalid: {}", .message)]
     InvalidArgument {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("An error while performing an IO operation: {}", .message)]
     IOErr {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Encription error: {}", .message)]
     EncryptionError {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Decryption error: {}", .message)]
     DecryptionError {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Configuration error: {}", .message)]
     ConfigurationError {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Serialization error: {}", .message)]
     SerializeError {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Deserialization error: {}", .message)]
     DeserializeError {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("An error occurred running the javascript function: {}", .message)]
     ScriptError {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
 }
 
@@ -154,6 +169,7 @@ impl From<anyhow::Error> for InternalError {
             None => InternalError::UnknownError {
                 message: error.to_string(),
                 subtype: None,
+                meta: None,
             },
         }
     }
@@ -164,6 +180,7 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::UnknownError {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -171,6 +188,7 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::UniqueFieldViolation {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -178,6 +196,7 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::Timeout {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -185,6 +204,7 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::ScriptError {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -192,6 +212,7 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::SerializeError {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -199,6 +220,7 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::DeserializeError {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -206,6 +228,7 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::ConfigurationError {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -213,6 +236,7 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::EncryptionError {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -220,6 +244,7 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::DecryptionError {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -227,6 +252,7 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::ConnectionError {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -234,6 +260,7 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::IOErr {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -241,6 +268,7 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::KeyNotFound {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -248,7 +276,104 @@ impl InternalError {
         IntegrationOSError::internal(InternalError::InvalidArgument {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
+    }
+
+    fn set_meta(self, metadata: Value) -> Self {
+        match self {
+            InternalError::UnknownError {
+                message, subtype, ..
+            } => InternalError::UnknownError {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+            InternalError::UniqueFieldViolation {
+                message, subtype, ..
+            } => InternalError::UniqueFieldViolation {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+            InternalError::Timeout {
+                message, subtype, ..
+            } => InternalError::Timeout {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+            InternalError::ConnectionError {
+                message, subtype, ..
+            } => InternalError::ConnectionError {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+            InternalError::KeyNotFound {
+                message, subtype, ..
+            } => InternalError::KeyNotFound {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+            InternalError::InvalidArgument {
+                message, subtype, ..
+            } => InternalError::InvalidArgument {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+            InternalError::IOErr {
+                message, subtype, ..
+            } => InternalError::IOErr {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+            InternalError::EncryptionError {
+                message, subtype, ..
+            } => InternalError::EncryptionError {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+            InternalError::DecryptionError {
+                message, subtype, ..
+            } => InternalError::DecryptionError {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+            InternalError::ConfigurationError {
+                message, subtype, ..
+            } => InternalError::ConfigurationError {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+            InternalError::ScriptError {
+                message, subtype, ..
+            } => InternalError::ScriptError {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+            InternalError::SerializeError {
+                message, subtype, ..
+            } => InternalError::SerializeError {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+            InternalError::DeserializeError {
+                message, subtype, ..
+            } => InternalError::DeserializeError {
+                message,
+                subtype,
+                meta: Some(metadata),
+            },
+        }
     }
 }
 
@@ -334,6 +459,25 @@ impl ErrorMeta for InternalError {
             InternalError::DeserializeError { message, .. } => ErrorMessage(message.to_string()),
         }
     }
+
+    // TODO: Implement this
+    fn meta(&self) -> Option<Value> {
+        match self {
+            InternalError::UnknownError { meta, .. } => meta.clone(),
+            InternalError::UniqueFieldViolation { meta, .. } => meta.clone(),
+            InternalError::Timeout { meta, .. } => meta.clone(),
+            InternalError::ConnectionError { meta, .. } => meta.clone(),
+            InternalError::KeyNotFound { meta, .. } => meta.clone(),
+            InternalError::InvalidArgument { meta, .. } => meta.clone(),
+            InternalError::IOErr { meta, .. } => meta.clone(),
+            InternalError::EncryptionError { meta, .. } => meta.clone(),
+            InternalError::DecryptionError { meta, .. } => meta.clone(),
+            InternalError::ConfigurationError { meta, .. } => meta.clone(),
+            InternalError::ScriptError { meta, .. } => meta.clone(),
+            InternalError::SerializeError { meta, .. } => meta.clone(),
+            InternalError::DeserializeError { meta, .. } => meta.clone(),
+        }
+    }
 }
 
 impl Debug for InternalError {
@@ -350,7 +494,7 @@ impl Debug for InternalError {
     }
 }
 
-#[derive(ThisError, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize, AsRefStr)]
+#[derive(ThisError, Clone, Hash, Eq, PartialEq, Serialize, AsRefStr)]
 #[serde(rename_all = "camelCase")]
 #[strum(serialize_all = "PascalCase")]
 pub enum ApplicationError {
@@ -358,61 +502,73 @@ pub enum ApplicationError {
     BadRequest {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Conflict: {}", .message)]
     Conflict {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Forbidden: {}", .message)]
     Forbidden {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Internal Server Error: {}", .message)]
     InternalServerError {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Method Not Allowed: {}", .message)]
     MethodNotAllowed {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Not Found: {}", .message)]
     NotFound {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Not Implemented: {}", .message)]
     NotImplemented {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Precondition Failed: {}", .message)]
     FailedDependency {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Service Unavailable: {}", .message)]
     ServiceUnavailable {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Too Many Requests: {}", .message)]
     TooManyRequests {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Unauthorized: {}", .message)]
     Unauthorized {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
     #[error("Unprocessable Entity: {}", .message)]
     UnprocessableEntity {
         message: String,
         subtype: Option<String>,
+        meta: Option<Value>,
     },
 }
 
@@ -423,6 +579,7 @@ impl From<anyhow::Error> for ApplicationError {
             None => ApplicationError::InternalServerError {
                 message: error.to_string(),
                 subtype: None,
+                meta: None,
             },
         }
     }
@@ -433,6 +590,7 @@ impl ApplicationError {
         IntegrationOSError::application(ApplicationError::BadRequest {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -440,6 +598,7 @@ impl ApplicationError {
         IntegrationOSError::application(ApplicationError::Conflict {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -447,6 +606,7 @@ impl ApplicationError {
         IntegrationOSError::application(ApplicationError::Forbidden {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -454,6 +614,7 @@ impl ApplicationError {
         IntegrationOSError::application(ApplicationError::InternalServerError {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -461,6 +622,7 @@ impl ApplicationError {
         IntegrationOSError::application(ApplicationError::MethodNotAllowed {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -468,6 +630,7 @@ impl ApplicationError {
         IntegrationOSError::application(ApplicationError::NotFound {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -475,6 +638,7 @@ impl ApplicationError {
         IntegrationOSError::application(ApplicationError::NotImplemented {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -482,6 +646,7 @@ impl ApplicationError {
         IntegrationOSError::application(ApplicationError::FailedDependency {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -489,6 +654,7 @@ impl ApplicationError {
         IntegrationOSError::application(ApplicationError::ServiceUnavailable {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -496,6 +662,7 @@ impl ApplicationError {
         IntegrationOSError::application(ApplicationError::TooManyRequests {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -503,6 +670,7 @@ impl ApplicationError {
         IntegrationOSError::application(ApplicationError::Unauthorized {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
     }
 
@@ -510,7 +678,97 @@ impl ApplicationError {
         IntegrationOSError::application(ApplicationError::UnprocessableEntity {
             message: message.to_string(),
             subtype: subtype.map(|s| s.to_string().snake_case()),
+            meta: None,
         })
+    }
+
+    fn set_meta(self, meta: Value) -> Self {
+        match self {
+            ApplicationError::BadRequest {
+                message, subtype, ..
+            } => ApplicationError::BadRequest {
+                message: message.clone(),
+                subtype: subtype.clone(),
+                meta: Some(meta),
+            },
+            ApplicationError::Conflict {
+                message, subtype, ..
+            } => ApplicationError::Conflict {
+                message: message.clone(),
+                subtype: subtype.clone(),
+                meta: Some(meta),
+            },
+            ApplicationError::Forbidden {
+                message, subtype, ..
+            } => ApplicationError::Forbidden {
+                message: message.clone(),
+                subtype: subtype.clone(),
+                meta: Some(meta),
+            },
+            ApplicationError::InternalServerError {
+                message, subtype, ..
+            } => ApplicationError::InternalServerError {
+                message: message.clone(),
+                subtype: subtype.clone(),
+                meta: Some(meta),
+            },
+            ApplicationError::MethodNotAllowed {
+                message, subtype, ..
+            } => ApplicationError::MethodNotAllowed {
+                message: message.clone(),
+                subtype: subtype.clone(),
+                meta: Some(meta),
+            },
+            ApplicationError::NotFound {
+                message, subtype, ..
+            } => ApplicationError::NotFound {
+                message: message.clone(),
+                subtype: subtype.clone(),
+                meta: Some(meta),
+            },
+            ApplicationError::NotImplemented {
+                message, subtype, ..
+            } => ApplicationError::NotImplemented {
+                message: message.clone(),
+                subtype: subtype.clone(),
+                meta: Some(meta),
+            },
+            ApplicationError::FailedDependency {
+                message, subtype, ..
+            } => ApplicationError::FailedDependency {
+                message: message.clone(),
+                subtype: subtype.clone(),
+                meta: Some(meta),
+            },
+            ApplicationError::ServiceUnavailable {
+                message, subtype, ..
+            } => ApplicationError::ServiceUnavailable {
+                message: message.clone(),
+                subtype: subtype.clone(),
+                meta: Some(meta),
+            },
+            ApplicationError::TooManyRequests {
+                message, subtype, ..
+            } => ApplicationError::TooManyRequests {
+                message: message.clone(),
+                subtype: subtype.clone(),
+                meta: Some(meta),
+            },
+            ApplicationError::Unauthorized {
+                message, subtype, ..
+            } => ApplicationError::Unauthorized {
+                message: message.clone(),
+                subtype: subtype.clone(),
+                meta: Some(meta),
+            },
+            ApplicationError::UnprocessableEntity {
+                message, subtype, ..
+            } => ApplicationError::UnprocessableEntity {
+                message: message.clone(),
+                subtype: subtype.clone(),
+                meta: Some(meta),
+            },
+        }
     }
 }
 
@@ -595,6 +853,23 @@ impl ErrorMeta for ApplicationError {
             }
         }
     }
+
+    fn meta(&self) -> Option<Value> {
+        match self {
+            ApplicationError::BadRequest { meta, .. } => meta.clone(),
+            ApplicationError::Conflict { meta, .. } => meta.clone(),
+            ApplicationError::Forbidden { meta, .. } => meta.clone(),
+            ApplicationError::InternalServerError { meta, .. } => meta.clone(),
+            ApplicationError::MethodNotAllowed { meta, .. } => meta.clone(),
+            ApplicationError::NotFound { meta, .. } => meta.clone(),
+            ApplicationError::NotImplemented { meta, .. } => meta.clone(),
+            ApplicationError::FailedDependency { meta, .. } => meta.clone(),
+            ApplicationError::ServiceUnavailable { meta, .. } => meta.clone(),
+            ApplicationError::TooManyRequests { meta, .. } => meta.clone(),
+            ApplicationError::Unauthorized { meta, .. } => meta.clone(),
+            ApplicationError::UnprocessableEntity { meta, .. } => meta.clone(),
+        }
+    }
 }
 
 impl Debug for ApplicationError {
@@ -624,23 +899,50 @@ impl From<InternalError> for ApplicationError {
             | InternalError::UnknownError { .. } => ApplicationError::InternalServerError {
                 message: "An unknown error occurred".into(),
                 subtype: None,
+                meta: None,
             },
-            InternalError::UniqueFieldViolation { message, subtype } => {
-                ApplicationError::Conflict { message, subtype }
+            InternalError::UniqueFieldViolation {
+                message,
+                subtype,
+                meta,
+            } => ApplicationError::Conflict {
+                message,
+                subtype,
+                meta,
+            },
+            InternalError::KeyNotFound {
+                message,
+                subtype,
+                meta,
+            } => ApplicationError::NotFound {
+                message,
+                subtype,
+                meta,
+            },
+            InternalError::InvalidArgument {
+                message,
+                subtype,
+                meta,
             }
-            InternalError::KeyNotFound { message, subtype } => {
-                ApplicationError::NotFound { message, subtype }
+            | InternalError::SerializeError {
+                message,
+                subtype,
+                meta,
             }
-            InternalError::InvalidArgument { message, subtype }
-            | InternalError::SerializeError { message, subtype }
-            | InternalError::DeserializeError { message, subtype } => {
-                ApplicationError::BadRequest { message, subtype }
-            }
+            | InternalError::DeserializeError {
+                message,
+                subtype,
+                meta,
+            } => ApplicationError::BadRequest {
+                message,
+                subtype,
+                meta,
+            },
         }
     }
 }
 
-#[derive(ThisError, Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize)]
+#[derive(ThisError, Debug, Clone, Hash, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum IntegrationOSError {
     Internal(InternalError),
@@ -666,6 +968,7 @@ impl From<anyhow::Error> for IntegrationOSError {
             None => IntegrationOSError::Internal(InternalError::UnknownError {
                 message: error.to_string(),
                 subtype: None,
+                meta: None,
             }),
         }
     }
@@ -848,23 +1151,33 @@ impl IntegrationOSError {
     pub fn from_err_code(status: StatusCode, message: &str, subtype: Option<&str>) -> Self {
         let message = message.to_string();
         let subtype = subtype.map(|s| s.to_string());
+        let meta = None;
         match status {
             StatusCode::BAD_REQUEST => {
-                IntegrationOSError::application(ApplicationError::BadRequest { message, subtype })
+                IntegrationOSError::application(ApplicationError::BadRequest {
+                    message,
+                    subtype,
+                    meta,
+                })
             }
 
-            StatusCode::CONFLICT => {
-                IntegrationOSError::application(ApplicationError::Conflict { message, subtype })
-            }
+            StatusCode::CONFLICT => IntegrationOSError::application(ApplicationError::Conflict {
+                message,
+                subtype,
+                meta,
+            }),
 
-            StatusCode::FORBIDDEN => {
-                IntegrationOSError::application(ApplicationError::Forbidden { message, subtype })
-            }
+            StatusCode::FORBIDDEN => IntegrationOSError::application(ApplicationError::Forbidden {
+                message,
+                subtype,
+                meta,
+            }),
 
             StatusCode::INTERNAL_SERVER_ERROR => {
                 IntegrationOSError::application(ApplicationError::InternalServerError {
                     message,
                     subtype,
+                    meta,
                 })
             }
 
@@ -872,17 +1185,21 @@ impl IntegrationOSError {
                 IntegrationOSError::application(ApplicationError::MethodNotAllowed {
                     message,
                     subtype,
+                    meta,
                 })
             }
 
-            StatusCode::NOT_FOUND => {
-                IntegrationOSError::application(ApplicationError::NotFound { message, subtype })
-            }
+            StatusCode::NOT_FOUND => IntegrationOSError::application(ApplicationError::NotFound {
+                message,
+                subtype,
+                meta,
+            }),
 
             StatusCode::NOT_IMPLEMENTED => {
                 IntegrationOSError::application(ApplicationError::NotImplemented {
                     message,
                     subtype,
+                    meta,
                 })
             }
 
@@ -890,6 +1207,7 @@ impl IntegrationOSError {
                 IntegrationOSError::application(ApplicationError::FailedDependency {
                     message,
                     subtype,
+                    meta,
                 })
             }
 
@@ -897,6 +1215,7 @@ impl IntegrationOSError {
                 IntegrationOSError::application(ApplicationError::ServiceUnavailable {
                     message,
                     subtype,
+                    meta,
                 })
             }
 
@@ -904,17 +1223,23 @@ impl IntegrationOSError {
                 IntegrationOSError::application(ApplicationError::TooManyRequests {
                     message,
                     subtype,
+                    meta,
                 })
             }
 
             StatusCode::UNAUTHORIZED => {
-                IntegrationOSError::application(ApplicationError::Unauthorized { message, subtype })
+                IntegrationOSError::application(ApplicationError::Unauthorized {
+                    message,
+                    subtype,
+                    meta,
+                })
             }
 
             StatusCode::UNPROCESSABLE_ENTITY => {
                 IntegrationOSError::application(ApplicationError::UnprocessableEntity {
                     message,
                     subtype,
+                    meta,
                 })
             }
 
@@ -923,6 +1248,7 @@ impl IntegrationOSError {
                     IntegrationOSError::application(ApplicationError::BadRequest {
                         message,
                         subtype,
+                        meta,
                     })
                 } else {
                     IntegrationOSError::internal(InternalError::IOErr {
@@ -931,13 +1257,13 @@ impl IntegrationOSError {
                             status, message
                         ),
                         subtype,
+                        meta,
                     })
                 }
             }
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn as_application(&self) -> IntegrationOSError {
         match self {
             IntegrationOSError::Application(e) => IntegrationOSError::Application(e.clone()),
@@ -945,15 +1271,26 @@ impl IntegrationOSError {
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn as_json(&self) -> serde_json::Value {
-        serde_json::json!({
+        json!({
             "type": self.as_ref(),
             "code": self.code().as_u16(),
             "status": StatusCode::from(self).as_u16(),
             "key": self.key().to_string(),
-            "message": self.message().to_string()
+            "message": self.message().to_string(),
+            "meta": self.meta().unwrap_or_default(),
         })
+    }
+
+    pub fn set_meta(self, meta: &Value) -> Self {
+        match self {
+            IntegrationOSError::Internal(e) => {
+                IntegrationOSError::internal(e.set_meta(meta.clone()))
+            }
+            IntegrationOSError::Application(e) => {
+                IntegrationOSError::application(e.set_meta(meta.clone()))
+            }
+        }
     }
 
     pub fn is_internal(&self) -> bool {
@@ -984,6 +1321,13 @@ impl ErrorMeta for IntegrationOSError {
         match self {
             IntegrationOSError::Internal(e) => e.message(),
             IntegrationOSError::Application(e) => e.message(),
+        }
+    }
+
+    fn meta(&self) -> Option<Value> {
+        match self {
+            IntegrationOSError::Internal(e) => e.meta(),
+            IntegrationOSError::Application(e) => e.meta(),
         }
     }
 }
@@ -1063,6 +1407,7 @@ mod tests {
         let internal_error = InternalError::UniqueFieldViolation {
             message: "test".to_string(),
             subtype: None,
+            meta: None,
         };
         let app_error: ApplicationError = internal_error.into();
 
@@ -1070,7 +1415,8 @@ mod tests {
             app_error,
             ApplicationError::Conflict {
                 message: "test".to_string(),
-                subtype: None
+                subtype: None,
+                meta: None
             }
         );
     }

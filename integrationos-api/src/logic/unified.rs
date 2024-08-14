@@ -222,8 +222,6 @@ pub async fn process_request(
         connection.platform, connection.platform_version, model_name, action_name,
     );
 
-    // let environment = state.config.connection_definition_cache_ttl_secs
-
     let mut response = state
         .extractor_caller
         .send_to_destination_unified(
@@ -257,6 +255,7 @@ pub async fn process_request(
         .collect::<HeaderMap>();
 
     let (parts, body) = response.response.into_parts();
+    let mut metadata = body.get(META).unwrap_or(&response.metadata).clone();
 
     if let Some(Ok(encrypted_access_key)) =
         access_key_header_value.map(|v| v.to_str().map(|s| s.to_string()))
@@ -273,15 +272,16 @@ pub async fn process_request(
                         "event_access_password is not 32 bytes in length",
                         None,
                     )
+                    .set_meta(&metadata)
                 })?;
 
             let access_key = AccessKey::parse(&encrypted_access_key, &password).map_err(|e| {
                 error!("Could not decrypt access key: {e}");
                 InternalError::decryption_error("Could not decrypt access key", None)
+                    .set_meta(&metadata)
             })?;
             let status_code = parts.status.as_u16();
 
-            let mut metadata = body.get(META).unwrap_or(&response.metadata).clone();
             if let Some(meta) = metadata.as_object_mut() {
                 meta.insert("status_code".to_string(), json!(status_code));
                 meta.insert("path".to_string(), json!("v1/unified"));
@@ -293,6 +293,7 @@ pub async fn process_request(
             .map_err(|e| {
                 error!("Could not serialize meta body to string: {e}");
                 InternalError::invalid_argument("Could not serialize meta body to string", None)
+                    .set_meta(&metadata)
             })?;
 
             let name = if parts.status.is_success() {
@@ -320,7 +321,16 @@ pub async fn process_request(
 
     let response = Response::from_parts(parts, ());
 
-    Ok((response, Json(body)))
+    if response.status().is_client_error() || response.status().is_server_error() {
+        let body = json!({
+            META: metadata,
+            "error": body,
+        });
+
+        Ok((response, Json(body)))
+    } else {
+        Ok((response, Json(body)))
+    }
 }
 
 fn remove_event_headers(headers: &mut HeaderMap, headers_config: &Headers) {
