@@ -25,6 +25,10 @@ serde_json = "1.0.111"
 tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.40"
 uuid = { version = "1.7.0", features = ["v4"] }
+indexmap = "2.4.0"
+
+[dev-dependencies]
+mockito = "1.2.0"
 
 [lib]
 path = "src/lib.rs"

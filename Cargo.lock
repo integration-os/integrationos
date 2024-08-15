@@ -332,7 +332,7 @@ dependencies = [
  "base64 0.13.1",
  "bitvec",
  "hex",
- "indexmap 2.3.0",
+ "indexmap 2.4.0",
  "js-sys",
  "once_cell",
  "rand",
@@ -1070,7 +1070,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "http 1.1.0",
- "indexmap 2.3.0",
+ "indexmap 2.4.0",
  "slab",
  "tokio",
  "tokio-util",
@@ -1400,9 +1400,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de3fc2e30ba82dd1b3911c8de1ffc143c74a914a14e99514d7637e3099df5ea0"
+checksum = "93ead53efc7ea8ed3cfb0c79fc8023fbb782a5432b52830b6518941cebe6505c"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.5",
@@ -1435,7 +1435,7 @@ dependencies = [
  "http 1.1.0",
  "http-serde-ext",
  "hyper 0.14.30",
- "indexmap 2.3.0",
+ "indexmap 2.4.0",
  "integrationos-cache",
  "integrationos-domain",
  "integrationos-event",
@@ -1506,7 +1506,7 @@ dependencies = [
  "hmac",
  "http 1.1.0",
  "http-serde-ext",
- "indexmap 2.3.0",
+ "indexmap 2.4.0",
  "js-sandbox-ios",
  "jsonpath_lib",
  "mockito",
@@ -1598,6 +1598,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "integrationos-snapshot"
+version = "0.1.0"
+dependencies = [
+ "integrationos-domain",
+]
+
+[[package]]
 name = "integrationos-unified"
 version = "0.1.0"
 dependencies = [
@@ -1607,10 +1614,12 @@ dependencies = [
  "handlebars",
  "http 1.1.0",
  "http-serde-ext",
+ "indexmap 2.4.0",
  "integrationos-cache",
  "integrationos-domain",
  "js-sandbox-ios",
  "jsonpath_lib",
+ "mockito",
  "mongodb",
  "reqwest",
  "serde",
@@ -1897,7 +1906,7 @@ checksum = "9bf4e7146e30ad172c42c39b3246864bd2d3c6396780711a1baf749cfe423e21"
 dependencies = [
  "base64 0.21.7",
  "hyper 0.14.30",
- "indexmap 2.3.0",
+ "indexmap 2.4.0",
  "ipnet",
  "metrics 0.22.3",
  "metrics-util 0.16.3",
@@ -2213,7 +2222,7 @@ version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc02deea53ffe807708244e5914f6b099ad7015a207ee24317c22112e17d9c5c"
 dependencies = [
- "indexmap 2.3.0",
+ "indexmap 2.4.0",
  "serde",
  "serde_json",
 ]
@@ -3114,7 +3123,7 @@ version = "1.0.122"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "784b6203951c57ff748476b126ccb5e8e2959a5c19e5c617ab1956be3dbc68da"
 dependencies = [
- "indexmap 2.3.0",
+ "indexmap 2.4.0",
  "itoa",
  "memchr",
  "ryu",
@@ -3186,7 +3195,7 @@ version = "0.9.34+deprecated"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
 dependencies = [
- "indexmap 2.3.0",
+ "indexmap 2.4.0",
  "itoa",
  "ryu",
  "serde",
