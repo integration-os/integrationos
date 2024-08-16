@@ -47,6 +47,8 @@ pub enum Field {
         required: bool,
         items: Box<Field>,
     },
+    #[serde(rename = "unknown")]
+    Unknown { path: String, required: bool },
 }
 
 impl Field {
@@ -185,6 +187,10 @@ impl Field {
                     required,
                 )?),
             },
+            DataType::Unknown => Field::Unknown {
+                path: path.clone(),
+                required,
+            },
         };
         Ok(field)
     }
@@ -204,6 +210,7 @@ impl Field {
                 items.prepend_path(new_path);
                 return;
             }
+            Field::Unknown { path, .. } => path,
         };
         if new_path.is_empty() {
             *path = format!("$.{path}");
@@ -488,6 +495,7 @@ pub fn map_data_by_schema(
                 fields, required, ..
             } => object(data, key, fields, *required),
             Field::Array { items, path, .. } => array(data, key, path, items),
+            Field::Unknown { path, .. } => Ok(data.get(path).unwrap_or(&Value::Null).clone()),
         }
     }
 
