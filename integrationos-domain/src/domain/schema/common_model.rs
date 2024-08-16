@@ -151,6 +151,7 @@ pub enum DataType<T = CommonModel> {
         #[serde(rename = "elementType")]
         element_type: Box<DataType<T>>,
     },
+    Unknown,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
@@ -307,6 +308,7 @@ impl DataType {
                 let name = (*element_type).as_rust_ref(e_name);
                 format!("Vec<{}>", name)
             }
+            DataType::Unknown => "serde_json::Value".into(),
         }
     }
 
@@ -328,6 +330,7 @@ impl DataType {
                 let name = (*element_type).as_typescript_ref(enum_name);
                 format!("{}[]", name)
             }
+            DataType::Unknown => "unknown".into(),
         }
     }
 
@@ -417,8 +420,8 @@ impl DataType {
                         )
                     }
                 }
-
             }
+            DataType::Unknown => "Schema.Unknown".to_string(),
         }
     }
 
@@ -501,6 +504,10 @@ impl DataType {
                     schema_kind: SchemaKind::Type(Type::Object(Default::default())),
                 })),
             },
+            DataType::Unknown => ReferenceOr::Item(Box::new(Schema {
+                schema_data: Default::default(),
+                schema_kind: SchemaKind::Type(Type::Object(Default::default())),
+            })),
         }
     }
 
@@ -547,6 +554,7 @@ impl DataType {
                 let i: usize = (0..options.len()).fake();
                 Value::String(options[i].clone())
             }
+            DataType::Unknown => Value::Null,
             DataType::Expandable(expandable) => match expandable {
                 Expandable::Expanded { model, .. } => {
                     let mut map = Map::new();
@@ -594,6 +602,7 @@ impl DataType {
                 let name = (*element_type).to_name();
                 format!("Array<{name}>")
             }
+            DataType::Unknown => "unknown".into(),
         }
     }
 }
@@ -654,6 +663,7 @@ impl From<DataType<UnsavedCommonModel>> for DataType {
             DataType::Array { element_type } => DataType::Array {
                 element_type: Box::new(element_type.deref().clone().into()),
             },
+            DataType::Unknown => DataType::Unknown,
         }
     }
 }
