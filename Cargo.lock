@@ -1601,18 +1601,14 @@ dependencies = [
 name = "integrationos-snapshot"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bson",
  "chrono",
+ "dotenvy",
  "envconfig",
  "futures",
- "handlebars",
- "http 1.1.0",
- "http-serde-ext",
- "indexmap 2.4.0",
  "integrationos-cache",
  "integrationos-domain",
- "js-sandbox-ios",
- "jsonpath_lib",
  "mongodb",
  "reqwest",
  "serde",

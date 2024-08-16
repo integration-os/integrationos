@@ -4,18 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow.workspace = true
 bson.workspace = true
 chrono = { workspace = true, features = ["serde"] }
 envconfig.workspace = true
+dotenvy.workspace = true
 futures.workspace = true
-handlebars.workspace = true
-http-serde-ext.workspace = true
-http.workspace = true
-indexmap = "2.4.0"
 integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain" }
-js-sandbox-ios.workspace = true
-jsonpath_lib.workspace = true
 mongodb.workspace = true
 reqwest = { workspace = true, features = [
     "json",

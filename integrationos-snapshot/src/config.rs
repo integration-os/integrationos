@@ -8,36 +8,24 @@ pub struct SnapshotConfig {
     pub cache_size: u64,
     #[envconfig(from = "CACHE_TTL_SECS", default = "60")]
     pub cache_ttl_secs: u64,
-    #[envconfig(from = "DB_CONNECTION_COUNT", default = "25")]
-    pub db_connection_count: u64,
-    #[envconfig(from = "FETCH_GOOGLE_AUTH_TOKEN", default = "true")]
-    pub fetch_google_auth_token: bool,
     #[envconfig(nested = true)]
     pub secrets_config: SecretsConfig,
     #[envconfig(nested = true)]
     pub cache: CacheConfig,
     #[envconfig(nested = true)]
     pub db: DatabaseConfig,
-    #[envconfig(from = "CONNECTION_CACHE_TTL_SECS", default = "86400")]
-    pub connection_cache_ttl_secs: u64,
-    #[envconfig(from = "CONNECTION_MODEL_SCHEMA_TTL_SECS", default = "86400")]
-    pub connection_model_schema_cache_ttl_secs: u64,
-    #[envconfig(from = "CONNECTION_MODEL_DEFINITION_CACHE_TTL_SECS", default = "86400")]
-    pub connection_model_definition_cache_ttl_secs: u64,
-    #[envconfig(from = "SECRET_CACHE_TTL_SECS", default = "300")]
-    pub secret_cache_ttl_secs: u64,
+    #[envconfig(from = "STREAM_CHUNK_SIZE", default = "100")]
+    pub stream_chunk_size: usize,
+    #[envconfig(from = "STREAM_CONCURRENCY", default = "10")]
+    pub stream_concurrency: usize,
 }
 
 impl Display for SnapshotConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "CACHE_SIZE: {}", self.cache_size)?;
         writeln!(f, "CACHE_TTL_SECS: {}", self.cache_ttl_secs)?;
-        writeln!(f, "DB_CONNECTION_COUNT: {}", self.db_connection_count)?;
-        writeln!(
-            f,
-            "FETCH_GOOGLE_AUTH_TOKEN: {}",
-            self.fetch_google_auth_token
-        )?;
+        writeln!(f, "STREAM_CHUNK_SIZE: {}", self.stream_chunk_size)?;
+        writeln!(f, "STREAM_CONCURRENCY: {}", self.stream_concurrency)?;
         write!(f, "{}", self.secrets_config)?;
         write!(f, "{}", self.cache)?;
         write!(f, "{}", self.db)
