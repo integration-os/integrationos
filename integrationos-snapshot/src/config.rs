@@ -18,10 +18,8 @@ pub struct SnapshotConfig {
     pub stream_chunk_size: usize,
     #[envconfig(from = "STREAM_CONCURRENCY", default = "10")]
     pub stream_concurrency: usize,
-    #[envconfig(from = "STREAM_TIMEOUT_SECS", default = "300")]
+    #[envconfig(from = "STREAM_TIMEOUT_SECS", default = "3600")]
     pub stream_timeout_secs: u64,
-    #[envconfig(from = "CORRUPTED_EVENTS_TTL_DAYS", default = "7")]
-    pub corrupted_events_ttl_days: u64,
 }
 
 impl Display for SnapshotConfig {
@@ -31,11 +29,6 @@ impl Display for SnapshotConfig {
         writeln!(f, "STREAM_CHUNK_SIZE: {}", self.stream_chunk_size)?;
         writeln!(f, "STREAM_CONCURRENCY: {}", self.stream_concurrency)?;
         writeln!(f, "STREAM_TIMEOUT_SECS: {}", self.stream_timeout_secs)?;
-        writeln!(
-            f,
-            "CORRUPTED_EVENTS_TTL_DAYS: {}",
-            self.corrupted_events_ttl_days
-        )?;
         write!(f, "{}", self.secrets_config)?;
         write!(f, "{}", self.cache)?;
         write!(f, "{}", self.db)

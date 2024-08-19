@@ -1,10 +1,5 @@
 mod config;
 
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::format,
-};
-
 use anyhow::{Context, Result};
 use bson::{doc, Document};
 use chrono::{Duration, Utc};
@@ -17,7 +12,9 @@ use integrationos_domain::{
     Event, Id, MongoStore, Store, Unit,
 };
 use mongodb::{Client, ClientSession};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use std::collections::HashSet;
+use std::time::Duration as StdDuration;
 use tracing::info;
 
 #[tokio::main]
@@ -75,69 +72,66 @@ async fn snapshot(
         .await
         .context("Error fetching events")?;
 
-    events
+    let task = events
         .stream(session)
         .try_chunks(config.stream_chunk_size)
         .try_for_each_concurrent(config.stream_concurrency, |chunk| async move {
-            let mut corrupted_events = HashSet::new();
-            for event in chunk {
-                // Attempt to deserialize the event as a regular Event
-                let decoded_event: Result<Event> =
-                    bson::from_document(event.clone()).context("Could not deserialize event");
+            let (_valid_events, _corrupted_events): (Vec<_>, HashSet<_>) = chunk.iter().fold(
+                (Vec::new(), HashSet::new()),
+                |(mut valid_acc, mut corrupt_acc), event| {
+                    // Attempt to deserialize the event as a regular Event
+                    let decoded_event: Result<Event> =
+                        bson::from_document(event.clone()).context("Could not deserialize event");
 
-                match decoded_event {
-                    Ok(event) => {
-                        tracing::info!("Event with id {} received", event.id);
-                    }
-                    Err(e) => {
-                        // Attempt to deserialize the corrupted event
-                        let corrupted_event: Result<CorruptedEvent> =
-                            bson::from_document(event.clone()).context(format!(
-                                "Could not deserialize corrupted event to a known type {e:?}"
-                            ));
+                    match decoded_event {
+                        Ok(event) => {
+                            tracing::info!("Event with id {} received", event.id);
+                            valid_acc.push(event);
+                        }
+                        Err(e) => {
+                            // Attempt to deserialize the corrupted event
+                            let corrupted_event: Result<CorruptedEvent> =
+                                bson::from_document(event.clone()).context(format!(
+                                    "Could not deserialize corrupted event to a known type {e:?}"
+                                ));
 
-                        match corrupted_event {
-                            Ok(corrupted_event) => {
-                                corrupted_events.insert(corrupted_event.id);
-                            }
-                            Err(_) => {
-                                tracing::error!(
-                                    "Unknown source of corruption, please contact the platform team for assistance: {event:?}"
-                                );
+                            match corrupted_event {
+                                Ok(corrupted_event) => {
+                                    corrupt_acc.insert(corrupted_event.id);
+                                }
+                                Err(_) => {
+                                    tracing::error!(
+                                        "Unknown source of corruption, please contact the platform team for assistance: {event:?}"
+                                    );
+                                }
                             }
                         }
                     }
-                }
-            }
+
+                    (valid_acc, corrupt_acc)
+                },
+            );
+
+            // TODO
+            // * Notify the watcher about the corrupted events
+            // * Write valid events to gcloud storage***
+            // * Delete all events from the database
+            // * Store checkpoint in the database
 
             Ok(())
-        })
+        });
+
+    tokio::time::timeout(StdDuration::from_secs(config.stream_timeout_secs), task)
         .await
-        .context("Error streaming events")?;
+        .context("Error streaming events")??;
+
+    session
+        .commit_transaction()
+        .await
+        .context("Error committing transaction")?;
 
     Ok(())
 }
 
-// async fn restore(events: MongoStore<Event>, session: &mut ClientSession) -> Result<Unit> {
-//     let filter = doc! {
-//         "createdAt": {
-//             "$lt": (Utc::now() - Duration::days(30)).timestamp_millis()
-//         }
-//     };
-
-//     let mut events = events
-//         .collection
-//         .find_with_session(filter, None, session)
-//         .await?;
-
-//     events.stream(session).try_chunks(100)
-
-//         .map(|chunk| {
-//         //
-//         //
-//         //
-//         todo!()
-//     });
-
-//     todo!()
-// }
+//*** Write small dsl to transactionally write events to gcloud storage,
+//meaning if something goes wrong we remove all the written events.
