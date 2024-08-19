@@ -78,7 +78,7 @@ impl Display for ErrorMessage {
     }
 }
 
-#[derive(ThisError, Clone, Hash, Eq, PartialEq, Serialize, AsRefStr)]
+#[derive(ThisError, Clone, Eq, PartialEq, Serialize, AsRefStr)]
 #[serde(rename_all = "camelCase")]
 #[strum(serialize_all = "PascalCase")]
 pub enum InternalError {
@@ -494,7 +494,7 @@ impl Debug for InternalError {
     }
 }
 
-#[derive(ThisError, Clone, Hash, Eq, PartialEq, Serialize, AsRefStr)]
+#[derive(ThisError, Clone, Eq, PartialEq, Serialize, AsRefStr)]
 #[serde(rename_all = "camelCase")]
 #[strum(serialize_all = "PascalCase")]
 pub enum ApplicationError {
@@ -942,7 +942,7 @@ impl From<InternalError> for ApplicationError {
     }
 }
 
-#[derive(ThisError, Debug, Clone, Hash, Eq, PartialEq, Serialize)]
+#[derive(ThisError, Debug, Clone, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum IntegrationOSError {
     Internal(InternalError),
