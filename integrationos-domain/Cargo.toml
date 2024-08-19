@@ -2,7 +2,7 @@
 name = "integrationos-domain"
 description = "Shared library for IntegrationOS"
 license = "GPL-3.0"
-version = "6.0.0"
+version = "6.0.1"
 edition = "2021"
 repository = "https://github.com/integration-os/integrationos-domain"
 
