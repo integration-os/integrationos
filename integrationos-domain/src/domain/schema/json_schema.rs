@@ -353,6 +353,14 @@ impl TryFrom<DataType> for Property {
                 items: Some(Box::new(Property::try_from(*element_type)?)),
                 r#enum: None,
             }),
+            DataType::Unknown => Ok(Property {
+                r#type: "unknown".to_string(),
+                path: None,
+                description: None,
+                properties: None,
+                items: None,
+                r#enum: None,
+            }),
         }
     }
 }
@@ -715,7 +723,7 @@ mod tests {
             /// The map array for all fields
             map: Vec<Map>,
 
-            /// The comments for the map  
+            /// The comments for the map
             comments: String,
 
             /// The potential issues with the map
@@ -727,7 +735,7 @@ mod tests {
             /// The name of the field in the source model
             source_field_name: String,
 
-            /// The name of the field in the destination model, empty if no match found  
+            /// The name of the field in the destination model, empty if no match found
             destination_field_name: String,
 
             /// Whether a match was found or not
