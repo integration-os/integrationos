@@ -31,6 +31,11 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
       data: { access_token: accessToken, token_type: tokenType },
     } = response;
 
+    let refreshToken = refresh_token;
+    if (response.data.refresh_token) {
+      refreshToken = response.data.refresh_token;
+    }
+
     // Get expiry time through introspection
     const introspection = await axios({
       url: `${baseUrl}/introspect`,
@@ -51,7 +56,7 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
 
     return {
       accessToken,
-      refreshToken: refresh_token,
+      refreshToken,
       expiresIn,
       tokenType,
       meta: {
