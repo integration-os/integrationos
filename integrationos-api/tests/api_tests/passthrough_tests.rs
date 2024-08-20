@@ -35,7 +35,7 @@ async fn test_passthrough_api() {
         .create();
 
     let create_model_definition_payload = CreateConnectionModelDefinitionRequest {
-        _id: None,
+        id: None,
         connection_platform: connection.platform.to_string(),
         connection_definition_id: conn_def.id,
         platform_version: conn_def.record_metadata.version.to_string(),

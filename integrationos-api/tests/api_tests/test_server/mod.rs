@@ -492,7 +492,7 @@ impl TestServer {
         assert!(!connection.secrets_service_id.is_empty());
 
         let model_def = CreateConnectionModelDefinitionRequest {
-            _id: None,
+            id: None,
             connection_platform: connection_def.platform,
             connection_definition_id: connection_def.id,
             platform_version: connection_def.platform_version,

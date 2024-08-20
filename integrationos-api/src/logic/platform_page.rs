@@ -42,7 +42,8 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
-    pub _id: Option<Id>,
+    #[serde(rename = "_id")]
+    pub id: Option<Id>,
     pub platform_id: Id,
     pub connection_definition_id: Id,
     pub platform_name: String,
@@ -106,7 +107,7 @@ impl RequestExt for CreateRequest {
         let hashed = HashedSecret::try_from(hash_value).ok()?;
 
         Some(Self::Output {
-            id: self._id.unwrap_or_else(|| Id::now(IdPrefix::PlatformPage)),
+            id: self.id.unwrap_or_else(|| Id::now(IdPrefix::PlatformPage)),
             platform_id: self.platform_id,
             platform_name: self.platform_name.clone(),
             connection_definition_id: self.connection_definition_id,

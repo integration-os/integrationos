@@ -35,7 +35,8 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
-    pub _id: Option<Id>,
+    #[serde(rename = "_id")]
+    pub id: Option<Id>,
     pub connection_platform: String,
     pub platform_redirect_uri: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -71,7 +72,7 @@ impl RequestExt for CreateRequest {
     fn from(&self) -> Option<Self::Output> {
         Some(Self::Output {
             id: self
-                ._id
+                .id
                 .unwrap_or_else(|| Id::now(IdPrefix::ConnectionOAuthDefinition)),
             connection_platform: self.connection_platform.clone(),
             configuration: OAuthApiConfig {

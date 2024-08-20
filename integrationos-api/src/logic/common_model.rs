@@ -39,7 +39,8 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
-    pub _id: Option<Id>,
+    #[serde(rename = "_id")]
+    pub id: Option<Id>,
     pub name: String,
     pub version: Version,
     pub fields: Vec<Field>,
@@ -81,7 +82,7 @@ impl RequestExt for CreateRequest {
 
     fn from(&self) -> Option<Self::Output> {
         let mut record = Self::Output {
-            id: self._id.unwrap_or_else(|| Id::now(IdPrefix::CommonModel)),
+            id: self.id.unwrap_or_else(|| Id::now(IdPrefix::CommonModel)),
             name: self.name.clone(),
             fields: self.fields.clone(),
             sample: self.sample.clone(),
