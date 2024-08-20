@@ -276,7 +276,8 @@ pub async fn test_connection_model_definition(
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
-    pub _id: Option<Id>,
+    #[serde(rename = "_id")]
+    pub id: Option<Id>,
     pub connection_platform: String,
     pub connection_definition_id: Id,
     pub platform_version: String,
@@ -328,7 +329,7 @@ impl RequestExt for CreateRequest {
 
         let mut record = Self::Output {
             id: self
-                ._id
+                .id
                 .unwrap_or_else(|| Id::now(IdPrefix::ConnectionModelDefinition)),
             connection_platform: self.connection_platform.clone(),
             connection_definition_id: self.connection_definition_id,

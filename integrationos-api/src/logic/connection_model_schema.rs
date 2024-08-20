@@ -150,7 +150,8 @@ pub async fn get_platform_models(
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
-    pub _id: Option<Id>,
+    #[serde(rename = "_id")]
+    pub id: Option<Id>,
     pub platform_id: Id,
     pub platform_page_id: Id,
     pub connection_platform: String,
@@ -179,7 +180,7 @@ impl RequestExt for CreateRequest {
 
         Some(Self::Output {
             id: self
-                ._id
+                .id
                 .unwrap_or_else(|| Id::now(IdPrefix::ConnectionModelSchema)),
             platform_id: self.platform_id,
             platform_page_id: self.platform_page_id,

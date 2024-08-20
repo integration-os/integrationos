@@ -44,7 +44,8 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
-    pub _id: Option<Id>,
+    #[serde(rename = "_id")]
+    pub id: Option<Id>,
     pub platform: String,
     pub platform_version: String,
     #[serde(default)]
@@ -324,7 +325,7 @@ impl RequestExt for CreateRequest {
 
         let mut record = Self::Output {
             id: self
-                ._id
+                .id
                 .unwrap_or_else(|| Id::now(IdPrefix::ConnectionDefinition)),
             platform_version: self.platform_version.clone(),
             platform: self.platform.clone(),

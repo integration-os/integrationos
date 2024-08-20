@@ -31,7 +31,8 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
-    pub _id: Option<Id>,
+    #[serde(rename = "_id")]
+    pub id: Option<Id>,
     pub connection_definition_id: Id,
     pub name: String,
     pub url: String,
@@ -48,7 +49,7 @@ impl RequestExt for CreateRequest {
 
     fn from(&self) -> Option<Self::Output> {
         Some(Self::Output {
-            id: self._id.unwrap_or_else(|| Id::now(IdPrefix::Platform)),
+            id: self.id.unwrap_or_else(|| Id::now(IdPrefix::Platform)),
             connection_definition_id: self.connection_definition_id,
             name: self.name.clone(),
             url: self.url.clone(),
