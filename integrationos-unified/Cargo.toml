@@ -5,26 +5,30 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-jsonpath_lib = "0.3.0"
-bson = "2.9.0"
-chrono = { version = "0.4.32", features = ["serde"] }
+jsonpath_lib.workspace = true
+bson.workspace = true
+chrono = { workspace = true, features = ["serde"] }
 integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain" }
-futures = "0.3.30"
-handlebars = { version = "4.4.0" }
-http = "1.1.0"
-http-serde-ext = "1.0.2"
+futures.workspace = true
+handlebars.workspace = true
+http.workspace = true
+http-serde-ext.workspace = true
 js-sandbox-ios.workspace = true
-mongodb = "2.8.0"
-reqwest = { version = "0.12.3", features = [
+mongodb.workspace = true
+reqwest = { workspace = true, features = [
     "json",
     "rustls-tls",
 ], default-features = false }
-serde = { version = "1.0.195", features = ["derive", "rc"] }
-serde_json = "1.0.111"
-tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
-tracing = "0.1.40"
-uuid = { version = "1.7.0", features = ["v4"] }
+serde = { workspace = true, features = ["derive", "rc"] }
+serde_json.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tracing.workspace = true
+uuid = { workspace = true, features = ["v4"] }
+indexmap = "2.4.0"
+
+[dev-dependencies]
+mockito = "1.2.0"
 
 [lib]
 path = "src/lib.rs"

@@ -1,14 +1,15 @@
 mod client;
+mod config;
 
 use crate::client::WatchdogClient;
 use anyhow::{Context, Result};
+use config::WatchdogConfig;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_domain::{
     cache::CacheConfig,
     database::DatabaseConfig,
     telemetry::{get_subscriber, init_subscriber},
-    watchdog::WatchdogConfig,
 };
 use tracing::info;
 

@@ -1,3 +1,4 @@
+use super::log_request_middleware;
 use crate::{
     logic::{
         common_enum, common_model,
@@ -20,8 +21,6 @@ use integrationos_domain::{
 };
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
-
-use super::log_request_middleware;
 
 pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     Router::new()

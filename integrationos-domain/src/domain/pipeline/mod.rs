@@ -5,16 +5,14 @@ pub mod policies;
 pub mod signature;
 pub mod source;
 
-use serde::{Deserialize, Serialize};
-
 use self::{
     destination::Destination, middleware::Middleware, signature::Signature, source::Source,
 };
-
 use super::{
     configuration::{environment::Environment, pipeline::PipelineConfig},
     shared::{ownership::Ownership, record_metadata::RecordMetadata},
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]

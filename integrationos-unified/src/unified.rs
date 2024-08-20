@@ -1,4 +1,5 @@
 use crate::{
+    client::CallerClient,
     request::{
         PathParams, RequestCrud, RequestCrudBorrowed, ResponseCrud, ResponseCrudToMap,
         ResponseCrudToMapRequest,
@@ -17,7 +18,6 @@ use integrationos_cache::local::{
 };
 use integrationos_domain::{
     api_model_config::{ModelPaths, RequestModelPaths, ResponseModelPaths},
-    client::caller_client::CallerClient,
     connection_model_definition::{
         ConnectionModelDefinition, CrudAction, CrudMapping, PlatformInfo,
     },

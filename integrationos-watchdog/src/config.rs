@@ -1,5 +1,5 @@
-use crate::{cache::CacheConfig, database::DatabaseConfig};
 use envconfig::Envconfig;
+use integrationos_domain::{cache::CacheConfig, database::DatabaseConfig};
 use std::fmt::{Display, Formatter};
 
 #[derive(Envconfig, Clone)] // Intentionally no Debug so secret is not printed

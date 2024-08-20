@@ -1,12 +1,12 @@
+use crate::config::WatchdogConfig;
 use bson::{doc, Bson, Document};
 use chrono::Utc;
 use futures::{future::join_all, TryStreamExt};
 use integrationos_cache::remote::RedisCache;
 use integrationos_domain::{
     cache::CacheConfig, database::DatabaseConfig, event_with_context::EventWithContext,
-    pipeline_context::PipelineStage, prelude::MongoStore, root_context::RootStage,
-    watchdog::WatchdogConfig, Event, ExtractorContext, IntegrationOSError, InternalError,
-    PipelineContext, RootContext, Store,
+    pipeline_context::PipelineStage, prelude::MongoStore, root_context::RootStage, Event,
+    ExtractorContext, IntegrationOSError, InternalError, PipelineContext, RootContext, Store,
 };
 use mongodb::options::FindOneOptions;
 use redis::{AsyncCommands, LposOptions, RedisResult};
