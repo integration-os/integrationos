@@ -7,7 +7,7 @@ members = [
     "integrationos-event",
     "integrationos-gateway",
     "integrationos-watchdog",
-    "integrationos-unified", "integrationos-snapshot",
+    "integrationos-unified",
 ]
 
 [workspace.dependencies]

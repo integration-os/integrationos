@@ -1598,27 +1598,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "integrationos-snapshot"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bson",
- "chrono",
- "dotenvy",
- "envconfig",
- "futures",
- "integrationos-cache",
- "integrationos-domain",
- "mongodb",
- "reqwest",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "integrationos-unified"
 version = "0.1.0"
 dependencies = [
