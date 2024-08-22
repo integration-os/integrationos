@@ -8,12 +8,14 @@ use axum::{
 use bson::{doc, Document};
 use futures::StreamExt;
 use integrationos_domain::{
-    api_model_config::Lang, common_model::SchemaType, ApplicationError, Id, IntegrationOSError,
-    InternalError, Store,
+    api_model_config::Lang,
+    common_model::{CommonEnum, DataType, SchemaType},
+    prefix::IdPrefix,
+    ApplicationError, Id, IntegrationOSError, InternalError, Store, StringExt,
 };
 use mongodb::options::FindOptions;
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -21,6 +23,81 @@ pub fn get_router() -> Router<Arc<AppState>> {
         .route("/:id", get(generate_schema))
         .route("/:id/:type", get(generate_schema))
         .route("/types/:id/:lang", get(generate_types))
+        .route("/types/:lang", get(generate_all_types))
+}
+
+async fn generate_all_types(
+    state: State<Arc<AppState>>,
+    Path(lang): Path<Lang>,
+) -> Result<String, IntegrationOSError> {
+    let cm_store = state.app_stores.common_model.clone();
+    let ce_store = state.app_stores.common_enum.clone();
+
+    let mut enums = HashSet::new();
+
+    let common_models = cm_store.get_all().await.map_err(IntegrationOSError::from)?;
+    let common_enums = ce_store.get_all().await.map_err(IntegrationOSError::from)?;
+
+    let mut output_types = String::new();
+
+    for cm in common_models {
+        enums.extend(
+            cm.get_enum_fields()
+                .into_iter()
+                .filter_map(|e| match e.datatype {
+                    DataType::Enum { options, .. } => Some(CommonEnum {
+                        id: Id::now(IdPrefix::CommonEnum),
+                        name: e.name.pascal_case(),
+                        options: options.unwrap_or_default(),
+                    }),
+                    _ => None,
+                }),
+        );
+
+        if cm.name.as_str() == "Collections" {
+            continue;
+        }
+
+        let Some(lang) = cm.interface.get(&lang) else {
+            continue;
+        };
+
+        output_types.push_str(lang);
+    }
+
+    for ce in enums {
+        match lang {
+            Lang::TypeScript => {
+                let ts = ce.as_typescript_type();
+                output_types.push_str(&ts);
+            }
+            Lang::Rust => {
+                let rust = ce.as_rust_type();
+                output_types.push_str(&rust);
+            }
+            Lang::JavaScript => {
+                unimplemented!();
+            }
+        }
+    }
+
+    for ce in common_enums {
+        match lang {
+            Lang::TypeScript => {
+                let ts = ce.as_typescript_type();
+                output_types.push_str(&ts);
+            }
+            Lang::Rust => {
+                let rust = ce.as_rust_type();
+                output_types.push_str(&rust);
+            }
+            Lang::JavaScript => {
+                unimplemented!();
+            }
+        }
+    }
+
+    Ok(output_types)
 }
 
 pub async fn get_common_models_projections(
