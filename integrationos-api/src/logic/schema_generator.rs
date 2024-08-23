@@ -2,7 +2,7 @@ use super::ReadResponse;
 use crate::server::AppState;
 use axum::{
     extract::{Path, State},
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use bson::{doc, Document};
@@ -14,7 +14,7 @@ use integrationos_domain::{
     ApplicationError, Id, IntegrationOSError, InternalError, Store, StringExt,
 };
 use mongodb::options::FindOptions;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, sync::Arc};
 
 pub fn get_router() -> Router<Arc<AppState>> {
@@ -24,6 +24,73 @@ pub fn get_router() -> Router<Arc<AppState>> {
         .route("/:id/:type", get(generate_schema))
         .route("/types/:id/:lang", get(generate_types))
         .route("/types/:lang", get(generate_all_types))
+        .route("/types/:lang", post(generate_specific_types))
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct GenerateSpecificTypesRequest {
+    models: Vec<String>,
+}
+
+async fn generate_specific_types(
+    state: State<Arc<AppState>>,
+    Path(lang): Path<Lang>,
+    Json(req): Json<GenerateSpecificTypesRequest>,
+) -> Result<String, IntegrationOSError> {
+    let cm_store = state.app_stores.common_model.clone();
+    let ce_store = state.app_stores.common_enum.clone();
+
+    let mut visited_enums = HashSet::new();
+    let mut visited_common_models = HashSet::new();
+
+    let common_models = cm_store
+        .get_many(
+            Some(doc! {
+                "name": { "$in": req.models },
+                "deleted": false,
+                "active": true,
+            }),
+            None,
+            None,
+            None,
+            None,
+        )
+        .await
+        .map_err(IntegrationOSError::from)?;
+
+    let mut output_types = String::new();
+
+    for common_model in common_models {
+        let expanded = match lang {
+            Lang::TypeScript => {
+                common_model
+                    .as_typescript_expanded_tracked(
+                        &cm_store,
+                        &ce_store,
+                        &mut visited_enums,
+                        &mut visited_common_models,
+                    )
+                    .await
+            }
+            Lang::Rust => {
+                common_model
+                    .as_rust_expanded_tracked(
+                        &cm_store,
+                        &ce_store,
+                        &mut visited_enums,
+                        &mut visited_common_models,
+                    )
+                    .await
+            }
+            Lang::JavaScript => {
+                unimplemented!();
+            }
+        };
+
+        output_types.push_str(&expanded);
+    }
+
+    Ok(output_types)
 }
 
 async fn generate_all_types(
@@ -35,8 +102,32 @@ async fn generate_all_types(
 
     let mut enums = HashSet::new();
 
-    let common_models = cm_store.get_all().await.map_err(IntegrationOSError::from)?;
-    let common_enums = ce_store.get_all().await.map_err(IntegrationOSError::from)?;
+    let common_models = cm_store
+        .get_many(
+            Some(doc! {
+                "deleted": false,
+                "active": true,
+            }),
+            None,
+            None,
+            None,
+            None,
+        )
+        .await
+        .map_err(IntegrationOSError::from)?;
+
+    let common_enums = ce_store
+        .get_many(
+            Some(doc! {
+                "deleted": false,
+            }),
+            None,
+            None,
+            None,
+            None,
+        )
+        .await
+        .map_err(IntegrationOSError::from)?;
 
     let mut output_types = String::new();
 
@@ -65,23 +156,7 @@ async fn generate_all_types(
         output_types.push_str(lang);
     }
 
-    for ce in enums {
-        match lang {
-            Lang::TypeScript => {
-                let ts = ce.as_typescript_type();
-                output_types.push_str(&ts);
-            }
-            Lang::Rust => {
-                let rust = ce.as_rust_type();
-                output_types.push_str(&rust);
-            }
-            Lang::JavaScript => {
-                unimplemented!();
-            }
-        }
-    }
-
-    for ce in common_enums {
+    for ce in enums.iter().chain(common_enums.iter()) {
         match lang {
             Lang::TypeScript => {
                 let ts = ce.as_typescript_type();
