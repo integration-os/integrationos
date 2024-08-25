@@ -70,6 +70,8 @@ generate_stores!(
     "connection-oauth-definitions",
     Store,
     "store",
+    Snapshots,
+    "snapshots",
     ConnectionDefinitions,
     "connection-definitions",
     ConnectionModelSchemas,

@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use envconfig::Envconfig;
 use http::StatusCode;
-use integrationos_api::config::Config as ApiConfig;
+use integrationos_api::config::ConnectionsConfig as ApiConfig;
 use integrationos_domain::{event_response::EventResponse, event_with_context::EventWithContext};
 use integrationos_event::{
     config::EventCoreConfig, dispatcher::Dispatcher, event_handler::EventHandler,

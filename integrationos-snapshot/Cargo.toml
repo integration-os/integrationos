@@ -1,0 +1,38 @@
+[package]
+name = "integrationos-snapshot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+bson.workspace = true
+chrono.workspace = true
+envconfig.workspace = true
+futures.workspace = true
+google-cloud-storage = "0.20.0"
+http.workspace = true
+integrationos-domain = { path = "../integrationos-domain" }
+integrationos-unified = { path = "../integrationos-unified" }
+mongodb.workspace = true
+reqwest = { workspace = true, features = ["rustls-tls"] }
+reqwest-middleware = "0.3.3"
+reqwest-retry = "0.6.1"
+reqwest-tracing = "0.5.3"
+serde.workspace = true
+serde_json.workspace = true
+tempfile = "3.12.0"
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tokio-util = "0.7.11"
+tracing.workspace = true
+
+[dev-dependencies]
+fake = { workspace = true, features = [
+    "uuid",
+    "derive",
+    "dummy",
+    "chrono",
+    "rand_core",
+    "http",
+    "serde_json",
+    "semver",
+] }

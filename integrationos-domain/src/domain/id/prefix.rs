@@ -14,6 +14,7 @@ pub enum IdPrefix {
     Cursor,
     EmbedToken,
     SessionId,
+    Snapshot,
     Event,
     EventAccess,
     EventDependency,
@@ -47,6 +48,7 @@ impl Display for IdPrefix {
             IdPrefix::Cursor => write!(f, "crs"),
             IdPrefix::EmbedToken => write!(f, "embed_tk"),
             IdPrefix::SessionId => write!(f, "session_id"),
+            IdPrefix::Snapshot => write!(f, "snap"),
             IdPrefix::Event => write!(f, "evt"),
             IdPrefix::EventAccess => write!(f, "evt_ac"),
             IdPrefix::EventDependency => write!(f, "evt_dep"),
@@ -84,6 +86,7 @@ impl TryFrom<&str> for IdPrefix {
             "crs" => Ok(IdPrefix::Cursor),
             "embed_tk" => Ok(IdPrefix::EmbedToken),
             "session_id" => Ok(IdPrefix::SessionId),
+            "snap" => Ok(IdPrefix::Snapshot),
             "evt" => Ok(IdPrefix::Event),
             "evt_ac" => Ok(IdPrefix::EventAccess),
             "evt_dep" => Ok(IdPrefix::EventDependency),
@@ -123,6 +126,7 @@ impl From<IdPrefix> for String {
             IdPrefix::Cursor => "crs".to_string(),
             IdPrefix::EmbedToken => "embed_tk".to_string(),
             IdPrefix::SessionId => "session_id".to_string(),
+            IdPrefix::Snapshot => "snap".to_string(),
             IdPrefix::Event => "evt".to_string(),
             IdPrefix::EventAccess => "evt_ac".to_string(),
             IdPrefix::EventDependency => "evt_dep".to_string(),
@@ -193,6 +197,7 @@ mod test {
             IdPrefix::try_from("session_id").unwrap(),
             IdPrefix::SessionId
         );
+        assert_eq!(IdPrefix::try_from("snap").unwrap(), IdPrefix::Snapshot);
         assert_eq!(IdPrefix::try_from("evt_ac").unwrap(), IdPrefix::EventAccess);
         assert_eq!(IdPrefix::try_from("evt_k").unwrap(), IdPrefix::EventKey);
         assert_eq!(IdPrefix::try_from("job").unwrap(), IdPrefix::Job);
@@ -231,6 +236,7 @@ mod test {
         assert_eq!(format!("{}", IdPrefix::Event), "evt");
         assert_eq!(format!("{}", IdPrefix::EmbedToken), "embed_tk");
         assert_eq!(format!("{}", IdPrefix::SessionId), "session_id");
+        assert_eq!(format!("{}", IdPrefix::Snapshot), "snap");
         assert_eq!(format!("{}", IdPrefix::EventAccess), "evt_ac");
         assert_eq!(format!("{}", IdPrefix::EventDependency), "evt_dep");
         assert_eq!(format!("{}", IdPrefix::EventKey), "evt_k");

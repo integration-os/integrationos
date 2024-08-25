@@ -22,3 +22,5 @@ RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/
 WORKDIR /app
 COPY --from=builder /app/${EXECUTABLE}/target/release/${EXECUTABLE} /usr/local/bin
 ENTRYPOINT /usr/local/bin/${EXECUTABLE}
+
+# TODO: Add env var to run a specific command for custom builds
