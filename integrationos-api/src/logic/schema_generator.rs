@@ -2,7 +2,7 @@ use super::ReadResponse;
 use crate::server::AppState;
 use axum::{
     extract::{Path, State},
-    routing::{get, post},
+    routing::get,
     Json, Router,
 };
 use bson::{doc, Document};
@@ -24,19 +24,20 @@ pub fn get_router() -> Router<Arc<AppState>> {
         .route("/:id/:type", get(generate_schema))
         .route("/types/:id/:lang", get(generate_types))
         .route("/types/:lang", get(generate_all_types))
-        .route("/types/:lang", post(generate_specific_types))
+        .route("/types/:lang/:models", get(generate_specific_types))
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct GenerateSpecificTypesRequest {
-    models: Vec<String>,
+    models: String,
+    lang: Lang,
 }
 
 async fn generate_specific_types(
     state: State<Arc<AppState>>,
-    Path(lang): Path<Lang>,
-    Json(req): Json<GenerateSpecificTypesRequest>,
+    Path(GenerateSpecificTypesRequest { models, lang }): Path<GenerateSpecificTypesRequest>,
 ) -> Result<String, IntegrationOSError> {
+    let models = models.split(',').map(|s| s.to_string()).collect::<Vec<_>>();
     let cm_store = state.app_stores.common_model.clone();
     let ce_store = state.app_stores.common_enum.clone();
 
@@ -46,7 +47,7 @@ async fn generate_specific_types(
     let common_models = cm_store
         .get_many(
             Some(doc! {
-                "name": { "$in": req.models },
+                "name": { "$in": models },
                 "deleted": false,
                 "active": true,
             }),
