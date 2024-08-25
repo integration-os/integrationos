@@ -41,6 +41,19 @@ impl Hash for CommonModel {
     }
 }
 
+pub enum TypeGenerationStrategy<'a> {
+    /// Generates the type in a cumulative way, meaning that it will only generate the types for the
+    /// models and enums that have not been generated before keeping track of the already generated
+    /// types.
+    Cumulative {
+        visited_enums: &'a mut HashSet<Id>,
+        visited_common_models: &'a mut HashSet<Id>,
+    },
+    /// Generates the type in a unique way, meaning that it will generate the types for a single
+    /// model, using this with multiple models will result in type duplication.
+    Unique,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UnsavedCommonModel {
     pub name: String,
@@ -745,15 +758,20 @@ impl CommonModel {
     /// * `lang` - The language to generate the model in
     /// * `cm_store` - The store for common models
     /// * `ce_store` - The store for common enums
-    pub async fn generate_as_expanded(
+    /// * `strategy` - The strategy to use for generating the type
+    pub async fn generate_as_expanded<'a>(
         &self,
         lang: &Lang,
         cm_store: &MongoStore<CommonModel>,
         ce_store: &MongoStore<CommonEnum>,
+        strategy: TypeGenerationStrategy<'a>,
     ) -> String {
         match lang {
-            Lang::Rust => self.as_rust_expanded(cm_store, ce_store).await,
-            Lang::TypeScript => self.as_typescript_expanded(cm_store, ce_store).await,
+            Lang::Rust => self.as_rust_expanded(cm_store, ce_store, strategy).await,
+            Lang::TypeScript => {
+                self.as_typescript_expanded(cm_store, ce_store, strategy)
+                    .await
+            }
             _ => unimplemented!(),
         }
     }
@@ -878,13 +896,30 @@ impl CommonModel {
         }
     }
 
-    async fn as_typescript_expanded(
+    /// Generates the model as a string in the specified language
+    /// with recursively expanded inner models and enums.
+    /// This is useful for generating the entire model and its
+    /// dependencies in a single file.
+    ///
+    /// # Arguments
+    /// * `cm_store` - The store to fetch the common models from
+    /// * `ce_store` - The store to fetch the common enums from
+    ///
+    /// # Returns
+    /// A string of all the enums and models recursively expanded in the specified language
+    async fn as_typescript_expanded<'a>(
         &self,
         cm_store: &MongoStore<CommonModel>,
         ce_store: &MongoStore<CommonEnum>,
+        strategy: TypeGenerationStrategy<'a>,
     ) -> String {
-        let mut visited_enums = HashSet::new();
-        let mut visited_common_models = HashSet::new();
+        let (visited_enums, visited_common_models) = match strategy {
+            TypeGenerationStrategy::Cumulative {
+                visited_enums,
+                visited_common_models,
+            } => (visited_enums, visited_common_models),
+            TypeGenerationStrategy::Unique => (&mut HashSet::new(), &mut HashSet::new()),
+        };
 
         let enums = self
             .fetch_all_enum_references(cm_store.clone(), ce_store.clone())
@@ -965,185 +1000,31 @@ impl CommonModel {
         }
     }
 
-    pub async fn as_typescript_expanded_tracked(
+    /// Generates the model as a string in the specified language
+    /// with recursively expanded inner models and enums.
+    /// This is useful for generating the entire model and its
+    /// dependencies in a single file.
+    ///
+    /// # Arguments
+    /// * `cm_store` - The store to fetch the common models from
+    /// * `ce_store` - The store to fetch the common enums from
+    ///
+    /// # Returns
+    /// A string of all the enums and models recursively expanded in the specified language
+    async fn as_rust_expanded<'a>(
         &self,
         cm_store: &MongoStore<CommonModel>,
         ce_store: &MongoStore<CommonEnum>,
-        visited_enums: &mut HashSet<Id>,
-        visited_common_models: &mut HashSet<Id>,
+        strategy: TypeGenerationStrategy<'a>,
     ) -> String {
-        let enums = self
-            .fetch_all_enum_references(cm_store.clone(), ce_store.clone())
-            .await
-            .map(|enums| {
-                enums
-                    .iter()
-                    .filter_map(|enum_model| {
-                        if visited_enums.contains(&enum_model.id) {
-                            return None;
-                        }
+        let (visited_enums, visited_common_models) = match strategy {
+            TypeGenerationStrategy::Cumulative {
+                visited_enums,
+                visited_common_models,
+            } => (visited_enums, visited_common_models),
+            TypeGenerationStrategy::Unique => (&mut HashSet::new(), &mut HashSet::new()),
+        };
 
-                        visited_enums.insert(enum_model.id);
-
-                        Some(enum_model.as_typescript_type())
-                    })
-                    .collect::<HashSet<String>>()
-                    .into_iter()
-                    .collect::<Vec<_>>()
-            })
-            .ok()
-            .unwrap_or_default()
-            .into_iter()
-            .collect::<Vec<_>>();
-
-        let children = self
-            .fetch_all_children_common_models(cm_store.clone())
-            .await
-            .ok()
-            .unwrap_or_default();
-
-        let children_types = children
-            .0
-            .into_values()
-            .filter_map(|child| {
-                if visited_common_models.contains(&child.id) {
-                    return None;
-                }
-                visited_common_models.insert(child.id);
-                Some(format!(
-                    "export interface {} {{ {} }}\n",
-                    replace_reserved_keyword(&child.name, Lang::TypeScript)
-                        .replace("::", "")
-                        .pascal_case(),
-                    child
-                        .fields
-                        .iter()
-                        .map(|field| field.as_typescript_ref())
-                        .collect::<HashSet<String>>()
-                        .into_iter()
-                        .collect::<Vec<_>>()
-                        .join(";\n    ")
-                ))
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        let ce_types = enums.join("\n");
-
-        let cm_types = format!(
-            "export interface {} {{ {} }}\n",
-            replace_reserved_keyword(&self.name, Lang::TypeScript)
-                .replace("::", "")
-                .pascal_case(),
-            self.fields
-                .iter()
-                .map(|field| field.as_typescript_ref())
-                .collect::<HashSet<String>>()
-                .into_iter()
-                .collect::<Vec<_>>()
-                .join(";\n    ")
-        );
-
-        if visited_common_models.contains(&self.id) {
-            format!("{}\n{}", ce_types, children_types)
-        } else {
-            format!("{}\n{}\n{}", ce_types, children_types, cm_types)
-        }
-    }
-
-    async fn as_rust_expanded(
-        &self,
-        cm_store: &MongoStore<CommonModel>,
-        ce_store: &MongoStore<CommonEnum>,
-    ) -> String {
-        let mut visited_enums = HashSet::new();
-        let mut visited_common_models = HashSet::new();
-
-        let enums = self
-            .fetch_all_enum_references(cm_store.clone(), ce_store.clone())
-            .await
-            .map(|enums| {
-                enums
-                    .iter()
-                    .filter_map(|enum_model| {
-                        if visited_enums.contains(&enum_model.id) {
-                            return None;
-                        }
-
-                        visited_enums.insert(enum_model.id);
-                        Some(enum_model.as_rust_type())
-                    })
-                    .collect::<HashSet<String>>()
-                    .into_iter()
-                    .collect::<Vec<_>>()
-            })
-            .ok()
-            .unwrap_or_default()
-            .into_iter()
-            .collect::<Vec<_>>();
-
-        let children = self
-            .fetch_all_children_common_models(cm_store.clone())
-            .await
-            .ok()
-            .unwrap_or_default();
-
-        let children_types = children
-            .0
-            .into_values()
-            .filter_map(|child| {
-                if visited_common_models.contains(&child.id) {
-                    return None;
-                }
-                visited_common_models.insert(child.id);
-                Some(format!(
-                    "pub struct {} {{ {} }}\n",
-                    replace_reserved_keyword(&child.name, Lang::Rust)
-                        .replace("::", "")
-                        .pascal_case(),
-                    child
-                        .fields
-                        .iter()
-                        .map(|field| field.as_rust_ref())
-                        .collect::<HashSet<String>>()
-                        .into_iter()
-                        .collect::<Vec<_>>()
-                        .join(",\n    ")
-                ))
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        let ce_types = enums.join("\n");
-
-        let cm_types = format!(
-            "pub struct {} {{ {} }}\n",
-            replace_reserved_keyword(&self.name, Lang::Rust)
-                .replace("::", "")
-                .pascal_case(),
-            self.fields
-                .iter()
-                .map(|field| field.as_rust_ref())
-                .collect::<HashSet<String>>()
-                .into_iter()
-                .collect::<Vec<_>>()
-                .join(",\n    ")
-        );
-
-        if visited_common_models.contains(&self.id) {
-            format!("{}\n{}", ce_types, children_types)
-        } else {
-            format!("{}\n{}\n{}", ce_types, children_types, cm_types)
-        }
-    }
-
-    pub async fn as_rust_expanded_tracked(
-        &self,
-        cm_store: &MongoStore<CommonModel>,
-        ce_store: &MongoStore<CommonEnum>,
-        visited_enums: &mut HashSet<Id>,
-        visited_common_models: &mut HashSet<Id>,
-    ) -> String {
         let enums = self
             .fetch_all_enum_references(cm_store.clone(), ce_store.clone())
             .await
@@ -1374,10 +1255,20 @@ impl CommonModel {
 
         let mut new_model = self.clone();
         let ts = self
-            .generate_as_expanded(&Lang::TypeScript, &cm_store, &ce_store)
+            .generate_as_expanded(
+                &Lang::TypeScript,
+                &cm_store,
+                &ce_store,
+                TypeGenerationStrategy::Unique,
+            )
             .await;
         let rust = self
-            .generate_as_expanded(&Lang::Rust, &cm_store, &ce_store)
+            .generate_as_expanded(
+                &Lang::Rust,
+                &cm_store,
+                &ce_store,
+                TypeGenerationStrategy::Unique,
+            )
             .await;
         let interface = HashMap::from_iter(vec![(Lang::Rust, rust), (Lang::TypeScript, ts)]);
         new_model.interface = interface;
