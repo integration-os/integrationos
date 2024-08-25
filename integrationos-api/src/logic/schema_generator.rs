@@ -24,20 +24,23 @@ pub fn get_router() -> Router<Arc<AppState>> {
         .route("/:id/:type", get(generate_schema))
         .route("/types/:id/:lang", get(generate_types))
         .route("/types/:lang", get(generate_all_types))
-        .route("/types/:lang/:models", get(generate_specific_types))
+        .route("/types/:lang/only/:models", get(generate_specific_types))
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct GenerateSpecificTypesRequest {
-    models: String,
     lang: Lang,
+    models: String,
 }
 
 async fn generate_specific_types(
     state: State<Arc<AppState>>,
     Path(GenerateSpecificTypesRequest { models, lang }): Path<GenerateSpecificTypesRequest>,
 ) -> Result<String, IntegrationOSError> {
-    let models = models.split(',').map(|s| s.to_string()).collect::<Vec<_>>();
+    let models = models
+        .split(',')
+        .map(|s| s.pascal_case())
+        .collect::<Vec<_>>();
     let cm_store = state.app_stores.common_model.clone();
     let ce_store = state.app_stores.common_enum.clone();
 
