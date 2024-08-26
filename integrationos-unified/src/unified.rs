@@ -309,7 +309,7 @@ impl UnifiedDestination {
 
         let config = join_result.0.map_err(|e| {
             error!("Could not find connection model definition for destination with cache key {:?}: {:?}", key, e);
-            
+
             InternalError::key_not_found("model definition", None)
         })?;
 
@@ -454,7 +454,10 @@ impl UnifiedDestination {
                     let pairs = custom_headers
                         .to_str()
                         .map_err(|e| {
-                            error!("Failed to convert custom headers to string. ID {:?}, Error: {:?}", config.id, e);
+                            error!(
+                                "Failed to convert custom headers to string. ID {:?}, Error: {:?}",
+                                config.id, e
+                            );
                             InternalError::invalid_argument(&e.to_string(), None)
                                 .set_meta(&metadata)
                         })?
@@ -553,7 +556,10 @@ impl UnifiedDestination {
         let context = match body {
             None | Some(Value::Null) => None,
             _ => Some(serde_json::to_vec(&body).map_err(|e| {
-                error!("Failed to convert body to vec. ID: {}, Error: {}", config.id, e);
+                error!(
+                    "Failed to convert body to vec. ID: {}, Error: {}",
+                    config.id, e
+                );
 
                 ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
             })?),
@@ -620,7 +626,10 @@ impl UnifiedDestination {
             "Received response body: {}",
             serde_json::to_string_pretty(&body)
                 .map_err(|e| {
-                    error!("Failed to convert body to pretty string. ID: {}, Body: {:?}, Error: {} ", config.id, body, e);
+                    error!(
+                        "Failed to convert body to pretty string. ID: {}, Body: {:?}, Error: {} ",
+                        config.id, body, e
+                    );
                 })
                 .unwrap_or_default(),
         );
@@ -731,7 +740,10 @@ impl UnifiedDestination {
             body = if let Some(body) = body {
                 let wrapped_body = json!({"body":body});
                 let mut bodies = jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
-                    error!("Failed to select body at response path. ID {}, Path {}, Error {}", config.id, path, e);
+                    error!(
+                        "Failed to select body at response path. ID {}, Path {}, Error {}",
+                        config.id, path, e
+                    );
 
                     ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
                 })?;
@@ -806,8 +818,7 @@ impl UnifiedDestination {
                 return Err(InternalError::invalid_argument(
                     &format!(
                         "No js for schema mapping to common model {name} for {}. ID: {}",
-                        connection.platform,
-                        config.id
+                        connection.platform, config.id
                     ),
                     None,
                 )
@@ -945,7 +956,10 @@ impl UnifiedDestination {
                     _ => {}
                 }
             }
-            None => tracing::info!("There was no response body to map for this action. ID: {}", config.id),
+            None => tracing::info!(
+                "There was no response body to map for this action. ID: {}",
+                config.id
+            ),
         };
 
         if let (true, Some(passthrough), Value::Object(ref mut response)) =
@@ -1002,7 +1016,10 @@ impl UnifiedDestination {
             .set_meta(&metadata));
         };
         let res = builder.body(response).map_err(|e| {
-            error!("Failed to create response from builder for successful response. ID: {}, Error: {}", config.id, e);
+            error!(
+                "Failed to create response from builder for successful response. ID: {}, Error: {}",
+                config.id, e
+            );
             IntegrationOSError::from_err_code(status, &e.to_string(), None).set_meta(&metadata)
         })?;
 
