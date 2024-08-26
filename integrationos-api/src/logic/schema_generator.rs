@@ -2,14 +2,14 @@ use super::ReadResponse;
 use crate::server::AppState;
 use axum::{
     extract::{Path, State},
-    routing::{get, post},
+    routing::get,
     Json, Router,
 };
 use bson::{doc, Document};
 use futures::StreamExt;
 use integrationos_domain::{
     api_model_config::Lang,
-    common_model::{CommonEnum, DataType, SchemaType},
+    common_model::{CommonEnum, DataType, SchemaType, TypeGenerationStrategy},
     prefix::IdPrefix,
     ApplicationError, Id, IntegrationOSError, InternalError, Store, StringExt,
 };
@@ -24,29 +24,33 @@ pub fn get_router() -> Router<Arc<AppState>> {
         .route("/:id/:type", get(generate_schema))
         .route("/types/:id/:lang", get(generate_types))
         .route("/types/:lang", get(generate_all_types))
-        .route("/types/:lang", post(generate_specific_types))
+        .route("/types/:lang/only/:models", get(generate_specific_types))
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct GenerateSpecificTypesRequest {
-    models: Vec<String>,
+    lang: Lang,
+    models: String,
 }
 
 async fn generate_specific_types(
     state: State<Arc<AppState>>,
-    Path(lang): Path<Lang>,
-    Json(req): Json<GenerateSpecificTypesRequest>,
+    Path(GenerateSpecificTypesRequest { models, lang }): Path<GenerateSpecificTypesRequest>,
 ) -> Result<String, IntegrationOSError> {
+    let models = models
+        .split(',')
+        .map(|s| s.pascal_case())
+        .collect::<Vec<_>>();
     let cm_store = state.app_stores.common_model.clone();
     let ce_store = state.app_stores.common_enum.clone();
 
-    let mut visited_enums = HashSet::new();
-    let mut visited_common_models = HashSet::new();
+    let visited_enums = &mut HashSet::new();
+    let visited_common_models = &mut HashSet::new();
 
     let common_models = cm_store
         .get_many(
             Some(doc! {
-                "name": { "$in": req.models },
+                "name": { "$in": models },
                 "deleted": false,
                 "active": true,
             }),
@@ -61,31 +65,17 @@ async fn generate_specific_types(
     let mut output_types = String::new();
 
     for common_model in common_models {
-        let expanded = match lang {
-            Lang::TypeScript => {
-                common_model
-                    .as_typescript_expanded_tracked(
-                        &cm_store,
-                        &ce_store,
-                        &mut visited_enums,
-                        &mut visited_common_models,
-                    )
-                    .await
-            }
-            Lang::Rust => {
-                common_model
-                    .as_rust_expanded_tracked(
-                        &cm_store,
-                        &ce_store,
-                        &mut visited_enums,
-                        &mut visited_common_models,
-                    )
-                    .await
-            }
-            Lang::JavaScript => {
-                unimplemented!();
-            }
-        };
+        let expanded = common_model
+            .generate_as_expanded(
+                &lang,
+                &cm_store,
+                &ce_store,
+                TypeGenerationStrategy::Cumulative {
+                    visited_enums,
+                    visited_common_models,
+                },
+            )
+            .await;
 
         output_types.push_str(&expanded);
     }
@@ -242,7 +232,7 @@ async fn generate_types(
         ))?;
 
     let schema = common_model
-        .generate_as_expanded(&lang, &cm_store, &ce_store)
+        .generate_as_expanded(&lang, &cm_store, &ce_store, TypeGenerationStrategy::Unique)
         .await;
 
     Ok(schema)
