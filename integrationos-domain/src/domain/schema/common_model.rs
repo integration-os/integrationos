@@ -913,12 +913,18 @@ impl CommonModel {
         ce_store: &MongoStore<CommonEnum>,
         strategy: TypeGenerationStrategy<'a>,
     ) -> String {
+        let mut long_lived_visited_enums = HashSet::new();
+        let mut long_lived_visited_common_models = HashSet::new();
+
         let (visited_enums, visited_common_models) = match strategy {
             TypeGenerationStrategy::Cumulative {
                 visited_enums,
                 visited_common_models,
             } => (visited_enums, visited_common_models),
-            TypeGenerationStrategy::Unique => (&mut HashSet::new(), &mut HashSet::new()),
+            TypeGenerationStrategy::Unique => (
+                &mut long_lived_visited_enums,
+                &mut long_lived_visited_common_models,
+            ),
         };
 
         let enums = self
@@ -1017,12 +1023,18 @@ impl CommonModel {
         ce_store: &MongoStore<CommonEnum>,
         strategy: TypeGenerationStrategy<'a>,
     ) -> String {
+        let mut long_lived_visited_enums = HashSet::new();
+        let mut long_lived_visited_common_models = HashSet::new();
+
         let (visited_enums, visited_common_models) = match strategy {
             TypeGenerationStrategy::Cumulative {
                 visited_enums,
                 visited_common_models,
             } => (visited_enums, visited_common_models),
-            TypeGenerationStrategy::Unique => (&mut HashSet::new(), &mut HashSet::new()),
+            TypeGenerationStrategy::Unique => (
+                &mut long_lived_visited_enums,
+                &mut long_lived_visited_common_models,
+            ),
         };
 
         let enums = self
