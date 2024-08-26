@@ -30,5 +30,6 @@ jobs:
           image: "us-docker.pkg.dev/integrationos/docker-oss/watchdog:${{ env.docker_image_tag }}"
           service_account: github-actions@integrationos.iam.gserviceaccount.com
           workload_identity_provider: projects/356173785332/locations/global/workloadIdentityPools/github-actions/providers/github-actions
+          file: packager/Dockerfile.watchdog
           build-args: |
             "EXECUTABLE=integrationos-watchdog"

@@ -4,6 +4,7 @@ use integrationos_domain::{prefix::IdPrefix, Id};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Started {
     #[serde(rename = "_id")]
     id: Id,

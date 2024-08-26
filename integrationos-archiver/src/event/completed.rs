@@ -4,21 +4,24 @@ use integrationos_domain::Id;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Dumped {
+#[serde(rename_all = "camelCase")]
+pub struct Completed {
     id: Id,
-    dumped_at: DateTime<Utc>,
+    path: String,
+    completed_at: DateTime<Utc>,
 }
 
-impl Dumped {
-    pub fn new(id: Id) -> Self {
+impl Completed {
+    pub fn new(path: String, id: Id) -> Self {
         Self {
+            path,
             id,
-            dumped_at: Utc::now(),
+            completed_at: Utc::now(),
         }
     }
 }
 
-impl EventMetadata for Dumped {
+impl EventMetadata for Completed {
     fn reference(&self) -> Id {
         self.id
     }

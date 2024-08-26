@@ -10,7 +10,6 @@ use event::completed::Completed;
 use event::dumped::Dumped;
 use event::failed::Failed;
 use event::started::Started;
-use event::uploaded::Uploaded;
 use event::{Event, EventMetadata};
 use google_cloud_storage::client::{Client as GClient, ClientConfig};
 use google_cloud_storage::http::objects::upload::{UploadObjectRequest, UploadType};
@@ -48,10 +47,10 @@ async fn main() -> Result<()> {
         .await?,
     );
 
-    let subscriber = get_subscriber("snapshot".into(), "info".into(), std::io::stdout);
+    let subscriber = get_subscriber("archiver".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
 
-    tracing::info!("Starting Snapshot with config:\n{config}");
+    tracing::info!("Starting archiver with config:\n{config}");
 
     let client = Client::with_uri_str(&config.db_config.control_db_url).await?;
     let database = client.database(&config.db_config.control_db_name);
@@ -130,20 +129,18 @@ async fn save(
     let remote_path = format!("gs://{}{}", config.gs_storage_bucket, base_path.display());
 
     snapshot
-        .create_one(&Event::Uploaded(Uploaded::new(
+        .create_one(&Event::Completed(Completed::new(
             remote_path.clone(),
             started.reference(),
         )))
         .await?;
 
-    tracing::info!("Uploaded files to {}", remote_path);
-
-    snapshot
-        .create_one(&Event::Completed(Completed::new(
-            remote_path,
-            started.reference(),
-        )))
-        .await?;
+    tracing::info!(
+        "Snapshot completed at {}, saved to {} with reference {}",
+        Utc::now(),
+        remote_path,
+        started.reference()
+    );
 
     Ok(())
 }

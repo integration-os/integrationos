@@ -1622,6 +1622,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "integrationos-archiver"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bson",
+ "chrono",
+ "envconfig",
+ "fake",
+ "futures",
+ "google-cloud-storage",
+ "http 1.1.0",
+ "integrationos-domain",
+ "integrationos-unified",
+ "mongodb",
+ "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "integrationos-cache"
 version = "0.1.0"
 dependencies = [
@@ -1750,33 +1777,6 @@ dependencies = [
  "tokio",
  "tower",
  "tower-http",
- "tracing",
-]
-
-[[package]]
-name = "integrationos-snapshot"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bson",
- "chrono",
- "envconfig",
- "fake",
- "futures",
- "google-cloud-storage",
- "http 1.1.0",
- "integrationos-domain",
- "integrationos-unified",
- "mongodb",
- "reqwest",
- "reqwest-middleware",
- "reqwest-retry",
- "reqwest-tracing",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tokio-util",
  "tracing",
 ]
 

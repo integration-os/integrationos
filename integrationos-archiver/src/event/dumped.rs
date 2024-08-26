@@ -4,23 +4,22 @@ use integrationos_domain::Id;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Failed {
+#[serde(rename_all = "camelCase")]
+pub struct Dumped {
     id: Id,
-    failed_at: DateTime<Utc>,
-    reason: String,
+    dumped_at: DateTime<Utc>,
 }
 
-impl Failed {
-    pub fn new(reason: String, id: Id) -> Self {
+impl Dumped {
+    pub fn new(id: Id) -> Self {
         Self {
             id,
-            reason,
-            failed_at: Utc::now(),
+            dumped_at: Utc::now(),
         }
     }
 }
 
-impl EventMetadata for Failed {
+impl EventMetadata for Dumped {
     fn reference(&self) -> Id {
         self.id
     }

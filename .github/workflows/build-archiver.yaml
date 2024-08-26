@@ -5,11 +5,11 @@ on:
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
     paths:
-      - .github/workflows/build-snapshot.yaml
+      - .github/workflows/build-archiver.yaml
       - "integrationos-domain/**"
-      - "integrationos-snapshot/**"
+      - "integrationos-archiver/**"
       - Cargo.lock
-      - Dockerfile
+      - packager/Dockerfile.archiver
 
 env:
   docker_image_tag: ${{ github.ref == 'refs/heads/main' && github.sha || github.ref_name }}
@@ -25,9 +25,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: integration-os/google-artifact-registry-action@v2
+
         with:
-          image: "us-docker.pkg.dev/integrationos/docker-oss/snapshot:${{ env.docker_image_tag }}"
+          image: "us-docker.pkg.dev/integrationos/docker-oss/archiver:${{ env.docker_image_tag }}"
           service_account: github-actions@integrationos.iam.gserviceaccount.com
           workload_identity_provider: projects/356173785332/locations/global/workloadIdentityPools/github-actions/providers/github-actions
+          file: packager/Dockerfile.archiver
           build-args: |
-            "EXECUTABLE=integrationos-snapshot"
+            "EXECUTABLE=integrationos-archiver"

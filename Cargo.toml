@@ -8,7 +8,7 @@ members = [
     "integrationos-gateway",
     "integrationos-watchdog",
     "integrationos-unified",
-    "integrationos-snapshot",
+    "integrationos-archiver",
 ]
 
 [workspace.dependencies]
