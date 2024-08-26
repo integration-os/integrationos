@@ -4,7 +4,7 @@ mod event;
 use anyhow::{anyhow, Context, Result};
 use bson::doc;
 use chrono::{Duration as CDuration, Utc};
-use config::SnapshotConfig;
+use config::ArchiverConfig;
 use envconfig::Envconfig;
 use event::completed::Completed;
 use event::dumped::Dumped;
@@ -31,7 +31,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let config = SnapshotConfig::init_from_env()?;
+    let config = ArchiverConfig::init_from_env()?;
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(config.max_retries);
     let client = reqwest::Client::default();
     let middleware = ClientBuilder::new(client)
@@ -54,36 +54,36 @@ async fn main() -> Result<()> {
 
     let client = Client::with_uri_str(&config.db_config.control_db_url).await?;
     let database = client.database(&config.db_config.control_db_name);
-    let snapshot: MongoStore<Event> = MongoStore::new(&database, &Store::Snapshots).await?;
+    let archives: MongoStore<Event> = MongoStore::new(&database, &Store::Archives).await?;
 
     let started = Started::new();
-    snapshot
+    archives
         .create_one(&Event::Started(started.clone()))
         .await?;
 
-    let saved = save(config, &snapshot, storage, &started).await;
+    let saved = save(config, &archives, storage, &started).await;
 
     if let Err(e) = saved {
-        snapshot
+        archives
             .create_one(&Event::Failed(Failed::new(
                 e.to_string(),
                 started.reference(),
             )))
             .await?;
 
-        tracing::error!("Failed to save snapshot: {e}");
+        tracing::error!("Failed to save archive: {e}");
 
         return Err(e);
     }
 
-    tracing::info!("Snapshot saved successfully");
+    tracing::info!("Archive saved successfully");
 
     Ok(())
 }
 
 async fn save(
-    config: SnapshotConfig,
-    snapshot: &MongoStore<Event>,
+    config: ArchiverConfig,
+    archive: &MongoStore<Event>,
     storage: GClient,
     started: &Started,
 ) -> Result<()> {
@@ -109,7 +109,7 @@ async fn save(
         return Err(anyhow!("Command mongodump failed: {:?}", command));
     }
 
-    snapshot
+    archive
         .create_one(&Event::Dumped(Dumped::new(started.reference())))
         .await?;
 
@@ -128,7 +128,7 @@ async fn save(
 
     let remote_path = format!("gs://{}{}", config.gs_storage_bucket, base_path.display());
 
-    snapshot
+    archive
         .create_one(&Event::Completed(Completed::new(
             remote_path.clone(),
             started.reference(),
@@ -136,7 +136,7 @@ async fn save(
         .await?;
 
     tracing::info!(
-        "Snapshot completed at {}, saved to {} with reference {}",
+        "Archive completed at {}, saved to {} with reference {}",
         Utc::now(),
         remote_path,
         started.reference()
@@ -165,7 +165,7 @@ impl Chunk {
 async fn upload_file(
     base_path: &Path,
     extension: &str,
-    config: &SnapshotConfig,
+    config: &ArchiverConfig,
     storage: &GClient,
 ) -> Result<()> {
     let path = base_path.with_extension(extension);

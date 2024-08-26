@@ -14,7 +14,7 @@ pub struct Started {
 impl Started {
     pub fn new() -> Self {
         Self {
-            id: Id::now(IdPrefix::Snapshot),
+            id: Id::now(IdPrefix::Archive),
             started_at: Utc::now(),
         }
     }

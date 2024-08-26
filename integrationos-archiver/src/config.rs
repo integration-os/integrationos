@@ -3,7 +3,7 @@ use integrationos_domain::database::DatabaseConfig;
 use std::fmt::{Display, Formatter};
 
 #[derive(Envconfig, Clone)]
-pub struct SnapshotConfig {
+pub struct ArchiverConfig {
     #[envconfig(nested = true)]
     pub db_config: DatabaseConfig,
     pub event_database_url: String,
@@ -21,7 +21,7 @@ pub struct SnapshotConfig {
     pub processing_chunk_timeout_secs: u64,
 }
 
-impl Display for SnapshotConfig {
+impl Display for ArchiverConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "EVENT_DATABASE_URL: {}", self.event_database_url)?;
         writeln!(f, "EVENT_COLLECTION_NAME: {}", self.event_collection_name)?;
