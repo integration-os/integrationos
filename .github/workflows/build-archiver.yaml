@@ -5,13 +5,12 @@ on:
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
     paths:
-      - .github/workflows/build-watchdog.yaml
-      - "integrationos-cache/**"
+      - .github/workflows/build-archiver.yaml
       - "integrationos-domain/**"
-      - "integrationos-watchdog/**"
+      - "integrationos-archiver/**"
       - Cargo.lock
       - Dockerfile.common
-      - integrationos-watchdog/Dockerfile
+      - integrationos-archiver/Dockerfile
 
 env:
   docker_image_tag: ${{ github.ref == 'refs/heads/main' && github.sha || github.ref_name }}
@@ -27,10 +26,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: integration-os/google-artifact-registry-action@v2
+
         with:
-          image: "us-docker.pkg.dev/integrationos/docker-oss/watchdog:${{ env.docker_image_tag }}"
+          image: "us-docker.pkg.dev/integrationos/docker-oss/archiver:${{ env.docker_image_tag }}"
           service_account: github-actions@integrationos.iam.gserviceaccount.com
           workload_identity_provider: projects/356173785332/locations/global/workloadIdentityPools/github-actions/providers/github-actions
-          file: integrationos-watchdog/Dockerfile
+          file: integrationos-archiver/Dockerfile
           build-args: |
-            "EXECUTABLE=integrationos-watchdog"
+            "EXECUTABLE=integrationos-archiver"

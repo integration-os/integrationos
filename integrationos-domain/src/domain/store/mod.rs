@@ -70,6 +70,8 @@ generate_stores!(
     "connection-oauth-definitions",
     Store,
     "store",
+    Archives,
+    "archives",
     ConnectionDefinitions,
     "connection-definitions",
     ConnectionModelSchemas,

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
-use integrationos_api::{config::Config, server::Server};
+use integrationos_api::{config::ConnectionsConfig, server::Server};
 use integrationos_domain::client::secrets_client::SecretsClient;
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use std::sync::Arc;
@@ -9,7 +9,7 @@ use tracing::info;
 
 fn main() -> Result<()> {
     dotenv().ok();
-    let config = Config::init_from_env()?;
+    let config = ConnectionsConfig::init_from_env()?;
 
     let subscriber = get_subscriber("connections-api".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);

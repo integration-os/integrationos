@@ -9,7 +9,7 @@ use integrationos_api::logic::{
     connection_definition::CreateRequest as CreateConnectionDefinitionRequest,
 };
 use integrationos_api::{
-    config::Config,
+    config::ConnectionsConfig,
     logic::{
         connection_model_definition::CreateRequest as CreateConnectionModelDefinitionRequest,
         ReadResponse,
@@ -68,7 +68,7 @@ static REDIS: OnceLock<Container<'static, Redis>> = OnceLock::new();
 
 pub struct TestServer {
     port: u16,
-    pub config: Config,
+    pub config: ConnectionsConfig,
     pub live_key: String,
     pub live_access_key: AccessKey,
     pub test_key: String,
@@ -156,7 +156,7 @@ impl TestServer {
         let db_name = db_name.unwrap_or_else(|| Uuid::new_v4().to_string());
         let token_secret = "Qsfb9YUkdjwUULX.u96HdTCX4q7GuB".to_string();
 
-        let config = Config::init_from_hashmap(&HashMap::from([
+        let config = ConnectionsConfig::init_from_hashmap(&HashMap::from([
             ("CONTROL_DATABASE_URL".to_string(), db.clone()),
             ("CONTROL_DATABASE_NAME".to_string(), db_name.clone()),
             ("CONTEXT_DATABASE_URL".to_string(), db.clone()),

@@ -7,7 +7,7 @@ use std::{
 };
 
 #[derive(Envconfig, Clone)]
-pub struct Config {
+pub struct ConnectionsConfig {
     #[envconfig(from = "WORKER_THREADS")]
     pub worker_threads: Option<usize>,
     #[envconfig(from = "DEBUG_MODE", default = "false")]
@@ -84,7 +84,7 @@ pub struct Config {
     pub environment: Environment,
 }
 
-impl Display for Config {
+impl Display for ConnectionsConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         writeln!(f, "WORKER_THREADS: {:?}", self.worker_threads)?;
         writeln!(f, "DEBUG_MODE: {:?}", self.debug_mode)?;

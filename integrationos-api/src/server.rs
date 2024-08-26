@@ -1,5 +1,5 @@
 use crate::{
-    config::Config,
+    config::ConnectionsConfig,
     logic::{connection_oauth_definition::FrontendOauthConnectionDefinition, openapi::OpenAPIData},
     metrics::Metric,
     router,
@@ -59,7 +59,7 @@ pub struct AppStores {
 #[derive(Clone)]
 pub struct AppState {
     pub app_stores: AppStores,
-    pub config: Config,
+    pub config: ConnectionsConfig,
     pub openapi_data: OpenAPIData,
     pub http_client: reqwest::Client,
     pub event_access_cache: EventAccessCache,
@@ -80,7 +80,7 @@ pub struct Server {
 
 impl Server {
     pub async fn init(
-        config: Config,
+        config: ConnectionsConfig,
         secrets_client: Arc<dyn CryptoExt + Sync + Send + 'static>,
     ) -> Result<Self> {
         let client = Client::with_uri_str(&config.db_config.control_db_url).await?;

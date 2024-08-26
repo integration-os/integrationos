@@ -1,6 +1,6 @@
 use super::{delete, read, PublicExt, RequestExt};
 use crate::{
-    config::Config,
+    config::ConnectionsConfig,
     router::ServerResponse,
     server::{AppState, AppStores},
 };
@@ -78,13 +78,13 @@ pub struct CreateEventAccessPayloadWithOwnership {
 }
 
 impl CreateEventAccessPayloadWithOwnership {
-    pub fn as_event_access(&self, config: &Config) -> Result<EventAccess> {
+    pub fn as_event_access(&self, config: &ConnectionsConfig) -> Result<EventAccess> {
         generate_event_access(config.clone(), self.clone())
     }
 }
 
 pub fn generate_event_access(
-    config: Config,
+    config: ConnectionsConfig,
     payload: CreateEventAccessPayloadWithOwnership,
 ) -> Result<EventAccess> {
     let namespace = payload

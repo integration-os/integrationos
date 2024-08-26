@@ -1,7 +1,7 @@
 use anyhow::Result;
 use envconfig::Envconfig;
 use http::StatusCode;
-use integrationos_api::config::Config as ApiConfig;
+use integrationos_api::config::ConnectionsConfig as ApiConfig;
 use integrationos_domain::event_response::EventResponse;
 use integrationos_gateway::{config::Config, finalizer::Finalizer, server::Server};
 use serde_json::{json, Value};
