@@ -142,9 +142,10 @@ impl UnifiedDestination {
                         PlatformInfo::Api(ref c) => c.path.as_ref(),
                     });
 
-                let matched_route = match_route(path, routes).map(|r| r.to_string());
+                let matched_route = match_route(path, routes.clone()).map(|r| r.to_string());
 
                 let mut connection_model_definitions = connection_model_definitions
+                    .clone()
                     .into_iter()
                     .filter(|c| match c.platform_info {
                         PlatformInfo::Api(ref c) => matched_route
@@ -154,6 +155,8 @@ impl UnifiedDestination {
 
                 if let Some(connection_model_definition) = connection_model_definitions.next() {
                     if connection_model_definitions.next().is_some() {
+                        error!("Multiple connection model definitions found for this path. Destination: {:?}, Routes: {:?}", destination, routes);
+
                         return Err(InternalError::invalid_argument(
                             "Multiple connection model definitions found for this path",
                             None,
@@ -305,7 +308,8 @@ impl UnifiedDestination {
         let join_result = join!(config_fut, secret_fut, schema_fut);
 
         let config = join_result.0.map_err(|e| {
-            error!("Could not find connection model definition for destination: {e}");
+            error!("Could not find connection model definition for destination with cache key {:?}: {:?}", key, e);
+            
             InternalError::key_not_found("model definition", None)
         })?;
 
@@ -366,7 +370,7 @@ impl UnifiedDestination {
                     "Mapping request body {}\nUsing js {js}",
                     serde_json::to_string_pretty(&body)
                         .map_err(|e| {
-                            error!("Could not convert body to pretty string {body:?}: {e}");
+                            error!("Failed to convert body to pretty string for connection model. ID: {}, Body: {}, Error: {}", config.id, body, e);
                         })
                         .unwrap_or_default(),
                 );
@@ -375,7 +379,8 @@ impl UnifiedDestination {
                 JS_RUNTIME
                     .with_borrow_mut(|script| script.add_script(&ns, "mapFromCommonModel", js))
                     .map_err(|e| {
-                        error!("Could not create request schema mapping script: {e}");
+                        error!("Failed to create request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
+
                         ApplicationError::bad_request(
                             &format!("Failed while creating request schema mapping script: {e}"),
                             None,
@@ -385,6 +390,8 @@ impl UnifiedDestination {
                 let body = JS_RUNTIME
                     .with_borrow_mut(|script| script.call_namespace(&ns, body))
                     .map_err(|e| {
+                        error!("Failed to run request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
+
                         ApplicationError::bad_request(
                             &format!("Failed while running request schema mapping script: {e}"),
                             None,
@@ -400,7 +407,7 @@ impl UnifiedDestination {
                     "Mapped body to {}",
                     serde_json::to_string_pretty(&body)
                         .map_err(|e| {
-                            error!("Could not convert body to pretty string {body:?}: {e}");
+                            error!("Failed to convert mapped body to pretty string. ID: {}, Body: {}, Error: {}", config.id, body, e);
                         })
                         .unwrap_or_default(),
                 );
@@ -428,7 +435,7 @@ impl UnifiedDestination {
                 JS_RUNTIME
                     .with_borrow_mut(|script| script.add_script(&ns, "mapCrudRequest", js.as_str()))
                     .map_err(|e| {
-                        error!("Could not create request crud mapping script from {js}: {e}");
+                        error!("Failed to create request crud mapping script for connection model. ID: {}, JS: {}, Error: {}", config.id, js, e);
                         ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
                     })?;
 
@@ -447,7 +454,7 @@ impl UnifiedDestination {
                     let pairs = custom_headers
                         .to_str()
                         .map_err(|e| {
-                            error!("Bad custom headers value: {e}");
+                            error!("Failed to convert custom headers to string. ID {:?}, Error: {:?}", config.id, e);
                             InternalError::invalid_argument(&e.to_string(), None)
                                 .set_meta(&metadata)
                         })?
@@ -472,9 +479,7 @@ impl UnifiedDestination {
                     "Mapping request crud {}\nUsing js {js}",
                     serde_json::to_string_pretty(&request)
                         .map_err(|e| {
-                            error!(
-                                "Could not convert request crud to pretty string {request:?}: {e}"
-                            );
+                            error!("Failed to convert request crud to pretty string. ID: {}, Request: {:?}, Error: {}", config.id, request, e);
                         })
                         .unwrap_or_default(),
                 );
@@ -482,6 +487,8 @@ impl UnifiedDestination {
                 let res: RequestCrud = JS_RUNTIME
                     .with_borrow_mut(|script| script.call_namespace(&ns, request))
                     .map_err(|e| {
+                        error!("Failed to run request crud mapping script for connection model. ID: {}, Error: {}", config.id, e);
+
                         ApplicationError::bad_request(
                             &format!("Failed while running request crud mapping script: {e}"),
                             None,
@@ -493,7 +500,7 @@ impl UnifiedDestination {
                     "Mapped request crud to {}",
                     serde_json::to_string_pretty(&res)
                         .map_err(|e| {
-                            error!("Could not convert crud to pretty string {res:?}: {e}");
+                            error!("Failed to convert crud to pretty string. ID: {}, Res: {:?}, Error: {}", config.id, res, e);
                         })
                         .unwrap_or_default(),
                 );
@@ -534,7 +541,7 @@ impl UnifiedDestination {
                     "Mapped request body to {path}: {}",
                     serde_json::to_string_pretty(&body)
                         .map_err(|e| {
-                            error!("Could not convert mapped body to pretty string {body:?}: {e}");
+                            error!("Failed to convert mapped body to pretty string. ID: {}, Body: {:?}, Error: {}", config.id, body, e);
                         })
                         .unwrap_or_default(),
                 );
@@ -546,7 +553,8 @@ impl UnifiedDestination {
         let context = match body {
             None | Some(Value::Null) => None,
             _ => Some(serde_json::to_vec(&body).map_err(|e| {
-                error!("Could not convert body to vec: {e}");
+                error!("Failed to convert body to vec. ID: {}, Error: {}", config.id, e);
+
                 ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
             })?),
         };
@@ -559,7 +567,10 @@ impl UnifiedDestination {
             })
             .await
             .map_err(|e| {
-                error!("Could not execute model definition: {e}");
+                error!(
+                    "Failed to execute connection model definition. ID: {}, Error: {:?}",
+                    config.id, e
+                );
                 e.set_meta(&metadata)
             })?;
 
@@ -577,12 +588,14 @@ impl UnifiedDestination {
             let mut res = Response::builder()
                 .status(status)
                 .body(res.json().await.map_err(|e| {
-                    error!("Could not get json body from unsuccessful response");
+                    error!("Failed to get json body from unsuccessful response. ID: {}, Error: {}", config.id, e);
+
                     IntegrationOSError::from_err_code(status, &e.to_string(), None)
                         .set_meta(&metadata)
                 })?)
                 .map_err(|e| {
-                    error!("Could not create response from builder for unsucessful response");
+                    error!("Failed to create response from builder for unsuccessful response. ID: {}, Error: {}", config.id, e);
+
                     IntegrationOSError::from_err_code(status, &e.to_string(), None)
                         .set_meta(&metadata)
                 })?;
@@ -607,7 +620,7 @@ impl UnifiedDestination {
             "Received response body: {}",
             serde_json::to_string_pretty(&body)
                 .map_err(|e| {
-                    error!("Could not convert mapped body to pretty string {body:?}: {e}");
+                    error!("Failed to convert body to pretty string. ID: {}, Body: {:?}, Error: {} ", config.id, body, e);
                 })
                 .unwrap_or_default(),
         );
@@ -625,7 +638,8 @@ impl UnifiedDestination {
                             script.add_script(&ns, "mapCrudRequest", js.as_str())
                         })
                         .map_err(|e| {
-                            error!("Could not create response crud mapping script from {js}: {e}");
+                            error!("Failed to create response crud mapping script for connection model. ID: {}, JS: {}, Error: {}", config.id, js, e);
+
                             ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
                         })?;
 
@@ -643,7 +657,8 @@ impl UnifiedDestination {
                         let wrapped_body = json!({"body":body});
                         let mut bodies =
                             jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
-                                error!("Could not select cursor at response path {path}: {e}");
+                                error!("Failed to select cursor at response path. ID: {}, Path: {}, Error: {}", config.id, path, e);
+
                                 ApplicationError::bad_request(&e.to_string(), None)
                                     .set_meta(&metadata)
                             })?;
@@ -667,7 +682,7 @@ impl UnifiedDestination {
                     debug!(
                         "Mapping response crud {}\nUsing js {js}",
                         serde_json::to_string_pretty(&res_to_map).map_err(|e| {
-                            error!("Could not convert response crud to pretty string {res_to_map:?}: {e}");
+                            error!("Failed to convert response crud to pretty string. ID: {}, Response to Map: {:?}, Error: {}", config.id, res_to_map, e);
                         })
                         .unwrap_or_default(),
                     );
@@ -676,7 +691,7 @@ impl UnifiedDestination {
                         .with_borrow_mut(|script| script.call_namespace(&ns, &res_to_map))
                         .map_err(|e| {
                             ApplicationError::bad_request(
-                                &format!("Failed while running response crud mapping script: {e}"),
+                                &format!("Failed while running response crud mapping script. ID: {}, Error: {}", config.id, e),
                                 None,
                             )
                             .set_meta(&metadata)
@@ -687,7 +702,8 @@ impl UnifiedDestination {
                     debug!(
                         "Mapped response crud to {}",
                         serde_json::to_string_pretty(&res).map_err(|e| {
-                            error!("Could not convert crud to pretty string {res:?}: {e}");
+                            error!("Failed to convert response crud to pretty string. ID: {}, Response: {:?}, Error: {}", config.id, res, e);
+
                             InternalError::invalid_argument(&e.to_string(), None)
                                 .set_meta(&metadata)
                         })?
@@ -715,7 +731,8 @@ impl UnifiedDestination {
             body = if let Some(body) = body {
                 let wrapped_body = json!({"body":body});
                 let mut bodies = jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
-                    error!("Could not select body at response path {path}: {e}");
+                    error!("Failed to select body at response path. ID {}, Path {}, Error {}", config.id, path, e);
+
                     ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
                 })?;
 
@@ -734,7 +751,8 @@ impl UnifiedDestination {
                             "passthrough": wrapped_body
                         }))
                         .map_err(|e| {
-                            error!("Could not create response from builder for missing body");
+                            error!("Failed to create response from builder for missing body. ID: {}, Error: {}", config.id, e);
+
                             IntegrationOSError::from_err_code(
                                 StatusCode::UNPROCESSABLE_ENTITY,
                                 &e.to_string(),
@@ -752,8 +770,10 @@ impl UnifiedDestination {
                 if bodies.len() != 1 && is_returning_error {
                     return Err(InternalError::invalid_argument(
                         &format!(
-                            "Invalid number of selected bodies ({}) at response path {path}",
-                            bodies.len()
+                            "Invalid number of selected bodies ({}) at response path {} for CMD with ID: {}",
+                            bodies.len(),
+                            path,
+                            config.id
                         ),
                         None,
                     )
@@ -785,8 +805,9 @@ impl UnifiedDestination {
             let Some(js) = mapping.as_ref().map(|m| &m.to_common_model) else {
                 return Err(InternalError::invalid_argument(
                     &format!(
-                        "No js for schema mapping to common model {name} for {}",
-                        connection.platform
+                        "No js for schema mapping to common model {name} for {}. ID: {}",
+                        connection.platform,
+                        config.id
                     ),
                     None,
                 )
@@ -796,7 +817,8 @@ impl UnifiedDestination {
             JS_RUNTIME
                 .with_borrow_mut(|script| script.add_script(&ns, "mapToCommonModel", js))
                 .map_err(|e| {
-                    error!("Could not create response schema mapping script from {js}: {e}");
+                    error!("Failed to create response schema mapping script for connection model. ID: {}, JS: {}, Error: {}", config.id, js, e);
+
                     ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
                 })?;
 
@@ -823,7 +845,7 @@ impl UnifiedDestination {
                             .and_then(|_| script.call_namespace(&ns, body))
                             .map_err(|e| {
                                 ApplicationError::bad_request(
-                                    &format!("Failed while running response schema mapping script: {e}"),
+                                    &format!("Failed while running response schema mapping script: {}. ID: {}", e, config.id),
                                     None,
                                 )
                                 .set_meta(&metadata)
@@ -860,7 +882,7 @@ impl UnifiedDestination {
                     })
                     .map_err(|e| {
                         ApplicationError::bad_request(
-                            &format!("Failed while running response schema mapping script: {e}"),
+                            &format!("Failed while running response schema mapping script. ID: {}, Error: {}", config.id, e),
                             None,
                         )
                         .set_meta(&metadata)
@@ -923,7 +945,7 @@ impl UnifiedDestination {
                     _ => {}
                 }
             }
-            None => tracing::info!("There was no response body to map for this action"),
+            None => tracing::info!("There was no response body to map for this action. ID: {}", config.id),
         };
 
         if let (true, Some(passthrough), Value::Object(ref mut response)) =
@@ -980,7 +1002,7 @@ impl UnifiedDestination {
             .set_meta(&metadata));
         };
         let res = builder.body(response).map_err(|e| {
-            error!("Could not create response from builder");
+            error!("Failed to create response from builder for successful response. ID: {}, Error: {}", config.id, e);
             IntegrationOSError::from_err_code(status, &e.to_string(), None).set_meta(&metadata)
         })?;
 
