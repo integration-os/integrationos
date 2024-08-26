@@ -10,7 +10,7 @@ on:
       - "integrationos-archiver/**"
       - Cargo.lock
       - Dockerfile.common
-      - packager/Dockerfile.archiver
+      - integrationos-archiver/Dockerfile
 
 env:
   docker_image_tag: ${{ github.ref == 'refs/heads/main' && github.sha || github.ref_name }}
@@ -31,6 +31,6 @@ jobs:
           image: "us-docker.pkg.dev/integrationos/docker-oss/archiver:${{ env.docker_image_tag }}"
           service_account: github-actions@integrationos.iam.gserviceaccount.com
           workload_identity_provider: projects/356173785332/locations/global/workloadIdentityPools/github-actions/providers/github-actions
-          file: packager/Dockerfile.archiver
+          file: integrationos-archiver/Dockerfile
           build-args: |
             "EXECUTABLE=integrationos-archiver"
