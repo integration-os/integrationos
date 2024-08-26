@@ -2,32 +2,43 @@ mod config;
 mod event;
 
 use anyhow::{anyhow, Context, Result};
-use bson::doc;
-use chrono::{Duration as CDuration, Utc};
-use config::ArchiverConfig;
+use bson::{doc, Document};
+use chrono::{DateTime, Duration as CDuration, NaiveDate, NaiveDateTime, TimeZone, Utc};
+use config::{ArchiverConfig, Mode};
 use envconfig::Envconfig;
 use event::completed::Completed;
 use event::dumped::Dumped;
 use event::failed::Failed;
 use event::started::Started;
 use event::{Event, EventMetadata};
+use futures::StreamExt;
 use google_cloud_storage::client::{Client as GClient, ClientConfig};
+use google_cloud_storage::http::buckets::get::GetBucketRequest;
+use google_cloud_storage::http::objects::download::Range;
+use google_cloud_storage::http::objects::get::GetObjectRequest;
+use google_cloud_storage::http::objects::list::ListObjectsRequest;
 use google_cloud_storage::http::objects::upload::{UploadObjectRequest, UploadType};
 use google_cloud_storage::http::objects::Object;
 use google_cloud_storage::http::resumable_upload_client::ChunkSize;
+use http::Uri;
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use integrationos_domain::{MongoStore, Store};
-use mongodb::Client;
+use mongodb::options::FindOneOptions;
+use mongodb::{Client, Database};
 use reqwest_middleware::ClientBuilder;
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use reqwest_tracing::TracingMiddleware;
 use std::future::Future;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
-use tempfile::TempDir;
+use tempfile::{NamedTempFile, TempDir};
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
+
+const ARCHIVE_SUFFIX: &str = ".bson.gz";
+const METADATA_SUFFIX: &str = ".metadata.json.gz";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -56,12 +67,167 @@ async fn main() -> Result<()> {
     let database = client.database(&config.db_config.control_db_name);
     let archives: MongoStore<Event> = MongoStore::new(&database, &Store::Archives).await?;
 
-    let started = Started::new();
+    let started = Started::new(config.event_collection_name.clone())?;
     archives
         .create_one(&Event::Started(started.clone()))
         .await?;
 
-    let saved = save(config, &archives, storage, &started).await;
+    match config.mode {
+        Mode::Restore => restore(config, &archives, &started, storage, &database).await,
+        Mode::Dump => dump(config, &archives, &started, storage).await,
+    }
+}
+
+#[derive(Debug)]
+struct ArchiveName {
+    date: NaiveDate,
+    file_name: String,
+}
+
+impl ArchiveName {
+    fn name(&self) -> String {
+        format!("{}-{}", self.date.format("%Y-%m-%d"), self.file_name)
+    }
+}
+
+async fn restore(
+    config: ArchiverConfig,
+    archives: &MongoStore<Event>,
+    started: &Started,
+    storage: GClient,
+    database: &Database,
+) -> Result<()> {
+    // TODO:
+    tracing::info!(
+        "Starting archiver in restore mode for the {} collection",
+        started.collection()
+    );
+
+    // Check if the archive exist, get latest archive sorted by
+    let filter = doc! {
+        "completedAt": {
+            "$exists": true,
+        }
+    };
+    let options = FindOneOptions::builder()
+        .sort(doc! { "completedAt": -1 })
+        .build();
+    let archive = archives.collection.find_one(filter, options).await?;
+
+    match archive {
+        None => Err(anyhow!("No archive found")),
+        // Should this date should match the date of the archive
+        Some(event) => {
+            let target_collection: MongoStore<Document> =
+                MongoStore::new(database, started.collection()).await?;
+
+            let element = target_collection.collection.find_one(doc! {}, None).await?;
+
+            if element.is_some() {
+                return Err(anyhow!(
+                    "Archive collection already contains an element. Overwrite are not allowed"
+                ));
+            }
+
+            let objects = storage
+                .list_objects(&ListObjectsRequest {
+                    bucket: config.gs_storage_bucket.clone(),
+                    ..Default::default()
+                })
+                .await?;
+
+            let names = objects
+                .items
+                .into_iter()
+                .flat_map(|object| object.into_iter().map(|o| o.name))
+                .collect::<Vec<String>>();
+
+            tracing::info!("Found {:?} objects in the bucket", names);
+
+            let archive_name = find_latest_archive(&names, &config)?;
+            if archive_name.date < event.date() {
+                return Err(anyhow!("Archive is older than the event"));
+            }
+
+            let mut bson_download = storage
+                .download_streamed_object(
+                    &GetObjectRequest {
+                        bucket: config.gs_storage_bucket.clone(),
+                        object: archive_name.name(),
+                        ..Default::default()
+                    },
+                    &Range::default(),
+                )
+                .await?;
+
+            let mut archive_bson_file = NamedTempFile::new()?;
+
+            match bson_download.next().await {
+                Some(Ok(bytes)) => archive_bson_file
+                    .write_all(&bytes)
+                    .context("Failed to write archive")?,
+                Some(Err(e)) => anyhow::bail!("Error downloading archive: {}", e),
+                None => (),
+            };
+
+            let companion_metadata = ArchiveName {
+                date: archive_name.date,
+                file_name: config.event_collection_name.clone() + METADATA_SUFFIX,
+            };
+
+            let mut archive_metadata_file = NamedTempFile::new()?;
+            let mut metadata_download = storage
+                .download_streamed_object(
+                    &GetObjectRequest {
+                        bucket: config.gs_storage_bucket.clone(),
+                        object: companion_metadata.name(),
+                        ..Default::default()
+                    },
+                    &Range::default(),
+                )
+                .await?;
+
+            match metadata_download.next().await {
+                Some(Ok(bytes)) => archive_metadata_file
+                    .write_all(&bytes)
+                    .context("Failed to write archive metadata")?,
+                Some(Err(e)) => anyhow::bail!("Error downloading archive metadata: {}", e),
+                None => (),
+            };
+
+            // * Restore: mongorestore --gzip --nsInclude=events-service.clients events-service/clients.bson.gz --verbose (nsInclude=${DB_NAME}.${COLLECTION_NAME})
+            let output = Command::new("mongorestore")
+                .arg("--gzip")
+                .arg("--nsInclude")
+                .arg(format!(
+                    "{}.{}",
+                    config.db_config.control_db_name, config.event_collection_name
+                ))
+                .arg(archive_bson_file.path())
+                .arg("--verbose")
+                .output()?;
+
+            if !output.status.success() {
+                anyhow::bail!("Archive restore failed with status {:?}", output);
+            }
+
+            Ok(())
+        }
+    }
+}
+
+async fn dump(
+    config: ArchiverConfig,
+    archives: &MongoStore<Event>,
+    started: &Started,
+    storage: GClient,
+) -> Result<()> {
+    tracing::info!(
+        "Starting archiver in dump mode for the {} collection",
+        started.collection()
+    );
+
+    let saved = save(config, archives, storage, started).await;
 
     if let Err(e) = saved {
         archives
@@ -77,6 +243,9 @@ async fn main() -> Result<()> {
     }
 
     tracing::info!("Archive saved successfully");
+
+    // TODO:
+    // * Delete: Remove the events that are older than 30 days because they are guaranteed to be already in the snapshot
 
     Ok(())
 }
@@ -258,9 +427,41 @@ fn get_file_name(path: &Path) -> Result<String> {
     Ok(file_name)
 }
 
-// TODO:
-// * Restore: mongorestore --gzip --nsInclude=events-service.clients events-service/clients.bson.gz --verbose (nsInclude=${DB_NAME}.${COLLECTION_NAME})
-// * Delete: Remove the events that are older than 30 days because they are guaranteed to be already in the snapshot
+fn parse_archive_name(name: &str, config: &ArchiverConfig) -> Option<ArchiveName> {
+    let expected_suffix = format!("-{}{}", config.event_collection_name, ARCHIVE_SUFFIX);
+
+    if let Some(point) = name.rfind(&expected_suffix) {
+        if point > 0 && point + expected_suffix.len() <= name.len() {
+            let (date_str, file_name) = name.split_at(point);
+            match NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+                Ok(date) => {
+                    let file_name = file_name[1..].to_string(); // Skip the leading hyphen
+                    if file_name == (config.event_collection_name.to_owned() + ARCHIVE_SUFFIX) {
+                        return Some(ArchiveName { date, file_name });
+                    }
+                }
+                Err(e) => tracing::warn!("Invalid date: {}", e),
+            }
+        } else {
+            tracing::warn!("Invalid archive name: {}", name);
+        }
+    } else {
+        tracing::warn!("Expected suffix not found in archive name: {}", name);
+    }
+
+    None
+}
+
+fn find_latest_archive(
+    names: &[String],
+    config: &ArchiverConfig,
+) -> Result<ArchiveName, anyhow::Error> {
+    names
+        .iter()
+        .flat_map(|name| parse_archive_name(name, config))
+        .max_by_key(|archive| archive.date)
+        .ok_or_else(|| anyhow!("No valid archive found"))
+}
 
 #[cfg(test)]
 mod tests {

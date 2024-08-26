@@ -1642,6 +1642,7 @@ dependencies = [
  "reqwest-tracing",
  "serde",
  "serde_json",
+ "strum",
  "tempfile",
  "tokio",
  "tokio-util",

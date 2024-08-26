@@ -3,6 +3,7 @@ pub mod dumped;
 pub mod failed;
 pub mod started;
 
+use chrono::NaiveDate;
 use completed::Completed;
 use dumped::Dumped;
 use failed::Failed;
@@ -21,4 +22,15 @@ pub enum Event {
     Dumped(Dumped),
     Failed(Failed),
     Completed(Completed),
+}
+
+impl Event {
+    pub fn date(&self) -> NaiveDate {
+        match self {
+            Event::Started(e) => e.date(),
+            Event::Dumped(e) => e.date(),
+            Event::Failed(e) => e.date(),
+            Event::Completed(e) => e.date(),
+        }
+    }
 }

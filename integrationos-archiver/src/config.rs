@@ -1,6 +1,14 @@
 use envconfig::Envconfig;
 use integrationos_domain::database::DatabaseConfig;
 use std::fmt::{Display, Formatter};
+use strum::{AsRefStr, EnumString};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, AsRefStr)]
+#[strum(serialize_all = "kebab-case")]
+pub enum Mode {
+    Dump,
+    Restore,
+}
 
 #[derive(Envconfig, Clone)]
 pub struct ArchiverConfig {
@@ -19,6 +27,8 @@ pub struct ArchiverConfig {
     pub read_buffer_size: usize,
     #[envconfig(from = "PROCESSING_CHUNK_TIMEOUT_SECS", default = "30")]
     pub processing_chunk_timeout_secs: u64,
+    #[envconfig(from = "MODE", default = "dump")]
+    pub mode: Mode,
 }
 
 impl Display for ArchiverConfig {
@@ -28,12 +38,13 @@ impl Display for ArchiverConfig {
         writeln!(f, "GS_STORAGE_BUCKET: {}", self.gs_storage_bucket)?;
         writeln!(f, "GS_STORAGE_URI: {}", self.gs_storage_uri)?;
         writeln!(f, "MAX_RETRIES: {}", self.max_retries)?;
-        write!(
+        writeln!(
             f,
             "PROCESSING_CHUNK_TIMEOUT_SECS: {}",
             self.processing_chunk_timeout_secs
         )?;
         writeln!(f, "READ_BUFFER_SIZE_BYTES: {}", self.read_buffer_size)?;
+        writeln!(f, "MODE: {}", self.mode.as_ref())?;
         write!(f, "{}", self.db_config)
     }
 }

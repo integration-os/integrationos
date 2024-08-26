@@ -3,6 +3,7 @@ pub mod cursor;
 use bson::doc;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 macro_rules! generate_stores {
     ($($name:tt, $str:expr),+) => {
@@ -20,10 +21,27 @@ macro_rules! generate_stores {
                 write!(f, "{store}")
             }
         }
+
+        impl FromStr for Store {
+            type Err = String;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                $(
+                    if s == $str {
+                        return Ok(Store::$name);
+                    }
+                )+
+
+                Err(format!("Invalid store name: {}", s))
+            }
+        }
     };
 }
 
 generate_stores!(
+    // TODO: REMOVE
+    Clients,
+    "clients",
     Integrations,
     "integrations",
     MicroServices,
