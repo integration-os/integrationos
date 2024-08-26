@@ -1,6 +1,6 @@
 # syntax = devthefuture/dockerfile-x
 
-ARG EXECUTABLE=integrationos-archiver
+ARG EXECUTABLE=integrationos-event
 INCLUDE Dockerfile.common
 
 FROM debian:bookworm-slim
