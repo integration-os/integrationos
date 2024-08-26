@@ -10,7 +10,8 @@ on:
       - "integrationos-domain/**"
       - "integrationos-watchdog/**"
       - Cargo.lock
-      - Dockerfile
+      - Dockerfile.common
+      - packager/Dockerfile.watch
 
 env:
   docker_image_tag: ${{ github.ref == 'refs/heads/main' && github.sha || github.ref_name }}

@@ -10,7 +10,8 @@ on:
       - "integrationos-domain/**"
       - "integrationos-gateway/**"
       - Cargo.lock
-      - Dockerfile
+      - Dockerfile.common
+      - packager/Dockerfile.gateway
 
 env:
   docker_image_tag: ${{ github.ref == 'refs/heads/main' && github.sha || github.ref_name }}

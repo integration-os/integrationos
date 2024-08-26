@@ -9,6 +9,7 @@ on:
       - "integrationos-domain/**"
       - "integrationos-archiver/**"
       - Cargo.lock
+      - Dockerfile.common
       - packager/Dockerfile.archiver
 
 env:

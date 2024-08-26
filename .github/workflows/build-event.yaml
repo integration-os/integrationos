@@ -11,7 +11,8 @@ on:
       - "integrationos-event/**"
       - "integrationos-unified/**"
       - Cargo.lock
-      - Dockerfile
+      - Dockerfile.common
+      - packager/Dockerfile.event
 
 env:
   docker_image_tag: ${{ github.ref == 'refs/heads/main' && github.sha || github.ref_name }}
