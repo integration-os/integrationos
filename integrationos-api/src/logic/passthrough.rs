@@ -77,10 +77,7 @@ pub async fn passthrough_request(
         )
         .await
         .map_err(|e| {
-            error!(
-                "Error executing connection model definition in passthrough endpoint: {:?}",
-                e
-            );
+            error!("Failed to execute connection model definition in passthrough endpoint. ID: {}, Error: {}", connection.id, e);
 
             e
         })?;
