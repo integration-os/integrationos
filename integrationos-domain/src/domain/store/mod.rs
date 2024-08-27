@@ -39,9 +39,6 @@ macro_rules! generate_stores {
 }
 
 generate_stores!(
-    // TODO: REMOVE
-    Clients,
-    "clients",
     Integrations,
     "integrations",
     MicroServices,
