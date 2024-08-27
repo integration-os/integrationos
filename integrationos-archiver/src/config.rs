@@ -7,6 +7,7 @@ use strum::{AsRefStr, EnumString};
 #[strum(serialize_all = "kebab-case")]
 pub enum Mode {
     Dump,
+    DumpDelete,
     Restore,
 }
 

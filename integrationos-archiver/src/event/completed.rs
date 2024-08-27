@@ -23,6 +23,12 @@ impl Completed {
     pub fn date(&self) -> NaiveDate {
         self.completed_at.date_naive()
     }
+
+    #[cfg(test)]
+    pub fn with_date(mut self, date: DateTime<Utc>) -> Self {
+        self.completed_at = date;
+        self
+    }
 }
 
 impl EventMetadata for Completed {
