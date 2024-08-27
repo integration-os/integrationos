@@ -3,7 +3,7 @@ mod event;
 
 use anyhow::{anyhow, Context, Result};
 use bson::{doc, Document};
-use chrono::{DateTime, Duration as CDuration, NaiveDate, NaiveDateTime, TimeZone, Utc};
+use chrono::{Duration as CDuration, NaiveDate, Utc};
 use config::{ArchiverConfig, Mode};
 use envconfig::Envconfig;
 use event::completed::Completed;
@@ -13,14 +13,12 @@ use event::started::Started;
 use event::{Event, EventMetadata};
 use futures::StreamExt;
 use google_cloud_storage::client::{Client as GClient, ClientConfig};
-use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::objects::download::Range;
 use google_cloud_storage::http::objects::get::GetObjectRequest;
 use google_cloud_storage::http::objects::list::ListObjectsRequest;
 use google_cloud_storage::http::objects::upload::{UploadObjectRequest, UploadType};
 use google_cloud_storage::http::objects::Object;
 use google_cloud_storage::http::resumable_upload_client::ChunkSize;
-use http::Uri;
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use integrationos_domain::{MongoStore, Store};
 use mongodb::options::FindOneOptions;
@@ -30,15 +28,13 @@ use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use reqwest_tracing::TracingMiddleware;
 use std::future::Future;
 use std::io::Write;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
-use tempfile::{NamedTempFile, TempDir};
+use tempfile::{Builder, TempDir};
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
-
-const ARCHIVE_SUFFIX: &str = ".bson.gz";
-const METADATA_SUFFIX: &str = ".metadata.json.gz";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -63,8 +59,8 @@ async fn main() -> Result<()> {
 
     tracing::info!("Starting archiver with config:\n{config}");
 
-    let client = Client::with_uri_str(&config.db_config.control_db_url).await?;
-    let database = client.database(&config.db_config.control_db_name);
+    let client = Client::with_uri_str(&config.db_config.event_db_url).await?;
+    let database = client.database(&config.db_config.event_db_name);
     let archives: MongoStore<Event> = MongoStore::new(&database, &Store::Archives).await?;
 
     let started = Started::new(config.event_collection_name.clone())?;
@@ -73,20 +69,56 @@ async fn main() -> Result<()> {
         .await?;
 
     match config.mode {
-        Mode::Restore => restore(config, &archives, &started, storage, &database).await,
+        Mode::Restore => restore(config, &archives, &started, storage).await,
         Mode::Dump => dump(config, &archives, &started, storage).await,
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum Extension {
+    Bson,
+    Metadata,
+}
+
+impl Extension {
+    /// Returns the file extension for the given extension with the leading dot
+    fn with_leading_dot(self) -> String {
+        ".".to_owned() + self.as_ref()
+    }
+}
+
+impl AsRef<str> for Extension {
+    fn as_ref(&self) -> &str {
+        match self {
+            Extension::Bson => "bson.gz",
+            Extension::Metadata => "metadata.json.gz",
+        }
+    }
+}
+
+impl Deref for Extension {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
     }
 }
 
 #[derive(Debug)]
 struct ArchiveName {
     date: NaiveDate,
-    file_name: String,
+    name: String,
+    extension: Extension,
 }
 
 impl ArchiveName {
     fn name(&self) -> String {
-        format!("{}-{}", self.date.format("%Y-%m-%d"), self.file_name)
+        format!(
+            "{}-{}.{}",
+            self.date.format("%Y-%m-%d"),
+            self.name,
+            self.extension.as_ref()
+        )
     }
 }
 
@@ -95,15 +127,12 @@ async fn restore(
     archives: &MongoStore<Event>,
     started: &Started,
     storage: GClient,
-    database: &Database,
 ) -> Result<()> {
-    // TODO:
     tracing::info!(
         "Starting archiver in restore mode for the {} collection",
         started.collection()
     );
 
-    // Check if the archive exist, get latest archive sorted by
     let filter = doc! {
         "completedAt": {
             "$exists": true,
@@ -115,20 +144,12 @@ async fn restore(
     let archive = archives.collection.find_one(filter, options).await?;
 
     match archive {
-        None => Err(anyhow!("No archive found")),
+        None => Err(anyhow!(
+            "No archive found for the collection {}",
+            started.collection()
+        )),
         // Should this date should match the date of the archive
         Some(event) => {
-            let target_collection: MongoStore<Document> =
-                MongoStore::new(database, started.collection()).await?;
-
-            let element = target_collection.collection.find_one(doc! {}, None).await?;
-
-            if element.is_some() {
-                return Err(anyhow!(
-                    "Archive collection already contains an element. Overwrite are not allowed"
-                ));
-            }
-
             let objects = storage
                 .list_objects(&ListObjectsRequest {
                     bucket: config.gs_storage_bucket.clone(),
@@ -144,10 +165,7 @@ async fn restore(
 
             tracing::info!("Found {:?} objects in the bucket", names);
 
-            let archive_name = find_latest_archive(&names, &config)?;
-            if archive_name.date < event.date() {
-                return Err(anyhow!("Archive is older than the event"));
-            }
+            let archive_name = find_latest_archive(&names, &config, &event)?;
 
             let mut bson_download = storage
                 .download_streamed_object(
@@ -160,7 +178,14 @@ async fn restore(
                 )
                 .await?;
 
-            let mut archive_bson_file = NamedTempFile::new()?;
+            let mut archive_bson_file = Builder::new()
+                .suffix(&archive_name.extension.with_leading_dot())
+                .prefix(&format!(
+                    "{}.{}-",
+                    config.event_collection_name,
+                    archive_name.date.format("%Y-%m-%d")
+                ))
+                .tempfile()?;
 
             match bson_download.next().await {
                 Some(Ok(bytes)) => archive_bson_file
@@ -172,10 +197,10 @@ async fn restore(
 
             let companion_metadata = ArchiveName {
                 date: archive_name.date,
-                file_name: config.event_collection_name.clone() + METADATA_SUFFIX,
+                name: config.event_collection_name.clone(),
+                extension: Extension::Metadata,
             };
 
-            let mut archive_metadata_file = NamedTempFile::new()?;
             let mut metadata_download = storage
                 .download_streamed_object(
                     &GetObjectRequest {
@@ -187,6 +212,15 @@ async fn restore(
                 )
                 .await?;
 
+            let mut archive_metadata_file = Builder::new()
+                .suffix(&companion_metadata.extension.with_leading_dot())
+                .prefix(&format!(
+                    "{}.{}-",
+                    config.event_collection_name,
+                    archive_name.date.format("%Y-%m-%d")
+                ))
+                .tempfile()?;
+
             match metadata_download.next().await {
                 Some(Ok(bytes)) => archive_metadata_file
                     .write_all(&bytes)
@@ -195,20 +229,26 @@ async fn restore(
                 None => (),
             };
 
+            // name of the the two temp files
+            tracing::info!("archive_bson_file: {:?}", archive_bson_file);
+
             // * Restore: mongorestore --gzip --nsInclude=events-service.clients events-service/clients.bson.gz --verbose (nsInclude=${DB_NAME}.${COLLECTION_NAME})
             let output = Command::new("mongorestore")
                 .arg("--gzip")
                 .arg("--nsInclude")
                 .arg(format!(
                     "{}.{}",
-                    config.db_config.control_db_name, config.event_collection_name
+                    config.db_config.event_db_name, config.event_collection_name
                 ))
                 .arg(archive_bson_file.path())
                 .arg("--verbose")
                 .output()?;
 
             if !output.status.success() {
-                anyhow::bail!("Archive restore failed with status {:?}", output);
+                anyhow::bail!(
+                    "Archive restore failed with status {}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
             }
 
             Ok(())
@@ -262,9 +302,9 @@ async fn save(
 
     let command = Command::new("mongodump")
         .arg("--uri")
-        .arg(&config.db_config.control_db_url)
+        .arg(&config.db_config.event_db_url)
         .arg("--db")
-        .arg(&config.db_config.control_db_name)
+        .arg(&config.db_config.event_db_name)
         .arg("--collection")
         .arg(&config.event_collection_name)
         .arg("--query")
@@ -287,11 +327,11 @@ async fn save(
         .join(&config.db_config.event_db_name)
         .join(&config.event_collection_name);
 
-    if let Err(e) = upload_file(&base_path, "bson.gz", &config, &storage).await {
+    if let Err(e) = upload_file(&base_path, &Extension::Bson, &config, &storage).await {
         return Err(anyhow!("Failed to upload bson file: {e}"));
     }
 
-    if let Err(e) = upload_file(&base_path, "metadata.json.gz", &config, &storage).await {
+    if let Err(e) = upload_file(&base_path, &Extension::Metadata, &config, &storage).await {
         return Err(anyhow!("Failed to upload json file: {e}"));
     }
 
@@ -333,11 +373,11 @@ impl Chunk {
 
 async fn upload_file(
     base_path: &Path,
-    extension: &str,
+    extension: &Extension,
     config: &ArchiverConfig,
     storage: &GClient,
 ) -> Result<()> {
-    let path = base_path.with_extension(extension);
+    let path = base_path.with_extension(extension.as_ref());
     let total = path.metadata()?.len();
 
     let upload_type = UploadType::Multipart(Box::new(Object {
@@ -428,7 +468,11 @@ fn get_file_name(path: &Path) -> Result<String> {
 }
 
 fn parse_archive_name(name: &str, config: &ArchiverConfig) -> Option<ArchiveName> {
-    let expected_suffix = format!("-{}{}", config.event_collection_name, ARCHIVE_SUFFIX);
+    let expected_suffix = format!(
+        "-{}{}",
+        config.event_collection_name,
+        Extension::Bson.with_leading_dot()
+    );
 
     if let Some(point) = name.rfind(&expected_suffix) {
         if point > 0 && point + expected_suffix.len() <= name.len() {
@@ -436,8 +480,18 @@ fn parse_archive_name(name: &str, config: &ArchiverConfig) -> Option<ArchiveName
             match NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
                 Ok(date) => {
                     let file_name = file_name[1..].to_string(); // Skip the leading hyphen
-                    if file_name == (config.event_collection_name.to_owned() + ARCHIVE_SUFFIX) {
-                        return Some(ArchiveName { date, file_name });
+                    if file_name
+                        == format!(
+                            "{}{}",
+                            config.event_collection_name,
+                            Extension::Bson.with_leading_dot()
+                        )
+                    {
+                        return Some(ArchiveName {
+                            date,
+                            name: config.event_collection_name.clone(),
+                            extension: Extension::Bson,
+                        });
                     }
                 }
                 Err(e) => tracing::warn!("Invalid date: {}", e),
@@ -455,12 +509,14 @@ fn parse_archive_name(name: &str, config: &ArchiverConfig) -> Option<ArchiveName
 fn find_latest_archive(
     names: &[String],
     config: &ArchiverConfig,
+    event: &Event,
 ) -> Result<ArchiveName, anyhow::Error> {
     names
         .iter()
         .flat_map(|name| parse_archive_name(name, config))
+        .filter(|archive| archive.date == event.date())
         .max_by_key(|archive| archive.date)
-        .ok_or_else(|| anyhow!("No valid archive found"))
+        .ok_or_else(|| anyhow!("No valid archive found. Please check the date you are restoring is the same as the event date. Or that there are any archived events for this collection."))
 }
 
 #[cfg(test)]
