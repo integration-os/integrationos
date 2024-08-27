@@ -11,6 +11,7 @@ use event::completed::Completed;
 use event::dumped::Dumped;
 use event::failed::Failed;
 use event::started::Started;
+use event::uploaded::Uploaded;
 use event::{Event, EventMetadata};
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use integrationos_domain::{MongoStore, Store, Unit};
@@ -197,6 +198,10 @@ async fn save(
     {
         return Err(anyhow!("Failed to upload bson file: {e}"));
     }
+
+    archive
+        .create_one(&Event::Uploaded(Uploaded::new(started.reference())))
+        .await?;
 
     if let Err(e) = storage
         .upload_file(&base_path, &Extension::Metadata, &config)
