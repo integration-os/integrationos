@@ -1,5 +1,5 @@
 use super::EventMetadata;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use integrationos_domain::Id;
 use serde::{Deserialize, Serialize};
 
@@ -18,6 +18,16 @@ impl Completed {
             id,
             completed_at: Utc::now(),
         }
+    }
+
+    pub fn date(&self) -> NaiveDate {
+        self.completed_at.date_naive()
+    }
+
+    #[cfg(test)]
+    pub fn with_date(mut self, date: DateTime<Utc>) -> Self {
+        self.completed_at = date;
+        self
     }
 }
 
