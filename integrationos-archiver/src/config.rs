@@ -15,7 +15,6 @@ pub enum Mode {
 pub struct ArchiverConfig {
     #[envconfig(nested = true)]
     pub db_config: DatabaseConfig,
-    pub event_database_url: String,
     #[envconfig(from = "EVENT_COLLECTION_NAME", default = "clients")]
     pub event_collection_name: String,
     #[envconfig(from = "GS_STORAGE_BUCKET", default = "integrationos-zsk")]
@@ -34,8 +33,6 @@ pub struct ArchiverConfig {
 
 impl Display for ArchiverConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "EVENT_DATABASE_URL: {}", self.event_database_url)?;
-        writeln!(f, "EVENT_COLLECTION_NAME: {}", self.event_collection_name)?;
         writeln!(f, "GS_STORAGE_BUCKET: {}", self.gs_storage_bucket)?;
         writeln!(f, "GS_STORAGE_URI: {}", self.gs_storage_uri)?;
         writeln!(f, "MAX_RETRIES: {}", self.max_retries)?;
@@ -45,6 +42,7 @@ impl Display for ArchiverConfig {
             self.processing_chunk_timeout_secs
         )?;
         writeln!(f, "READ_BUFFER_SIZE_BYTES: {}", self.read_buffer_size)?;
+        writeln!(f, "EVENT_COLLECTION_NAME: {}", self.event_collection_name)?;
         writeln!(f, "MODE: {}", self.mode.as_ref())?;
         write!(f, "{}", self.db_config)
     }
