@@ -36,7 +36,6 @@ impl Display for ArchiverConfig {
         writeln!(f, "GS_STORAGE_BUCKET: {}", self.gs_storage_bucket)?;
         writeln!(f, "GS_STORAGE_URI: {}", self.gs_storage_uri)?;
         writeln!(f, "MAX_RETRIES: {}", self.max_retries)?;
-        writeln!(f, "{}", self.db_config)?;
         writeln!(
             f,
             "PROCESSING_CHUNK_TIMEOUT_SECS: {}",
