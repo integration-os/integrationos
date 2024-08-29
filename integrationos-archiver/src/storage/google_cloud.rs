@@ -340,8 +340,18 @@ mod tests {
 
         let archive_name = find_latest_archive(
             &[
-                "2024-08-27-clients.bson.gz".to_string(),
-                "2024-08-27-clients.metadata.json.gz".to_string(),
+                format!(
+                    "{}-{}.bson.gz",
+                    date.format("%Y-%m-%d"),
+                    config.event_collection_name
+                ),
+                // "2024-08-27-clients.bson.gz".to_string(),
+                format!(
+                    "{}-{}.metadata.json.gz",
+                    date.format("%Y-%m-%d"),
+                    config.event_collection_name
+                ),
+                // "2024-08-27-clients.metadata.json.gz".to_string(),
             ],
             &config,
             &event,
