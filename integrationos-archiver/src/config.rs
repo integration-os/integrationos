@@ -43,7 +43,7 @@ impl Display for ArchiverConfig {
             self.processing_chunk_timeout_secs
         )?;
         writeln!(f, "READ_BUFFER_SIZE_BYTES: {}", self.read_buffer_size)?;
-        writeln!(f, "MODE: {}", self.event_collection_name)?;
+        writeln!(f, "EVENT_COLLECTION_NAME: {}", self.event_collection_name)?;
         writeln!(f, "MODE: {}", self.mode.as_ref())?;
         write!(f, "{}", self.db_config)
     }
