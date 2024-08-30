@@ -1,7 +1,17 @@
-use std::fmt::{Display, Formatter, Result};
-
 use envconfig::Envconfig;
+use std::fmt::{Display, Formatter, Result};
+use strum::{AsRefStr, EnumString};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, AsRefStr)]
+pub enum SecretServiceProvider {
+    GoogleKms,
+    // TODO: Implement LocalStorage
+}
+
+// PROJECT_ID=buildable-production
+// LOCATION_ID=global
+// KEY_RING_ID=secrets-service-local
+// KEY_ID=secrets-service-local
 #[derive(Debug, Clone, Envconfig)]
 pub struct SecretsConfig {
     #[envconfig(
@@ -13,6 +23,17 @@ pub struct SecretsConfig {
     pub get_path: String,
     #[envconfig(from = "SECRETS_SERVICE_CREATE_PATH", default = "v1/secrets/create/")]
     pub create_path: String,
+    // Remove everything above this line once the secrets service is up and running
+    #[envconfig(from = "SECRETS_SERVICE_PROVIDER", default = "google_kms")]
+    pub provider: SecretServiceProvider,
+    #[envconfig(from = "GOOGLE_KMS_PROJECT_ID", default = "buildable-production")]
+    pub google_kms_project_id: String,
+    #[envconfig(from = "GOOGLE_KMS_LOCATION_ID", default = "global")]
+    pub google_kms_location_id: String,
+    #[envconfig(from = "GOOGLE_KMS_KEY_RING_ID", default = "secrets-service-local")]
+    pub google_kms_key_ring_id: String,
+    #[envconfig(from = "GOOGLE_KMS_KEY_ID", default = "secrets-service-local")]
+    pub google_kms_key_id: String,
 }
 
 impl SecretsConfig {
