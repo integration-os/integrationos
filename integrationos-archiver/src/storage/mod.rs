@@ -9,6 +9,14 @@ use std::{
     ops::Deref,
     path::{Path, PathBuf},
 };
+use strum::{AsRefStr, EnumString};
+
+#[derive(Debug, Clone, PartialEq, Eq, EnumString, AsRefStr)]
+#[strum(serialize_all = "kebab-case")]
+pub enum StorageProvider {
+    GoogleCloud,
+    // TODO: Implement LocalStorage
+}
 
 #[derive(Debug)]
 pub struct Chunk {

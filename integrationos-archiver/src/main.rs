@@ -19,13 +19,15 @@ use mongodb::options::FindOneOptions;
 use mongodb::{Client, Database};
 use std::process::Command;
 use storage::google_cloud::GoogleCloudStorage;
-use storage::{Extension, Storage};
+use storage::{Extension, Storage, StorageProvider};
 use tempfile::TempDir;
 
 #[tokio::main]
 async fn main() -> Result<Unit> {
     let config = ArchiverConfig::init_from_env()?;
-    let storage = GoogleCloudStorage::new(&config).await?;
+    let storage = match config.storage_provider {
+        StorageProvider::GoogleCloud => GoogleCloudStorage::new(&config).await?,
+    };
 
     let subscriber = get_subscriber("archiver".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
