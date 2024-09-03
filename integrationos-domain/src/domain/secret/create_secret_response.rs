@@ -6,7 +6,7 @@ pub struct CreateSecretResponse {
     #[serde(rename = "_id")]
     pub id: String,
     pub buildable_id: String,
-    pub created_at: f64,
+    pub created_at: i64,
     pub author: CreateSecretAuthor,
     pub encrypted_secret: String,
 }

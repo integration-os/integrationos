@@ -73,6 +73,8 @@ generate_stores!(
     "connections",
     PublicConnectionDetails,
     "public-connection-details",
+    Secrets,
+    "secrets",
     Settings,
     "settings",
     EmbedTokens,

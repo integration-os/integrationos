@@ -37,6 +37,7 @@ pub struct SecretsConfig {
 }
 
 impl SecretsConfig {
+    // TODO: Remove
     pub fn new() -> Self {
         Self::default()
     }
@@ -48,6 +49,11 @@ impl Default for SecretsConfig {
             base_url: "https://secrets-service-development-b2nnzrt2eq-uk.a.run.app/".to_owned(),
             get_path: "v1/secrets/get/".to_owned(),
             create_path: "v1/secrets/create/".to_owned(),
+            provider: SecretServiceProvider::GoogleKms,
+            google_kms_project_id: "buildable-production".to_owned(),
+            google_kms_location_id: "global".to_owned(),
+            google_kms_key_ring_id: "secrets-service-local".to_owned(),
+            google_kms_key_id: "secrets-service-local".to_owned(),
         }
     }
 }

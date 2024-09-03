@@ -1839,6 +1839,7 @@ dependencies = [
  "base64ct",
  "bson",
  "chrono",
+ "crc32fast",
  "ctr",
  "digest",
  "downcast-rs",
