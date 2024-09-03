@@ -144,6 +144,14 @@ impl Field {
                 .as_typescript_schema(self.name.clone(), r#type)
         )
     }
+
+    fn as_python_ref(&self) -> String {
+        format!(
+            "{}: Optional[{}]",
+            replace_reserved_keyword(&self.name, Lang::Python).snake_case(),
+            self.datatype.as_python_ref(self.name.clone())
+        )
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, Eq, PartialEq)]
@@ -187,6 +195,30 @@ fn replace_reserved_keyword(name: &str, lang: Lang) -> String {
             "type" => "type_".to_owned(),
             "enum" => "enum_".to_owned(),
             "interface" => "interface_".to_owned(),
+            _ => name.to_owned(),
+        },
+        Lang::Python => match name.to_lowercase().as_str() {
+            "class" => "class_".to_owned(),
+            "def" => "def_".to_owned(),
+            "if" => "if_".to_owned(),
+            "else" => "else_".to_owned(),
+            "elif" => "elif_".to_owned(),
+            "for" => "for_".to_owned(),
+            "while" => "while_".to_owned(),
+            "return" => "return_".to_owned(),
+            "import" => "import_".to_owned(),
+            "from" => "from_".to_owned(),
+            "as" => "as_".to_owned(),
+            "try" => "try_".to_owned(),
+            "except" => "except_".to_owned(),
+            "finally" => "finally_".to_owned(),
+            "raise" => "raise_".to_owned(),
+            "assert" => "assert_".to_owned(),
+            "with" => "with_".to_owned(),
+            "lambda" => "lambda_".to_owned(),
+            "yield" => "yield_".to_owned(),
+            "global" => "global_".to_owned(),
+            "nonlocal" => "nonlocal_".to_owned(),
             _ => name.to_owned(),
         },
         _ => name.to_owned(),
@@ -299,6 +331,22 @@ impl CommonEnum {
         );
 
         format!("{}\n{}", native_enum, schema)
+    }
+
+    pub fn as_python_type(&self) -> String {
+        format!(
+            "class {}(Enum):\n    {}\n",
+            replace_reserved_keyword(&self.name, Lang::Python)
+                .replace("::", "")
+                .pascal_case(),
+            self.options
+                .iter()
+                .map(|option| format!("    {} = '{}'", option.to_uppercase(), option))
+                .collect::<HashSet<String>>()
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
     }
 }
 
@@ -435,6 +483,28 @@ impl DataType {
                 }
             }
             DataType::Unknown => "Schema.Unknown".to_string(),
+        }
+    }
+
+    fn as_python_ref(&self, enum_name: String) -> String {
+        match self {
+            DataType::String => "str".into(),
+            DataType::Number => "float".into(),
+            DataType::Boolean => "bool".into(),
+            DataType::Date => "str".into(),
+            DataType::Enum { reference, .. } => {
+                if reference.is_empty() {
+                    enum_name.pascal_case()
+                } else {
+                    reference.into()
+                }
+            }
+            DataType::Expandable(expandable) => expandable.reference(),
+            DataType::Array { element_type } => {
+                let name = (*element_type).as_python_ref(enum_name);
+                format!("List[{}]", name)
+            }
+            DataType::Unknown => "Any".into(),
         }
     }
 
@@ -745,6 +815,7 @@ impl CommonModel {
         match lang {
             Lang::Rust => self.as_rust_ref(),
             Lang::TypeScript => self.as_typescript_ref(),
+            Lang::Python => self.as_python_ref(),
             _ => unimplemented!(),
         }
     }
@@ -772,6 +843,7 @@ impl CommonModel {
                 self.as_typescript_expanded(cm_store, ce_store, strategy)
                     .await
             }
+            Lang::Python => self.as_python_expanded(cm_store, ce_store, strategy).await,
             _ => unimplemented!(),
         }
     }
@@ -824,6 +896,121 @@ impl CommonModel {
                 .collect::<Vec<_>>()
                 .join(";\n    ")
         )
+    }
+
+    fn as_python_ref(&self) -> String {
+        format!(
+            "from typing import Optional, List, Any\n\nclass {}:\n    {}",
+            replace_reserved_keyword(&self.name, Lang::Python)
+                .replace("::", "")
+                .pascal_case(),
+            self.fields
+                .iter()
+                .map(|field| field.as_python_ref())
+                .collect::<HashSet<String>>()
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join("\n    ")
+        )
+    }
+
+    async fn as_python_expanded<'a>(
+        &self,
+        cm_store: &MongoStore<CommonModel>,
+        ce_store: &MongoStore<CommonEnum>,
+        strategy: TypeGenerationStrategy<'a>,
+    ) -> String {
+        let mut long_lived_visited_enums = HashSet::new();
+        let mut long_lived_visited_common_models = HashSet::new();
+
+        let (visited_enums, visited_common_models) = match strategy {
+            TypeGenerationStrategy::Cumulative {
+                visited_enums,
+                visited_common_models,
+            } => (visited_enums, visited_common_models),
+            TypeGenerationStrategy::Unique => (
+                &mut long_lived_visited_enums,
+                &mut long_lived_visited_common_models,
+            ),
+        };
+
+        let enums = self
+            .fetch_all_enum_references(cm_store.clone(), ce_store.clone())
+            .await
+            .map(|enums| {
+                enums
+                    .iter()
+                    .filter_map(|enum_model| {
+                        if visited_enums.contains(&enum_model.id) {
+                            return None;
+                        }
+
+                        visited_enums.insert(enum_model.id);
+
+                        Some(enum_model.as_python_type())
+                    })
+                    .collect::<HashSet<String>>()
+                    .into_iter()
+                    .collect::<Vec<_>>()
+            })
+            .ok()
+            .unwrap_or_default()
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        let children = self
+            .fetch_all_children_common_models(cm_store.clone())
+            .await
+            .ok()
+            .unwrap_or_default();
+
+        let children_types = children
+            .0
+            .into_values()
+            .filter_map(|child| {
+                if visited_common_models.contains(&child.id) {
+                    return None;
+                }
+                visited_common_models.insert(child.id);
+                Some(format!(
+                    "class {}:\n    {}",
+                    replace_reserved_keyword(&child.name, Lang::Python)
+                        .replace("::", "")
+                        .pascal_case(),
+                    child
+                        .fields
+                        .iter()
+                        .map(|field| field.as_python_ref())
+                        .collect::<HashSet<String>>()
+                        .into_iter()
+                        .collect::<Vec<_>>()
+                        .join("\n    ")
+                ))
+            })
+            .collect::<Vec<_>>()
+            .join("\n\n");
+
+        let ce_types = enums.join("\n\n");
+
+        let cm_types = format!(
+            "class {}:\n    {}",
+            replace_reserved_keyword(&self.name, Lang::Python)
+                .replace("::", "")
+                .pascal_case(),
+            self.fields
+                .iter()
+                .map(|field| field.as_python_ref())
+                .collect::<HashSet<String>>()
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join("\n    ")
+        );
+
+        if visited_common_models.contains(&self.id) {
+            format!("{}\n\n{}", ce_types, children_types)
+        } else {
+            format!("{}\n\n{}\n\n{}", ce_types, children_types, cm_types)
+        }
     }
 
     pub async fn as_typescript_schema_expanded(
@@ -1282,7 +1469,19 @@ impl CommonModel {
                 TypeGenerationStrategy::Unique,
             )
             .await;
-        let interface = HashMap::from_iter(vec![(Lang::Rust, rust), (Lang::TypeScript, ts)]);
+        let python = self
+            .generate_as_expanded(
+                &Lang::Python,
+                &cm_store,
+                &ce_store,
+                TypeGenerationStrategy::Unique,
+            )
+            .await;
+        let interface = HashMap::from_iter(vec![
+            (Lang::Rust, rust),
+            (Lang::TypeScript, ts),
+            (Lang::Python, python),
+        ]);
         new_model.interface = interface;
         new_model.fields = Vec::new(); // Clear the fields to populate them freshly
 
@@ -1813,5 +2012,41 @@ mod tests {
                 "export const Model = Schema.Struct({ name: Schema.String,\n    age: Schema.Number }).annotations({ title: 'Model' });\n"
             )
         );
+    }
+
+    #[test]
+    fn test_common_model_as_python_class_is_correct() {
+        let common_model = CommonModel {
+            id: Id::new(IdPrefix::CommonModel, chrono::Utc::now()),
+            name: "Model".to_string(),
+            fields: vec![
+                Field {
+                    name: "name".to_string(),
+                    datatype: DataType::String,
+                    description: None,
+                    required: true,
+                },
+                Field {
+                    name: "age".to_string(),
+                    datatype: DataType::Number,
+                    description: None,
+                    required: true,
+                },
+            ],
+            sample: json!({
+                "name": "John Doe",
+                "age": 25
+            }),
+            primary: true,
+            category: "Category".to_string(),
+            interface: Default::default(),
+            record_metadata: Default::default(),
+        };
+
+        let python_class = common_model.as_python_ref();
+        println!("{:}", python_class);
+        assert!(python_class.contains("class Model:"));
+        assert!(python_class.contains("name: Optional[str]"));
+        assert!(python_class.contains("age: Optional[float]"));
     }
 }

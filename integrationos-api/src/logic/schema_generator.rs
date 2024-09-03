@@ -156,6 +156,10 @@ async fn generate_all_types(
                 let rust = ce.as_rust_type();
                 output_types.push_str(&rust);
             }
+            Lang::Python => {
+                let python = ce.as_python_type();
+                output_types.push_str(&python);
+            }
             Lang::JavaScript => {
                 unimplemented!();
             }

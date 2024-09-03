@@ -204,4 +204,5 @@ pub enum Lang {
     JavaScript,
     TypeScript,
     Rust,
+    Python,
 }
