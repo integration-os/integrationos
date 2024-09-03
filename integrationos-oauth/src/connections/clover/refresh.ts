@@ -1,4 +1,4 @@
-import { OAuthResponse } from "../../lib/types";
+import { OAuthResponse } from '../../lib/types';
 
 export const refresh = async (payload: any): Promise<OAuthResponse> => {
     return {
@@ -6,6 +6,6 @@ export const refresh = async (payload: any): Promise<OAuthResponse> => {
         refreshToken: payload.refreshToken,
         expiresIn: payload.expiresIn,
         tokenType: payload.tokenType,
-        meta: payload.meta
+        meta: payload.meta,
     };
 };
