@@ -330,7 +330,7 @@ impl DataType {
             DataType::String => "string".into(),
             DataType::Number => "number".into(),
             DataType::Boolean => "boolean".into(),
-            DataType::Date => "Date".into(),
+            DataType::Date => "string".into(),
             DataType::Enum { reference, .. } => {
                 if reference.is_empty() {
                     enum_name.pascal_case()
