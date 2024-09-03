@@ -17,7 +17,7 @@ use integrationos_domain::{
     extractor::HttpExtractor,
     id::Id,
     middleware::Middleware,
-    Connection, Event, Pipeline, Store,
+    Connection, Event, Pipeline, SecretExt, Store,
 };
 use integrationos_unified::unified::{UnifiedCacheTTLs, UnifiedDestination};
 use moka::future::Cache;
@@ -46,7 +46,7 @@ pub struct MongoControlDataStore {
 impl MongoControlDataStore {
     pub async fn new(
         config: &EventCoreConfig,
-        secrets_client: Arc<dyn CryptoExt + Sync + Send>,
+        secrets_client: Arc<dyn SecretExt + Sync + Send>,
     ) -> Result<Self> {
         let mut client_options = ClientOptions::parse(&config.db.control_db_url)
             .await

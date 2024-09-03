@@ -226,7 +226,7 @@ async fn oauth_handler(
         group: payload.group,
         environment: user_event_access.environment,
         platform: platform.into(),
-        secrets_service_id: secret.id,
+        secrets_service_id: secret.id(),
         event_access_id: event_access.id,
         access_key: event_access.access_key,
         settings: conn_definition.settings,

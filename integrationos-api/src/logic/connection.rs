@@ -378,7 +378,7 @@ pub async fn update_connection(
                 e
             })?;
 
-        connection.secrets_service_id = secret_result.id;
+        connection.secrets_service_id = secret_result.id();
     }
 
     if let Some(active) = req.active {

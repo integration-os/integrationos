@@ -1,60 +1,55 @@
 use super::MongoStore;
 use crate::{
-    create_secret_request::CreateSecretRequest,
-    get_secret_response::GetSecretResponse,
-    prelude::{create_secret_response::CreateSecretResponse, get_secret_request::GetSecretRequest},
-    secrets::SecretsConfig,
-    IntegrationOSError, InternalError, SecretAuthor,
+    prelude::create_secret_response::Secret, secrets::SecretsConfig, IntegrationOSError,
+    InternalError, SecretVersion,
 };
+use axum::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use bson::doc;
-use chrono::Utc;
 use google_cloud_kms::{
     client::{Client, ClientConfig},
     grpc::kms::v1::{DecryptRequest, EncryptRequest},
 };
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::future::Future;
-use uuid::Uuid;
+use secrecy::{ExposeSecret, SecretString};
 
+#[async_trait]
 pub trait SecretExt {
-    fn get<T: for<'a> Deserialize<'a>>(
+    async fn get(&self, id: String, buildable_id: String) -> Result<Secret, IntegrationOSError>;
+
+    async fn create(
         &self,
-        secret: &GetSecretRequest,
-    ) -> impl Future<Output = Result<GetSecretResponse<T>, IntegrationOSError>> + Send;
-    fn create<T: Serialize>(
-        &self,
-        secret: &CreateSecretRequest<T>,
-    ) -> impl Future<Output = Result<CreateSecretResponse, IntegrationOSError>>;
+        secret: &[u8],
+        buildable_id: String,
+        version: SecretVersion,
+    ) -> Result<Secret, IntegrationOSError>;
 }
 
+#[async_trait]
 impl SecretExt for GoogleCryptoKms {
-    async fn get<T: for<'a> Deserialize<'a>>(
-        &self,
-        secret: &GetSecretRequest,
-    ) -> Result<GetSecretResponse<T>, IntegrationOSError> {
-        self.get_secret(secret).await
+    async fn get(&self, id: String, buildable_id: String) -> Result<Secret, IntegrationOSError> {
+        self.get_secret(id, buildable_id).await
     }
 
-    async fn create<T: Serialize>(
+    async fn create(
         &self,
-        secret: &CreateSecretRequest<T>,
-    ) -> Result<CreateSecretResponse, IntegrationOSError> {
-        self.create_secret(secret).await
+        secret: &[u8],
+        buildable_id: String,
+        version: SecretVersion,
+    ) -> Result<Secret, IntegrationOSError> {
+        self.create_secret(secret, buildable_id, version).await
     }
 }
 
 pub struct GoogleCryptoKms {
     client: Client,
     config: SecretsConfig,
-    storage: MongoStore<Value>,
+    storage: MongoStore<Secret>,
 }
 
 impl GoogleCryptoKms {
     pub async fn new(
         secrets_config: &SecretsConfig,
-        storage: MongoStore<Value>,
+        storage: MongoStore<Secret>,
     ) -> Result<Self, IntegrationOSError> {
         let config = ClientConfig::default().with_auth().await.map_err(|e| {
             InternalError::connection_error(&e.to_string(), Some("Failed to create client"))
@@ -70,18 +65,17 @@ impl GoogleCryptoKms {
         })
     }
 
-    async fn get_secret<T: for<'a> Deserialize<'a>>(
+    async fn get_secret(
         &self,
-        secret: &GetSecretRequest,
-    ) -> Result<GetSecretResponse<T>, IntegrationOSError> {
+        // secret: &GetSecretRequest,
+        id: String,
+        buildable_id: String,
+    ) -> Result<Secret, IntegrationOSError> {
         let encrypted_secret = self
             .storage
-            .get_one(doc! { "_id": secret.id.clone(), "buildableId": secret.buildable_id.clone() })
+            .get_one(doc! { "_id": id.to_string().clone(), "buildableId": buildable_id.clone() })
             .await?
             .ok_or_else(|| InternalError::key_not_found("Secret", None))?;
-
-        let encrypted_secret = serde_json::from_value::<CreateSecretResponse>(encrypted_secret)
-            .map_err(|e| InternalError::deserialize_error(&e.to_string(), None))?;
 
         let request = DecryptRequest {
             name: format!(
@@ -91,7 +85,7 @@ impl GoogleCryptoKms {
                 key_ring_id = self.config.google_kms_key_ring_id,
                 key_id = self.config.google_kms_key_id,
             ),
-            ciphertext: BASE64_STANDARD.decode(encrypted_secret.encrypted_secret.as_bytes())
+            ciphertext: BASE64_STANDARD.decode(encrypted_secret.secret().expose_secret().as_bytes())
                 .map_err(|e| InternalError::deserialize_error(&e.to_string(), None))?,
             ..Default::default()
         };
@@ -100,23 +94,18 @@ impl GoogleCryptoKms {
             InternalError::connection_error(&e.to_string(), Some("Failed to decrypt secret"))
         })?;
 
-        let secret = GetSecretResponse {
-            id: encrypted_secret.id.clone(),
-            buildable_id: encrypted_secret.buildable_id.clone(),
-            created_at: encrypted_secret.created_at,
-            author: SecretAuthor::default(),
-            secret: serde_json::from_slice::<T>(&decrypted_secret.plaintext)
+        encrypted_secret.decrypted(SecretString::new(
+            String::from_utf8(decrypted_secret.plaintext)
                 .map_err(|e| InternalError::deserialize_error(&e.to_string(), None))?,
-            version: Some(encrypted_secret.version),
-        };
-
-        Ok(secret)
+        ))
     }
 
-    async fn create_secret<T: Serialize>(
+    async fn create_secret(
         &self,
-        secret: &CreateSecretRequest<T>,
-    ) -> Result<CreateSecretResponse, IntegrationOSError> {
+        secret: &[u8],
+        buildable_id: String,
+        version: SecretVersion,
+    ) -> Result<Secret, IntegrationOSError> {
         // Follows node sdk implementation of cryptoKeyPathTemplate: new this._gaxModule.PathTemplate('projects/{project}/locations/{location}/keyRings/{key_ring}/cryptoKeys/{crypto_key}'),
         let key_name = format!(
             "projects/{project_id}/locations/{location_id}/keyRings/{key_ring_id}/cryptoKeys/{key_id}",
@@ -129,7 +118,7 @@ impl GoogleCryptoKms {
         let checksum = crc32fast::hash(key_name.as_bytes());
         let request = EncryptRequest {
             name: key_name,
-            plaintext: serde_json::to_vec(&secret.secret)
+            plaintext: serde_json::to_vec(&secret)
                 .map_err(|e| InternalError::serialize_error(&e.to_string(), None))?,
             plaintext_crc32c: Some(checksum as i64),
             ..Default::default()
@@ -151,19 +140,9 @@ impl GoogleCryptoKms {
                 None,
             ))
         } else {
-            let secret = CreateSecretResponse {
-                id: Uuid::new_v4().to_string(),
-                buildable_id: secret.buildable_id.clone(),
-                created_at: Utc::now().timestamp_millis(),
-                author: SecretAuthor::default(),
-                encrypted_secret: encoded,
-                version: secret.version,
-            };
+            let secret = Secret::new(encoded, Some(version), buildable_id.clone(), None);
 
-            let value = serde_json::to_value(&secret)
-                .map_err(|e| InternalError::serialize_error(&e.to_string(), None))?;
-
-            self.storage.create_one(&value).await?;
+            self.storage.create_one(&secret).await?;
 
             Ok(secret)
         }

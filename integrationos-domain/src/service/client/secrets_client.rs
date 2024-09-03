@@ -2,7 +2,7 @@ use crate::{
     configuration::secrets::SecretsConfig,
     microservice::MicroService,
     prelude::{
-        create_secret_request::CreateSecretRequest, create_secret_response::CreateSecretResponse,
+        create_secret_request::CreateSecretRequest, create_secret_response::Secret,
         get_secret_request::GetSecretRequest, get_secret_response::GetSecretResponse, MongoStore,
     },
     IntegrationOSError, InternalError, SecretVersion, Store,
@@ -65,7 +65,7 @@ impl SecretsClient {
         &self,
         buildable_id: String,
         secret: T,
-    ) -> Result<CreateSecretResponse, IntegrationOSError> {
+    ) -> Result<Secret, IntegrationOSError> {
         let secret = serde_json::to_string(&secret).unwrap();
 
         let client = self.get_client().await?;
@@ -87,7 +87,7 @@ impl SecretsClient {
 
         let body_str = self.handle_response(response).await?;
 
-        let body = serde_json::from_str::<CreateSecretResponse>(&body_str).map_err(|err| {
+        let body = serde_json::from_str::<Secret>(&body_str).map_err(|err| {
             InternalError::invalid_argument(&format!("Failed to deserialize response: {err}"), None)
         })?;
 

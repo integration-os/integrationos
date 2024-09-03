@@ -23,7 +23,7 @@ use integrationos_domain::{
     event_access::EventAccess,
     page::PlatformPage,
     stage::Stage,
-    Connection, Event, Pipeline, PlatformData, Store, Transaction,
+    Connection, Event, Pipeline, PlatformData, SecretExt, Store, Transaction,
 };
 use integrationos_unified::unified::{UnifiedCacheTTLs, UnifiedDestination};
 use mongodb::{options::UpdateOptions, Client, Database};
@@ -66,7 +66,7 @@ pub struct AppState {
     pub connections_cache: ConnectionCacheArcStrHeaderKey,
     pub connection_definitions_cache: ConnectionDefinitionCache,
     pub connection_oauth_definitions_cache: ConnectionOAuthDefinitionCache,
-    pub secrets_client: Arc<dyn CryptoExt + Sync + Send>,
+    pub secrets_client: Arc<dyn SecretExt + Sync + Send>,
     pub extractor_caller: UnifiedDestination,
     pub event_tx: Sender<Event>,
     pub metric_tx: Sender<Metric>,
@@ -81,7 +81,7 @@ pub struct Server {
 impl Server {
     pub async fn init(
         config: ConnectionsConfig,
-        secrets_client: Arc<dyn CryptoExt + Sync + Send + 'static>,
+        secrets_client: Arc<dyn SecretExt + Sync + Send + 'static>,
     ) -> Result<Self> {
         let client = Client::with_uri_str(&config.db_config.control_db_url).await?;
         let db = client.database(&config.db_config.control_db_name);

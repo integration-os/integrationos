@@ -1,8 +1,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use integrationos_domain::{
-    algebra::CryptoExt, create_secret_response::CreateSecretResponse,
-    get_secret_request::GetSecretRequest, IntegrationOSError,
+    algebra::CryptoExt, create_secret_response::Secret, get_secret_request::GetSecretRequest,
+    IntegrationOSError,
 };
 
 #[derive(Debug, Clone)]
@@ -21,7 +21,7 @@ impl CryptoExt for MockSecretsClient {
         &self,
         _key: String,
         _val: &serde_json::Value,
-    ) -> Result<CreateSecretResponse, IntegrationOSError> {
+    ) -> Result<Secret, IntegrationOSError> {
         unimplemented!()
     }
 }

@@ -26,7 +26,7 @@ use integrationos_domain::{
     connection_model_definition::{
         ConnectionModelDefinition, CrudAction, CrudMapping, PlatformInfo,
     },
-    create_secret_response::{CreateSecretResponse, SecretAuthor},
+    create_secret_response::{Secret, SecretAuthor},
     environment::Environment,
     event_access::EventAccess,
     event_type::EventType,
@@ -91,7 +91,7 @@ impl CryptoExt for MockSecretsClient {
         &self,
         key: String,
         value: &serde_json::Value,
-    ) -> std::result::Result<CreateSecretResponse, IntegrationOSError> {
+    ) -> std::result::Result<Secret, IntegrationOSError> {
         let mut secrets = self.secrets.write().unwrap();
         let id: String = Faker.fake();
         let req = GetSecretRequest {
@@ -100,13 +100,13 @@ impl CryptoExt for MockSecretsClient {
         };
         secrets.insert(req.clone(), value.clone());
 
-        Ok(CreateSecretResponse {
+        Ok(Secret {
             id: req.id,
             buildable_id: key,
             created_at: 0f64,
             author: SecretAuthor { id: Faker.fake() },
-            encrypted_secret: Faker.fake(),
-            version: SecretVersion::V1,
+            secret: Faker.fake(),
+            version: Some(SecretVersion::V1),
         })
     }
     async fn decrypt(

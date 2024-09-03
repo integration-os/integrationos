@@ -11,7 +11,7 @@ use integrationos_domain::{
     connection_model_definition::{
         ConnectionModelDefinition, CrudAction, PlatformInfo, TestConnection,
     },
-    create_secret_response::CreateSecretResponse,
+    create_secret_response::Secret,
     destination::Action,
     environment::Environment,
     get_secret_request::GetSecretRequest,
@@ -182,15 +182,13 @@ async fn test_send_to_destination() {
             &self,
             _key: String,
             _value: &serde_json::Value,
-        ) -> Result<CreateSecretResponse, IntegrationOSError> {
-            Ok(CreateSecretResponse {
-                id: "id".into(),
-                buildable_id: "buildable_id".into(),
-                created_at: Utc::now().timestamp_millis(),
-                author: SecretAuthor { id: "id".into() },
-                encrypted_secret: "encrypted_secret".into(),
-                version: SecretVersion::V1,
-            })
+        ) -> Result<Secret, IntegrationOSError> {
+            Ok(Secret::new(
+                "encrypted_secret".into(),
+                Some(SecretVersion::V1),
+                "buildable_id".into(),
+                None,
+            ))
         }
     }
 
