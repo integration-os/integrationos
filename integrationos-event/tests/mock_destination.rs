@@ -11,7 +11,7 @@ use integrationos_domain::{
     connection_model_definition::{
         ConnectionModelDefinition, CrudAction, PlatformInfo, TestConnection,
     },
-    create_secret_response::{CreateSecretAuthor, CreateSecretResponse},
+    create_secret_response::CreateSecretResponse,
     destination::Action,
     environment::Environment,
     get_secret_request::GetSecretRequest,
@@ -19,7 +19,8 @@ use integrationos_domain::{
     ownership::Ownership,
     record_metadata::RecordMetadata,
     settings::Settings,
-    Connection, ConnectionType, IntegrationOSError, Pipeline, Throughput,
+    Connection, ConnectionType, IntegrationOSError, Pipeline, SecretAuthor, SecretVersion,
+    Throughput,
 };
 use integrationos_event::{
     config::EventCoreConfig, mongo_control_data_store::MongoControlDataStore,
@@ -182,13 +183,13 @@ async fn test_send_to_destination() {
             _key: String,
             _value: &serde_json::Value,
         ) -> Result<CreateSecretResponse, IntegrationOSError> {
-            // FIXME: Created at SHOULD NOT be an f64
             Ok(CreateSecretResponse {
                 id: "id".into(),
                 buildable_id: "buildable_id".into(),
-                created_at: 0.0,
-                author: CreateSecretAuthor { id: "id".into() },
+                created_at: Utc::now().timestamp_millis(),
+                author: SecretAuthor { id: "id".into() },
                 encrypted_secret: "encrypted_secret".into(),
+                version: SecretVersion::V1,
             })
         }
     }

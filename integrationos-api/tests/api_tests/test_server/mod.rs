@@ -16,6 +16,7 @@ use integrationos_api::{
     },
     server::Server,
 };
+use integrationos_domain::SecretVersion;
 use integrationos_domain::{
     access_key_data::AccessKeyData,
     access_key_prefix::AccessKeyPrefix,
@@ -25,7 +26,7 @@ use integrationos_domain::{
     connection_model_definition::{
         ConnectionModelDefinition, CrudAction, CrudMapping, PlatformInfo,
     },
-    create_secret_response::{CreateSecretAuthor, CreateSecretResponse},
+    create_secret_response::{CreateSecretResponse, SecretAuthor},
     environment::Environment,
     event_access::EventAccess,
     event_type::EventType,
@@ -103,8 +104,9 @@ impl CryptoExt for MockSecretsClient {
             id: req.id,
             buildable_id: key,
             created_at: 0f64,
-            author: CreateSecretAuthor { id: Faker.fake() },
+            author: SecretAuthor { id: Faker.fake() },
             encrypted_secret: Faker.fake(),
+            version: SecretVersion::V1,
         })
     }
     async fn decrypt(

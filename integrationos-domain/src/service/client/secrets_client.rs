@@ -5,7 +5,7 @@ use crate::{
         create_secret_request::CreateSecretRequest, create_secret_response::CreateSecretResponse,
         get_secret_request::GetSecretRequest, get_secret_response::GetSecretResponse, MongoStore,
     },
-    IntegrationOSError, InternalError, Store,
+    IntegrationOSError, InternalError, SecretVersion, Store,
 };
 use bson::doc;
 use mongodb::Client;
@@ -73,6 +73,7 @@ impl SecretsClient {
         let data = &CreateSecretRequest {
             buildable_id,
             secret,
+            version: SecretVersion::V2,
         };
 
         let response = client
