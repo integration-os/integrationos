@@ -812,7 +812,7 @@ impl UnifiedDestination {
 
         if matches!(
             config.action_name,
-            CrudAction::GetMany | CrudAction::GetOne | CrudAction::Create
+            CrudAction::GetMany | CrudAction::GetOne | CrudAction::Create | CrudAction::Upsert
         ) {
             let Some(js) = mapping.as_ref().map(|m| &m.to_common_model) else {
                 return Err(InternalError::invalid_argument(
