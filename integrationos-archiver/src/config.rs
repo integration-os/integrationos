@@ -9,6 +9,7 @@ pub enum Mode {
     Dump,
     DumpDelete,
     Restore,
+    NoOp,
 }
 
 #[derive(Envconfig, Clone)]
