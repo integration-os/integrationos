@@ -150,18 +150,20 @@ pub async fn test_connection_model_definition(
         }
     };
 
-    let mut secret_result = state
+    let secret_result = state
         .secrets_client
-        .decrypt(&GetSecretRequest {
-            buildable_id: connection.ownership.id.to_string(),
-            id: connection.secrets_service_id.clone(),
-        })
+        .get(
+            connection.secrets_service_id.clone(),
+            connection.ownership.id.to_string(),
+        )
         .await
         .map_err(|e| {
             error!("Error decripting secret for connection: {:?}", e);
 
             e
         })?;
+
+    let mut secret_result = secret_result.decode::<Value>()?;
 
     let request_string: String = serde_json::to_string(&payload.request.clone()).map_err(|e| {
         error!(

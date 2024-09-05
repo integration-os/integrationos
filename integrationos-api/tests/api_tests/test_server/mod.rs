@@ -100,14 +100,21 @@ impl CryptoExt for MockSecretsClient {
         };
         secrets.insert(req.clone(), value.clone());
 
-        Ok(Secret {
-            id: req.id,
-            buildable_id: key,
-            created_at: 0f64,
-            author: SecretAuthor { id: Faker.fake() },
-            secret: Faker.fake(),
-            version: Some(SecretVersion::V1),
-        })
+        Ok(Secret::new(
+            Faker.fake(),
+            Some(SecretVersion::V1),
+            key,
+            Faker.fake(),
+        ))
+
+        // Ok(Secret {
+        //     id: req.id,
+        //     buildable_id: key,
+        //     created_at: 0f64,
+        //     author: SecretAuthor { id: Faker.fake() },
+        //     secret: Faker.fake(),
+        //     version: Some(SecretVersion::V1),
+        // })
     }
     async fn decrypt(
         &self,

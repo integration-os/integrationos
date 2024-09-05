@@ -16,10 +16,10 @@ pub struct MongoContextStore {
 
 impl MongoContextStore {
     pub async fn new(config: &EventCoreConfig) -> Result<Self> {
-        let client = Client::with_uri_str(&config.db.context_db_url).await?;
+        let client = Client::with_uri_str(&config.db_config.context_db_url).await?;
         Ok(Self {
-            db: client.database(&config.db.context_db_name),
-            collection_name: config.db.context_collection_name.clone(),
+            db: client.database(&config.db_config.context_db_name),
+            collection_name: config.db_config.context_collection_name.clone(),
         })
     }
 }

@@ -11,6 +11,7 @@ use google_cloud_kms::{
     grpc::kms::v1::{DecryptRequest, EncryptRequest},
 };
 use secrecy::{ExposeSecret, SecretString};
+use serde_json::Value;
 
 #[async_trait]
 pub trait SecretExt {
@@ -18,9 +19,8 @@ pub trait SecretExt {
 
     async fn create(
         &self,
-        secret: &[u8],
+        secret: &Value,
         buildable_id: String,
-        version: SecretVersion,
     ) -> Result<Secret, IntegrationOSError>;
 }
 
@@ -32,14 +32,41 @@ impl SecretExt for GoogleCryptoKms {
 
     async fn create(
         &self,
-        secret: &[u8],
+        secret: &Value,
         buildable_id: String,
-        version: SecretVersion,
     ) -> Result<Secret, IntegrationOSError> {
-        self.create_secret(secret, buildable_id, version).await
+        let secret = serde_json::to_string(&secret)
+            .map_err(|e| InternalError::serialize_error(&e.to_string(), None))?;
+        self.create_secret(secret, buildable_id, SecretVersion::V2)
+            .await
     }
 }
 
+#[async_trait]
+impl SecretExt for ChaCha20Poly1305 {
+    async fn get(&self, id: String, buildable_id: String) -> Result<Secret, IntegrationOSError> {
+        todo!()
+    }
+
+    async fn create(
+        &self,
+        secret: &Value,
+        buildable_id: String,
+    ) -> Result<Secret, IntegrationOSError> {
+        todo!()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ChaCha20Poly1305 {
+    config: SecretsConfig,
+    storage: MongoStore<Secret>,
+    key: SecretString,
+}
+
+impl ChaCha20Poly1305 {}
+
+#[derive(Debug, Clone)]
 pub struct GoogleCryptoKms {
     client: Client,
     config: SecretsConfig,
@@ -100,12 +127,13 @@ impl GoogleCryptoKms {
         ))
     }
 
-    async fn create_secret(
+    async fn create_secret<T: AsRef<[u8]>>(
         &self,
-        secret: &[u8],
+        secret: T,
         buildable_id: String,
         version: SecretVersion,
     ) -> Result<Secret, IntegrationOSError> {
+        let secret = secret.as_ref();
         // Follows node sdk implementation of cryptoKeyPathTemplate: new this._gaxModule.PathTemplate('projects/{project}/locations/{location}/keyRings/{key_ring}/cryptoKeys/{crypto_key}'),
         let key_name = format!(
             "projects/{project_id}/locations/{location_id}/keyRings/{key_ring_id}/cryptoKeys/{key_id}",

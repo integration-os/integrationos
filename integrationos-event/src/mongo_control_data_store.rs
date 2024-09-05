@@ -48,7 +48,7 @@ impl MongoControlDataStore {
         config: &EventCoreConfig,
         secrets_client: Arc<dyn SecretExt + Sync + Send>,
     ) -> Result<Self> {
-        let mut client_options = ClientOptions::parse(&config.db.control_db_url)
+        let mut client_options = ClientOptions::parse(&config.db_config.control_db_url)
             .await
             .with_context(|| "Could not parse control mongodb url")?;
 
@@ -56,13 +56,13 @@ impl MongoControlDataStore {
         let client = Client::with_options(client_options)
             .with_context(|| "Failed to create control MongoDB client with options")?;
 
-        let db = client.database(&config.db.control_db_name);
+        let db = client.database(&config.db_config.control_db_name);
 
         let connections_store = MongoStore::new(&db.clone(), &Store::Connections).await?;
         let event_access_store = MongoStore::new(&db.clone(), &Store::EventAccess).await?;
         let pipelines_store = MongoStore::new(&db, &Store::Pipelines).await?;
 
-        let mut event_client_options = ClientOptions::parse(&config.db.event_db_url)
+        let mut event_client_options = ClientOptions::parse(&config.db_config.event_db_url)
             .await
             .with_context(|| "Could not parse events mongodb url")?;
 
@@ -70,13 +70,13 @@ impl MongoControlDataStore {
         let client = Client::with_options(event_client_options)
             .with_context(|| "Failed to create events MongoDB client with options")?;
 
-        let event_db = client.database(&config.db.event_db_name);
+        let event_db = client.database(&config.db_config.event_db_name);
         let event_store = MongoStore::new(&event_db, &Store::Events)
             .await
             .with_context(|| {
                 format!(
                     "Could not connect to event db at {}",
-                    config.db.event_db_name
+                    config.db_config.event_db_name
                 )
             })?;
 
@@ -109,7 +109,7 @@ impl MongoControlDataStore {
             },
             http_client: reqwest::Client::new(),
             destination_caller: UnifiedDestination::new(
-                config.db.clone(),
+                config.db_config.clone(),
                 config.cache_size,
                 secrets_client,
                 UnifiedCacheTTLs {

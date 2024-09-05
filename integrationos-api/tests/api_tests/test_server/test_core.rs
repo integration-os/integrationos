@@ -38,7 +38,7 @@ impl TestCore {
     ) -> Self {
         let mut config = EventCoreConfig::init_from_hashmap(&HashMap::from([])).unwrap();
 
-        config.db = api_config.db_config.clone();
+        config.db_config = api_config.db_config.clone();
         config.cache = gateway_config.redis.clone();
 
         let control_store = Arc::new(

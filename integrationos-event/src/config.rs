@@ -1,5 +1,9 @@
 use envconfig::Envconfig;
-use integrationos_domain::{cache::CacheConfig, database::DatabaseConfig, secrets::SecretsConfig};
+use integrationos_domain::{
+    cache::CacheConfig,
+    database::DatabaseConfig,
+    secrets::{SecretServiceProvider, SecretsConfig},
+};
 use std::fmt::{Display, Formatter};
 
 #[derive(Envconfig, Clone)] // Intentionally no Debug so secret is not printed
@@ -17,7 +21,10 @@ pub struct EventCoreConfig {
     #[envconfig(nested = true)]
     pub cache: CacheConfig,
     #[envconfig(nested = true)]
-    pub db: DatabaseConfig,
+    pub db_config: DatabaseConfig,
+    // Remove everything above this line once the secrets service is up and running
+    #[envconfig(from = "SECRETS_SERVICE_PROVIDER", default = "google_kms")]
+    pub provider: SecretServiceProvider,
     #[envconfig(from = "CONNECTION_CACHE_TTL_SECS", default = "86400")]
     pub connection_cache_ttl_secs: u64,
     #[envconfig(from = "CONNECTION_MODEL_SCHEMA_TTL_SECS", default = "86400")]
@@ -40,6 +47,6 @@ impl Display for EventCoreConfig {
         )?;
         write!(f, "{}", self.secrets_config)?;
         write!(f, "{}", self.cache)?;
-        write!(f, "{}", self.db)
+        write!(f, "{}", self.db_config)
     }
 }

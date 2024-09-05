@@ -87,25 +87,21 @@ async fn oauth_handler(
 
     let secret = get_secret::<PlatformSecret>(
         &state,
-        GetSecretRequest {
-            id: setting
-                .platform_secret(&payload.connection_definition_id, environment)
-                .ok_or_else(|| {
-                    error!(
-                        "Settings does not have a secret service id for the connection platform"
-                    );
-                    InternalError::invalid_argument(
-                        "Provided connection definition does not have a secret entry",
-                        None,
-                    )
-                })?,
-            buildable_id: if payload.is_engineering_account {
-                tracing::info!("Using engineering account id for secret");
-                state.config.engineering_account_id.clone()
-            } else {
-                tracing::info!("Using user event access id for secret");
-                user_event_access.clone().ownership.id.to_string()
-            },
+        setting
+            .platform_secret(&payload.connection_definition_id, environment)
+            .ok_or_else(|| {
+                error!("Settings does not have a secret service id for the connection platform");
+                InternalError::invalid_argument(
+                    "Provided connection definition does not have a secret entry",
+                    None,
+                )
+            })?,
+        if payload.is_engineering_account {
+            tracing::info!("Using engineering account id for secret");
+            state.config.engineering_account_id.clone()
+        } else {
+            tracing::info!("Using user event access id for secret");
+            user_event_access.clone().ownership.id.to_string()
         },
     )
     .await
@@ -183,9 +179,9 @@ async fn oauth_handler(
 
     let secret = state
         .secrets_client
-        .encrypt(
-            user_event_access.clone().ownership.id.to_string(),
+        .create(
             &oauth_secret.as_json(),
+            user_event_access.clone().ownership.id.to_string(),
         )
         .await
         .map_err(|e| {
@@ -486,14 +482,12 @@ pub async fn get_user_settings(
 
 async fn get_secret<S: DeserializeOwned>(
     state: &State<Arc<AppState>>,
-    get_secret_request: GetSecretRequest,
+    id: String,
+    buildable_id: String,
 ) -> Result<S, IntegrationOSError> {
     let secrets_client = &state.secrets_client;
 
-    let encoded_secret = secrets_client.decrypt(&get_secret_request).await?;
+    let encoded_secret = secrets_client.get(id, buildable_id).await?;
 
-    serde_json::from_value::<S>(encoded_secret).map_err(|e| {
-        error!("Failed to deserialize owner secret: {}", e);
-        InternalError::deserialize_error(&e.to_string(), None)
-    })
+    encoded_secret.decode::<S>()
 }
