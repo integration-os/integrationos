@@ -1,30 +1,19 @@
 use envconfig::Envconfig;
+use secrecy::SecretString;
 use std::fmt::{Display, Formatter, Result};
 use strum::{AsRefStr, EnumString};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, AsRefStr)]
+#[strum(serialize_all = "kebab-case")]
 pub enum SecretServiceProvider {
     GoogleKms,
+    IOSKms,
     // TODO: Implement LocalStorage
 }
 
-// PROJECT_ID=buildable-production
-// LOCATION_ID=global
-// KEY_RING_ID=secrets-service-local
-// KEY_ID=secrets-service-local
 #[derive(Debug, Clone, Envconfig)]
 pub struct SecretsConfig {
-    #[envconfig(
-        from = "SECRETS_SERVICE_BASE_URL",
-        default = "https://secrets-service-development-b2nnzrt2eq-uk.a.run.app/"
-    )]
-    pub base_url: String,
-    #[envconfig(from = "SECRETS_SERVICE_GET_PATH", default = "v1/secrets/get/")]
-    pub get_path: String,
-    #[envconfig(from = "SECRETS_SERVICE_CREATE_PATH", default = "v1/secrets/create/")]
-    pub create_path: String,
-    // Remove everything above this line once the secrets service is up and running
-    #[envconfig(from = "SECRETS_SERVICE_PROVIDER", default = "google_kms")]
+    #[envconfig(from = "SECRETS_SERVICE_PROVIDER", default = "google-kms")]
     pub provider: SecretServiceProvider,
     #[envconfig(from = "GOOGLE_KMS_PROJECT_ID", default = "buildable-production")]
     pub google_kms_project_id: String,
@@ -34,6 +23,11 @@ pub struct SecretsConfig {
     pub google_kms_key_ring_id: String,
     #[envconfig(from = "GOOGLE_KMS_KEY_ID", default = "secrets-service-local")]
     pub google_kms_key_id: String,
+    #[envconfig(
+        from = "IOS_CRYPTO_SECRET",
+        default = "xTtUQejH8eSNmWP5rlnHLkOWkHeflivG"
+    )]
+    pub ios_crypto_secret: SecretString,
 }
 
 impl SecretsConfig {
@@ -46,28 +40,32 @@ impl SecretsConfig {
 impl Default for SecretsConfig {
     fn default() -> Self {
         Self {
-            base_url: "https://secrets-service-development-b2nnzrt2eq-uk.a.run.app/".to_owned(),
-            get_path: "v1/secrets/get/".to_owned(),
-            create_path: "v1/secrets/create/".to_owned(),
-            provider: SecretServiceProvider::GoogleKms,
+            provider: SecretServiceProvider::IOSKms,
             google_kms_project_id: "buildable-production".to_owned(),
             google_kms_location_id: "global".to_owned(),
             google_kms_key_ring_id: "secrets-service-local".to_owned(),
             google_kms_key_id: "secrets-service-local".to_owned(),
+            ios_crypto_secret: SecretString::new("xTtUQejH8eSNmWP5rlnHLkOWkHeflivG".to_owned()),
         }
     }
 }
 
 impl Display for SecretsConfig {
+    // TODO: Update this
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        writeln!(f, "SECRETS_SERVICE_BASE_URL: {}", self.base_url)?;
-        writeln!(f, "SECRETS_SERVICE_GET_PATH: {}", self.get_path)?;
-        writeln!(f, "SECRETS_SERVICE_CREATE_PATH: {}", self.create_path)
+        writeln!(f, "SECRETS_SERVICE_PROVIDER: {}", self.provider.as_ref())?;
+        writeln!(f, "GOOGLE_KMS_PROJECT_ID: ****")?;
+        writeln!(f, "GOOGLE_KMS_LOCATION_ID: ****")?;
+        writeln!(f, "GOOGLE_KMS_KEY_RING_ID: ****")?;
+        writeln!(f, "GOOGLE_KMS_KEY_ID: ****")?;
+        writeln!(f, "IOS_CRYPTO_SECRET: ****")
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use secrecy::ExposeSecret;
+
     use super::*;
 
     #[tokio::test]
@@ -75,11 +73,14 @@ mod tests {
         let config = SecretsConfig::new();
 
         assert_eq!(
-            config.base_url,
-            "https://secrets-service-development-b2nnzrt2eq-uk.a.run.app/"
+            config.ios_crypto_secret.expose_secret().as_str(),
+            "xTtUQejH8eSNmWP5rlnHLkOWkHeflivG"
         );
-        assert_eq!(config.get_path, "v1/secrets/get/");
-        assert_eq!(config.create_path, "v1/secrets/create/");
+        assert_eq!(config.provider, SecretServiceProvider::IOSKms);
+        assert_eq!(config.google_kms_project_id, "buildable-production");
+        assert_eq!(config.google_kms_location_id, "global");
+        assert_eq!(config.google_kms_key_ring_id, "secrets-service-local");
+        assert_eq!(config.google_kms_key_id, "secrets-service-local");
     }
 
     #[tokio::test]
@@ -88,10 +89,13 @@ mod tests {
 
         let config_str = format!("{config}");
 
-        let display = "SECRETS_SERVICE_BASE_URL: https://secrets-service-development-b2nnzrt2eq-uk.a.run.app/\n\
-            SECRETS_SERVICE_GET_PATH: v1/secrets/get/\n\
-            SECRETS_SERVICE_CREATE_PATH: v1/secrets/create/\n\
-        ";
+        let display = "SECRETS_SERVICE_PROVIDER: ios-crypto\n\
+            GOOGLE_KMS_PROJECT_ID: ****\n\
+            GOOGLE_KMS_LOCATION_ID: ****\n\
+            GOOGLE_KMS_KEY_RING_ID: ****\n\
+            GOOGLE_KMS_KEY_ID: ****\n\
+            IOS_CRYPTO_SECRET: ****\n\
+            ";
 
         assert_eq!(config_str, display);
     }

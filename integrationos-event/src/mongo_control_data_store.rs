@@ -10,7 +10,7 @@ use futures::future::join_all;
 use handlebars::Handlebars;
 use http::header::AUTHORIZATION;
 use integrationos_domain::{
-    algebra::{CryptoExt, FecherExt, GoogleTokenFetcher, MongoStore},
+    algebra::{FecherExt, GoogleTokenFetcher, MongoStore},
     duplicates::Duplicates,
     encrypted_access_key::EncryptedAccessKey,
     event_access::EventAccess,

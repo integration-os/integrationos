@@ -85,47 +85,6 @@ pub struct MockSecretsClient {
     secrets: Arc<RwLock<HashMap<GetSecretRequest, Value>>>,
 }
 
-#[async_trait]
-impl CryptoExt for MockSecretsClient {
-    async fn encrypt(
-        &self,
-        key: String,
-        value: &serde_json::Value,
-    ) -> std::result::Result<Secret, IntegrationOSError> {
-        let mut secrets = self.secrets.write().unwrap();
-        let id: String = Faker.fake();
-        let req = GetSecretRequest {
-            id,
-            buildable_id: key.clone(),
-        };
-        secrets.insert(req.clone(), value.clone());
-
-        Ok(Secret::new(
-            Faker.fake(),
-            Some(SecretVersion::V1),
-            key,
-            Faker.fake(),
-        ))
-
-        // Ok(Secret {
-        //     id: req.id,
-        //     buildable_id: key,
-        //     created_at: 0f64,
-        //     author: SecretAuthor { id: Faker.fake() },
-        //     secret: Faker.fake(),
-        //     version: Some(SecretVersion::V1),
-        // })
-    }
-    async fn decrypt(
-        &self,
-        secret: &GetSecretRequest,
-    ) -> std::result::Result<Value, IntegrationOSError> {
-        let secrets = self.secrets.read().unwrap();
-        let res = secrets.get(secret).unwrap();
-        Ok(res.clone())
-    }
-}
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ApiResponse<T: DeserializeOwned = Value> {
     pub code: StatusCode,

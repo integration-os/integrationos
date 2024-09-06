@@ -1,7 +1,7 @@
 use super::{SecretAuthor, SecretVersion};
 use crate::{IntegrationOSError, InternalError};
 use chrono::Utc;
-use secrecy::{ExposeSecret, SecretString};
+use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -55,12 +55,11 @@ impl Secret {
         self.created_at
     }
 
-    pub fn secret(&self) -> SecretString {
-        SecretString::new(self.secret.clone())
+    pub fn buildable_id(&self) -> String {
+        self.buildable_id.clone()
     }
 
-    pub fn decrypted(mut self, secret: SecretString) -> Result<Self, IntegrationOSError> {
-        self.secret = secret.expose_secret().into();
-        Ok(self)
+    pub fn secret(&self) -> SecretString {
+        SecretString::new(self.secret.clone())
     }
 }

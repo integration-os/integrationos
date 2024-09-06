@@ -3,8 +3,9 @@ use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_api::{config::ConnectionsConfig, server::Server};
 use integrationos_domain::create_secret_response::Secret;
+use integrationos_domain::secrets::SecretServiceProvider;
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
-use integrationos_domain::{GoogleCryptoKms, MongoStore, Store};
+use integrationos_domain::{GoogleKms, IOSKms, MongoStore, SecretExt, Store};
 use mongodb::Client;
 use std::sync::Arc;
 use tracing::info;
@@ -26,9 +27,16 @@ fn main() -> Result<()> {
             let client = Client::with_uri_str(&config.db_config.event_db_url).await?;
             let database = client.database(&config.db_config.event_db_name);
             let secrets_store = MongoStore::<Secret>::new(&database, &Store::Secrets).await?;
-            // THIS HAS TO BE MATCHED AGAINST SECRETS SERVICE PROVIDER CHOICE
-            let secrets_client =
-                Arc::new(GoogleCryptoKms::new(&config.secrets_config, secrets_store).await?);
+            let secrets_client: Arc<dyn SecretExt + Sync + Send> =
+                match config.secrets_config.provider {
+                    SecretServiceProvider::GoogleKms => {
+                        Arc::new(GoogleKms::new(&config.secrets_config, secrets_store).await?)
+                    }
+                    SecretServiceProvider::IOSKms => {
+                        Arc::new(IOSKms::new(&config.secrets_config, secrets_store).await?)
+                    }
+                };
+
             let server: Server = Server::init(config, secrets_client).await?;
 
             server.run().await

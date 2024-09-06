@@ -21,7 +21,6 @@ use integrationos_domain::{
         TestConnection, TestConnectionState,
     },
     event_access::EventAccess,
-    get_secret_request::GetSecretRequest,
     id::{prefix::IdPrefix, Id},
     ApplicationError, IntegrationOSError, InternalError,
 };

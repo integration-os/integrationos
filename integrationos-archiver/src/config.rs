@@ -1,9 +1,8 @@
+use crate::storage::StorageProvider;
 use envconfig::Envconfig;
 use integrationos_domain::database::DatabaseConfig;
 use std::fmt::{Display, Formatter};
 use strum::{AsRefStr, EnumString};
-
-use crate::storage::StorageProvider;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, AsRefStr)]
 #[strum(serialize_all = "kebab-case")]

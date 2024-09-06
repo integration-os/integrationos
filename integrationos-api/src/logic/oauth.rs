@@ -15,7 +15,6 @@ use integrationos_domain::{
         Computation, ConnectionOAuthDefinition, OAuthResponse, PlatformSecret, Settings,
     },
     event_access::EventAccess,
-    get_secret_request::GetSecretRequest,
     id::{prefix::IdPrefix, Id},
     oauth_secret::OAuthSecret,
     ownership::Ownership,

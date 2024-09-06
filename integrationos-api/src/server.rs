@@ -13,7 +13,7 @@ use integrationos_cache::local::{
     event_access_cache::EventAccessCache,
 };
 use integrationos_domain::{
-    algebra::{CryptoExt, DefaultTemplate, MongoStore},
+    algebra::{DefaultTemplate, MongoStore},
     common_model::{CommonEnum, CommonModel},
     connection_definition::{ConnectionDefinition, PublicConnectionDetails},
     connection_model_definition::ConnectionModelDefinition,
