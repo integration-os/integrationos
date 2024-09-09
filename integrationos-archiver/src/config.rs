@@ -22,7 +22,7 @@ pub struct ArchiverConfig {
     pub gs_storage_bucket: String,
     #[envconfig(from = "GS_STORAGE_URI", default = "gs://integrationos-zsk")]
     pub gs_storage_uri: String,
-    #[envconfig(from = "STORAGE_PROVIDER", default = "google_cloud")]
+    #[envconfig(from = "STORAGE_PROVIDER", default = "google-cloud")]
     pub storage_provider: StorageProvider,
     #[envconfig(from = "MAX_RETRIES", default = "3")]
     pub max_retries: u32,
