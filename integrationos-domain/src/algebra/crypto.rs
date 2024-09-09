@@ -47,7 +47,6 @@ impl CryptoExt for IOSCrypto {
 impl IOSCrypto {
     pub fn new(config: SecretsConfig) -> Result<Self, IntegrationOSError> {
         let len = config.ios_crypto_secret.expose_secret().as_bytes().len();
-        println!("{len}");
 
         if len != 32 {
             return Err(InternalError::invalid_argument(

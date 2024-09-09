@@ -38,7 +38,6 @@ impl IOSKms {
 #[async_trait]
 impl SecretExt for IOSKms {
     async fn get(&self, id: &str, buildable_id: &str) -> Result<Secret, IntegrationOSError> {
-        println!("Get secret: {:?}", id);
         let secret = self
             .storage
             .get_one(doc! { "_id": id, "buildableId": buildable_id })

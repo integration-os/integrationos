@@ -1079,8 +1079,6 @@ impl UnifiedDestination {
             })
             .await?;
 
-        println!("Secret: {:?}", secret);
-
         // Template the route for passthrough actions
         let templated_config = match &destination.action {
             Action::Passthrough { method: _, path } => {

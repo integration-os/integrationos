@@ -105,10 +105,8 @@ impl FromStr for Id {
 
 #[cfg(test)]
 mod test {
-    use chrono::SubsecRound;
-    use once_cell::sync::Lazy;
-
     use super::*;
+    use once_cell::sync::Lazy;
 
     const ID_STR: &str = "evt::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA";
     static PARSED_ID: Lazy<Id> = Lazy::new(|| {
@@ -162,17 +160,5 @@ mod test {
         let id_str = serde_json::to_string(&id).unwrap();
         assert_eq!(id_str, format!("\"{}\"", ID_STR));
         assert_eq!(id, serde_json::from_str(&id_str).unwrap());
-    }
-
-    // genertae 100 Ids
-    #[test]
-    #[ignore]
-    fn test_id_generate() {
-        for _ in 0..1000 {
-            let timestamp = Utc::now().round_subsecs(3);
-            let id = Id::new(IdPrefix::CommonModel, timestamp);
-            println!("{}", id);
-            println!(" ",);
-        }
     }
 }

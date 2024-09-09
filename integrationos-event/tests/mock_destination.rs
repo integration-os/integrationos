@@ -171,25 +171,25 @@ async fn test_send_to_destination() {
 
     #[async_trait::async_trait]
     impl SecretExt for SecretsClient {
-        async fn get(&self, _id: &str, _buildable_id: &str) -> Result<Secret, IntegrationOSError> {
+        async fn get(&self, _id: &str, buildable_id: &str) -> Result<Secret, IntegrationOSError> {
             Ok(Secret::new(
-                "encrypted_secret".into(),
+                "secret".into(),
                 Some(SecretVersion::V1),
-                "buildable_id".into(),
-                Some(123456789),
+                buildable_id.to_string(),
+                Some(1725915939),
             ))
         }
 
         async fn create(
             &self,
             _secret: &Value,
-            _buildable_id: &str,
+            buildable_id: &str,
         ) -> Result<Secret, IntegrationOSError> {
             Ok(Secret::new(
-                "encrypted_secret".into(),
+                "secret".into(),
                 Some(SecretVersion::V1),
-                "buildable_id".into(),
-                Some(123456789),
+                buildable_id.to_string(),
+                Some(1725915939),
             ))
         }
     }
