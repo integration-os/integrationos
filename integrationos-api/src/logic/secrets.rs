@@ -1,33 +1,17 @@
-use super::{PublicExt, RequestExt};
-use crate::server::{AppState, AppStores};
+use crate::server::AppState;
 use axum::{
     extract::{Path, State},
     routing::post,
     Extension, Json, Router,
 };
 use bson::doc;
-use integrationos_domain::{
-    algebra::MongoStore, event_access::EventAccess, secret::Secret, IntegrationOSError,
-};
+use integrationos_domain::{event_access::EventAccess, secret::Secret, IntegrationOSError};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new().route("/", post(create_secret).get(get_secret))
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct SecretRequest;
-
-impl PublicExt<Secret> for SecretRequest {}
-
-impl RequestExt for SecretRequest {
-    type Output = Secret;
-
-    fn get_store(stores: AppStores) -> MongoStore<Self::Output> {
-        stores.secrets
-    }
 }
 
 #[derive(Serialize, Deserialize)]

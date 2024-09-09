@@ -1,12 +1,9 @@
 use super::log_request_middleware;
 use crate::{
     logic::{
-        connection,
-        connection_model_definition::test_connection_model_definition,
-        connection_model_schema::{
+        connection, connection_model_definition::test_connection_model_definition, connection_model_schema::{
             public_get_connection_model_schema, PublicGetConnectionModelSchema,
-        },
-        event_access, events, metrics, oauth, passthrough, pipeline, transactions, unified,
+        }, event_access, events, metrics, oauth, passthrough, pipeline, secrets, transactions, unified
     },
     middleware::{
         blocker::{handle_blocked_error, BlockInvalidHeaders},
@@ -30,12 +27,15 @@ use tracing::warn;
 
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let routes = Router::new()
-        .nest("/pipelines", pipeline::get_router())
-        .nest("/events", events::get_router())
-        .nest("/transactions", transactions::get_router())
         .nest("/connections", connection::get_router())
         .nest("/event-access", event_access::get_router())
+        .nest("/events", events::get_router())
+        .nest("/oauth", oauth::get_router())
         .nest("/passthrough", passthrough::get_router())
+        .nest("/pipelines", pipeline::get_router())
+        .nest("/secrets", secrets::get_router())
+        .nest("/transactions", transactions::get_router())
+        .nest("/unified", unified::get_router())
         .route(
             "/connection-model-definitions/test/:id",
             post(test_connection_model_definition),
@@ -47,8 +47,6 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
                 PublicConnectionModelSchema,
             >),
         )
-        .nest("/oauth", oauth::get_router())
-        .nest("/unified", unified::get_router())
         .layer(TraceLayer::new_for_http())
         .nest("/metrics", metrics::get_router());
 
