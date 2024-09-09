@@ -149,7 +149,7 @@ impl GoogleCryptoKms {
         version: Option<SecretVersion>,
     ) -> Result<String, IntegrationOSError> {
         match version {
-            Some(SecretVersion::V2) => self.fallback.encrypt(encrypted_secret).await,
+            Some(SecretVersion::V2) => self.fallback.decrypt(encrypted_secret).await,
             _ => {
                 let request = DecryptRequest {
                     name: format!(

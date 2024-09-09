@@ -313,7 +313,7 @@ impl UnifiedDestination {
 
         let mut secret = join_result
             .1
-            .map_err(|e| InternalError::key_not_found(&format!("secret for key: {e}"), None))?;
+            .map_err(|e| InternalError::key_not_found(e.as_ref(), None))?;
 
         let cms = join_result.2.map_err(|e| {
             InternalError::key_not_found(&format!("model schema {name} for destination: {e}"), None)

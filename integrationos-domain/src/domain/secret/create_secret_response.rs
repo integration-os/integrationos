@@ -13,8 +13,7 @@ pub struct Secret {
     buildable_id: String,
     created_at: i64,
     author: SecretAuthor,
-    #[serde(rename = "encrypedSecret")]
-    secret: String,
+    encrypted_secret: String,
     #[serde(default)]
     version: Option<SecretVersion>,
 }
@@ -31,7 +30,7 @@ impl Secret {
             buildable_id,
             created_at: created_at.unwrap_or(Utc::now().timestamp_millis()),
             author: SecretAuthor::default(),
-            secret,
+            encrypted_secret: secret,
             version,
         }
     }
@@ -44,7 +43,7 @@ impl Secret {
     where
         T: for<'a> Deserialize<'a>,
     {
-        serde_json::from_str(&self.secret)
+        serde_json::from_str(&self.encrypted_secret)
             .map_err(|e| InternalError::deserialize_error(&e.to_string(), None))
     }
 
@@ -60,7 +59,7 @@ impl Secret {
         self.buildable_id.clone()
     }
 
-    pub fn secret(&self) -> SecretString {
-        SecretString::new(self.secret.clone())
+    pub fn encrypted_secret(&self) -> SecretString {
+        SecretString::new(self.encrypted_secret.clone())
     }
 }

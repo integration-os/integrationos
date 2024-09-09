@@ -44,7 +44,7 @@ impl SecretExt for IOSKms {
             .await?
             .ok_or_else(|| InternalError::key_not_found("Secret", None))?;
 
-        let encrypted_secret = secret.secret().expose_secret().to_owned();
+        let encrypted_secret = secret.encrypted_secret().expose_secret().to_owned();
         let version = secret.version();
 
         let decrypted_secret = self.crypto.decrypt(encrypted_secret, version).await?;
@@ -109,7 +109,7 @@ impl SecretExt for GoogleKms {
             .await?
             .ok_or_else(|| InternalError::key_not_found("Secret", None))?;
 
-        let encrypted_secret = secret.secret().expose_secret().to_owned();
+        let encrypted_secret = secret.encrypted_secret().expose_secret().to_owned();
         let version = secret.version();
 
         let decrypted_secret = self.crypto.decrypt(encrypted_secret, version).await?;
