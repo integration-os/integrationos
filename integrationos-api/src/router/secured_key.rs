@@ -1,9 +1,13 @@
 use super::log_request_middleware;
 use crate::{
     logic::{
-        connection, connection_model_definition::test_connection_model_definition, connection_model_schema::{
+        connection,
+        connection_model_definition::test_connection_model_definition,
+        connection_model_schema::{
             public_get_connection_model_schema, PublicGetConnectionModelSchema,
-        }, event_access, events, metrics, oauth, passthrough, pipeline, secrets, transactions, unified
+        },
+        event_access, events, metrics, oauth, passthrough, pipeline, secrets, transactions,
+        unified,
     },
     middleware::{
         blocker::{handle_blocked_error, BlockInvalidHeaders},
