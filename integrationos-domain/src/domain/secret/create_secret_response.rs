@@ -11,7 +11,9 @@ pub struct Secret {
     #[serde(rename = "_id")]
     id: String,
     buildable_id: String,
-    created_at: i64,
+    // Note: this was done due to an initial error making the timestamp as an f64. So
+    // it needs to be kept that way for backwards compatibility.
+    created_at: f64,
     author: SecretAuthor,
     encrypted_secret: String,
     #[serde(default)]
@@ -28,7 +30,7 @@ impl Secret {
         Self {
             id: Uuid::new_v4().to_string(),
             buildable_id,
-            created_at: created_at.unwrap_or(Utc::now().timestamp_millis()),
+            created_at: created_at.unwrap_or(Utc::now().timestamp_millis()) as f64,
             author: SecretAuthor::default(),
             encrypted_secret: secret,
             version,
@@ -52,7 +54,7 @@ impl Secret {
     }
 
     pub fn created_at(&self) -> i64 {
-        self.created_at
+        self.created_at as i64
     }
 
     pub fn buildable_id(&self) -> String {
