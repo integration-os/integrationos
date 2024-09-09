@@ -188,76 +188,67 @@ impl GoogleCryptoKms {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use secrecy::SecretString;
+#[cfg(test)]
+mod tests {
 
-//     use super::*;
+    use super::*;
 
-//     #[test]
-//     fn should_encrypt_and_decrypt_data() {
-//         let secret = SecretString::new("secret".to_string());
-//         let crypto = Crypto::new(&secret).expect("Failed to create crypto");
+    #[tokio::test]
+    async fn should_encrypt_and_decrypt_data() {
+        let config = SecretsConfig::default();
+        let crypto = IOSCrypto::new(config).expect("Failed to create IOSCrypto client");
 
-//         let data = "lorem_ipsum-dolor_sit-amet";
-//         let encrypted = crypto.encrypt(data).expect("Failed to encrypt data");
-//         let decrypted = crypto.decrypt(&encrypted).expect("Failed to decrypt data");
+        let data = "lorem_ipsum-dolor_sit-amet";
+        let encrypted = crypto
+            .encrypt(data.to_owned())
+            .await
+            .expect("Failed to encrypt data");
+        let decrypted = crypto
+            .decrypt(encrypted.to_owned())
+            .await
+            .expect("Failed to decrypt data");
 
-//         assert_eq!(data, decrypted);
-//     }
+        assert_eq!(data, decrypted);
+    }
 
-//     #[test]
-//     fn should_fail_to_decrypt_if_the_key_is_different() {
-//         let secret = SecretString::new("secret".to_string());
-//         let crypto = Crypto::new(&secret).expect("Failed to create crypto");
+    #[tokio::test]
+    async fn should_fail_to_decrypt_if_the_key_is_different() {
+        // let secret = SecretString::new("secret".to_string());
+        // let crypto = Crypto::new(&secret).expect("Failed to create crypto");
+        //
+        // let data = "lorem_ipsum-dolor_sit-amet";
+        // let encrypted = crypto.encrypt(data).expect("Failed to encrypt data");
+        //
+        // let secret = SecretString::new("different".to_string());
+        // let crypto = Crypto::new(&secret).expect("Failed to create crypto");
+        //
+        // let decrypted = crypto.decrypt(&encrypted);
+        //
+        // assert!(decrypted.is_err());
+        //
+        let config = SecretsConfig::default();
+        let crypto = IOSCrypto::new(config).expect("Failed to create IOSCrypto client");
 
-//         let data = "lorem_ipsum-dolor_sit-amet";
-//         let encrypted = crypto.encrypt(data).expect("Failed to encrypt data");
+        let data = "lorem_ipsum-dolor_sit-amet";
 
-//         let secret = SecretString::new("different".to_string());
-//         let crypto = Crypto::new(&secret).expect("Failed to create crypto");
+        todo!()
+    }
 
-//         let decrypted = crypto.decrypt(&encrypted);
-
-//         assert!(decrypted.is_err());
-//     }
-
-//     #[test]
-//     fn should_fail_to_decrypt_if_the_data_is_tampered() {
-//         let secret = SecretString::new("secret".to_string());
-//         let crypto = Crypto::new(&secret).expect("Failed to create crypto");
-
-//         let data = "lorem_ipsum-dolor_sit-amet";
-//         let encrypted = crypto.encrypt(data).expect("Failed to encrypt data");
-
-//         let mut obsf = hex::decode(encrypted).expect("Failed to decode encrypted data");
-//         obsf[0] = 0;
-//         let tampered = hex::encode(obsf);
-
-//         let decrypted = crypto.decrypt(&tampered);
-
-//         assert!(decrypted.is_err());
-//     }
-// }
-
-// #[async_trait]
-// impl CryptoExt for SecretsClient {
-//     async fn decrypt(
-//         &self,
-//         secret: &GetSecretRequest,
-//     ) -> Result<serde_json::Value, IntegrationOSError> {
-//         self.get_secret(secret).await.map_err(|e| {
-//             InternalError::encryption_error(e.message().as_ref(), Some("Failed to decrypt secret"))
-//         })
-//     }
-
-//     async fn encrypt(
-//         &self,
-//         key: String,
-//         value: &serde_json::Value,
-//     ) -> Result<CreateSecretResponse, IntegrationOSError> {
-//         self.create_secret(key, value).await.map_err(|e| {
-//             InternalError::encryption_error(e.message().as_ref(), Some("Failed to encrypt secret"))
-//         })
-//     }
-// }
+    #[test]
+    fn should_fail_to_decrypt_if_the_data_is_tampered() {
+        // let secret = SecretString::new("secret".to_string());
+        // let crypto = Crypto::new(&secret).expect("Failed to create crypto");
+        //
+        // let data = "lorem_ipsum-dolor_sit-amet";
+        // let encrypted = crypto.encrypt(data).expect("Failed to encrypt data");
+        //
+        // let mut obsf = hex::decode(encrypted).expect("Failed to decode encrypted data");
+        // obsf[0] = 0;
+        // let tampered = hex::encode(obsf);
+        //
+        // let decrypted = crypto.decrypt(&tampered);
+        //
+        // assert!(decrypted.is_err());
+        todo!()
+    }
+}

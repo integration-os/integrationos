@@ -257,8 +257,8 @@ impl UnifiedDestination {
                     match self
                         .secrets_client
                         .get(
-                            connection.secrets_service_id.clone(),
-                            connection.ownership.id.to_string(),
+                            &connection.secrets_service_id,
+                            &connection.ownership.id
                         )
                         .map(|v| Some(v).transpose())
                         .await
@@ -1071,8 +1071,8 @@ impl UnifiedDestination {
                 match self
                     .secrets_client
                     .get(
-                        connection.secrets_service_id.clone(),
-                        connection.ownership.id.to_string(),
+                        &connection.secrets_service_id,
+                        &connection.ownership.id
                     )
                     .map(|v| Some(v).transpose())
                     .await

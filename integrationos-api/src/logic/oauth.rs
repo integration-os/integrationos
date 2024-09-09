@@ -180,7 +180,7 @@ async fn oauth_handler(
         .secrets_client
         .create(
             &oauth_secret.as_json(),
-            user_event_access.clone().ownership.id.to_string(),
+            user_event_access.clone().ownership.id.as_ref()
         )
         .await
         .map_err(|e| {
@@ -486,7 +486,7 @@ async fn get_secret<S: DeserializeOwned>(
 ) -> Result<S, IntegrationOSError> {
     let secrets_client = &state.secrets_client;
 
-    let encoded_secret = secrets_client.get(id, buildable_id).await?;
+    let encoded_secret = secrets_client.get(&id, &buildable_id).await?;
 
     encoded_secret.decode::<S>()
 }

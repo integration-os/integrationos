@@ -19,6 +19,7 @@ use integrationos_domain::{
     connection_model_definition::ConnectionModelDefinition,
     connection_model_schema::{ConnectionModelSchema, PublicConnectionModelSchema},
     connection_oauth_definition::{ConnectionOAuthDefinition, Settings},
+    create_secret_response::Secret,
     cursor::Cursor,
     event_access::EventAccess,
     page::PlatformPage,
@@ -51,6 +52,7 @@ pub struct AppStores {
     pub pipeline: MongoStore<Pipeline>,
     pub event_access: MongoStore<EventAccess>,
     pub event: MongoStore<Event>,
+    pub secrets: MongoStore<Secret>,
     pub transactions: MongoStore<Transaction>,
     pub cursors: MongoStore<Cursor>,
     pub stages: MongoStore<Stage>,
@@ -98,6 +100,7 @@ impl Server {
             MongoStore::new(&db, &Store::PublicConnectionModelSchemas).await?;
         let common_model = MongoStore::new(&db, &Store::CommonModels).await?;
         let common_enum = MongoStore::new(&db, &Store::CommonEnums).await?;
+        let secrets = MongoStore::new(&db, &Store::Secrets).await?;
         let connection = MongoStore::new(&db, &Store::Connections).await?;
         let platform = MongoStore::new(&db, &Store::Platforms).await?;
         let platform_page = MongoStore::new(&db, &Store::PlatformPages).await?;
@@ -134,6 +137,7 @@ impl Server {
             oauth_config,
             platform_page,
             frontend_oauth_config,
+            secrets,
             model_schema,
             public_model_schema,
             platform,

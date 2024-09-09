@@ -10,12 +10,12 @@ use serde_json::Value;
 
 #[async_trait]
 pub trait SecretExt {
-    async fn get(&self, id: String, buildable_id: String) -> Result<Secret, IntegrationOSError>;
+    async fn get(&self, id: &str, buildable_id: &str) -> Result<Secret, IntegrationOSError>;
 
     async fn create(
         &self,
         secret: &Value,
-        buildable_id: String,
+        buildable_id: &str,
     ) -> Result<Secret, IntegrationOSError>;
 }
 
@@ -37,10 +37,10 @@ impl IOSKms {
 
 #[async_trait]
 impl SecretExt for IOSKms {
-    async fn get(&self, id: String, buildable_id: String) -> Result<Secret, IntegrationOSError> {
+    async fn get(&self, id: &str, buildable_id: &str) -> Result<Secret, IntegrationOSError> {
         let secret = self
             .storage
-            .get_one(doc! { "_id": id.to_string().clone(), "buildableId": buildable_id.clone() })
+            .get_one(doc! { "_id": id, "buildableId": buildable_id })
             .await?
             .ok_or_else(|| InternalError::key_not_found("Secret", None))?;
 
@@ -60,7 +60,7 @@ impl SecretExt for IOSKms {
     async fn create(
         &self,
         secret: &Value,
-        buildable_id: String,
+        buildable_id: &str
     ) -> Result<Secret, IntegrationOSError> {
         let string = serde_json::to_string(&secret).map_err(|_| {
             InternalError::serialize_error("The provided value is not a valid UTF-8 string", None)
@@ -71,7 +71,7 @@ impl SecretExt for IOSKms {
         let secret = Secret::new(
             encrypted_secret,
             Some(SecretVersion::V2),
-            buildable_id,
+            buildable_id.to_owned(),
             None,
         );
 
@@ -102,10 +102,10 @@ impl GoogleKms {
 
 #[async_trait]
 impl SecretExt for GoogleKms {
-    async fn get(&self, id: String, buildable_id: String) -> Result<Secret, IntegrationOSError> {
+    async fn get(&self, id: &str, buildable_id: &str) -> Result<Secret, IntegrationOSError> {
         let secret = self
             .storage
-            .get_one(doc! { "_id": id.to_string().clone(), "buildableId": buildable_id.clone() })
+            .get_one(doc! { "_id": id, "buildableId": buildable_id })
             .await?
             .ok_or_else(|| InternalError::key_not_found("Secret", None))?;
 
@@ -125,7 +125,7 @@ impl SecretExt for GoogleKms {
     async fn create(
         &self,
         secret: &Value,
-        buildable_id: String,
+        buildable_id: &str,
     ) -> Result<Secret, IntegrationOSError> {
         let string = serde_json::to_string(&secret).map_err(|_| {
             InternalError::serialize_error("The provided value is not a valid UTF-8 string", None)
@@ -135,7 +135,7 @@ impl SecretExt for GoogleKms {
         let secret = Secret::new(
             encrypted_secret,
             Some(SecretVersion::V2),
-            buildable_id,
+            buildable_id.to_owned(),
             None,
         );
 

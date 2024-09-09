@@ -152,8 +152,8 @@ pub async fn test_connection_model_definition(
     let secret_result = state
         .secrets_client
         .get(
-            connection.secrets_service_id.clone(),
-            connection.ownership.id.to_string(),
+            &connection.secrets_service_id,
+            &connection.ownership.id
         )
         .await
         .map_err(|e| {

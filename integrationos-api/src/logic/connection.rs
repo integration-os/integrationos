@@ -208,7 +208,7 @@ pub async fn create_connection(
 
     let secret_result = state
         .secrets_client
-        .create(&auth_form_data_value, access.ownership.id.to_string())
+        .create(&auth_form_data_value, &access.ownership.id)
         .await
         .map_err(|e| {
             error!("Error creating secret for connection: {:?}", e);
@@ -370,7 +370,7 @@ pub async fn update_connection(
 
         let secret_result = state
             .secrets_client
-            .create(&auth_form_data_value, event_access.ownership.id.to_string())
+            .create(&auth_form_data_value, &event_access.ownership.id)
             .await
             .map_err(|e| {
                 error!("Error creating secret for connection update: {:?}", e);

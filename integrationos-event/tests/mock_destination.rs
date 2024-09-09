@@ -173,8 +173,8 @@ async fn test_send_to_destination() {
     impl SecretExt for SecretsClient {
         async fn get(
             &self,
-            _id: String,
-            _buildable_id: String,
+            _id: &str,
+            _buildable_id: &str,
         ) -> Result<Secret, IntegrationOSError> {
             Ok(Secret::new(
                 "encrypted_secret".into(),
@@ -187,7 +187,7 @@ async fn test_send_to_destination() {
         async fn create(
             &self,
             _secret: &Value,
-            _buildable_id: String,
+            _buildable_id: &str
         ) -> Result<Secret, IntegrationOSError> {
             Ok(Secret::new(
                 "encrypted_secret".into(),
