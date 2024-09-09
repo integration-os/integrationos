@@ -13,6 +13,7 @@ pub struct Secret {
     buildable_id: String,
     created_at: i64,
     author: SecretAuthor,
+    #[serde(rename = "encrypedSecret")]
     secret: String,
     #[serde(default)]
     version: Option<SecretVersion>,

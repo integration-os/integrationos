@@ -87,11 +87,11 @@ pub struct MockSecretsClient {
 
 #[async_trait]
 impl SecretExt for MockSecretsClient {
-    async fn get(&self, id: String, buildable_id: String) -> Result<Secret, IntegrationOSError> {
+    async fn get(&self, id: &str, buildable_id: &str) -> Result<Secret, IntegrationOSError> {
         Ok(Secret::new(
             "secret".to_string(),
             Some(SecretVersion::V2),
-            buildable_id,
+            buildable_id.to_string(),
             None,
         ))
     }
@@ -99,12 +99,12 @@ impl SecretExt for MockSecretsClient {
     async fn create(
         &self,
         secret: &Value,
-        buildable_id: String,
+        buildable_id: &str
     ) -> Result<Secret, IntegrationOSError> {
         Ok(Secret::new(
             "secret".to_string(),
             Some(SecretVersion::V2),
-            buildable_id,
+            buildable_id.to_string(),
             None,
         ))
     }
