@@ -99,7 +99,7 @@ impl SecretExt for MockSecretsClient {
     async fn create(
         &self,
         secret: &Value,
-        buildable_id: &str
+        buildable_id: &str,
     ) -> Result<Secret, IntegrationOSError> {
         Ok(Secret::new(
             "secret".to_string(),

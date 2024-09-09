@@ -180,7 +180,7 @@ async fn oauth_handler(
         .secrets_client
         .create(
             &oauth_secret.as_json(),
-            user_event_access.clone().ownership.id.as_ref()
+            user_event_access.clone().ownership.id.as_ref(),
         )
         .await
         .map_err(|e| {
