@@ -16,7 +16,6 @@ use integrationos_api::{
     },
     server::Server,
 };
-use integrationos_domain::SecretVersion;
 use integrationos_domain::{
     access_key_data::AccessKeyData,
     access_key_prefix::AccessKeyPrefix,
@@ -26,13 +25,14 @@ use integrationos_domain::{
     connection_model_definition::{
         ConnectionModelDefinition, CrudAction, CrudMapping, PlatformInfo,
     },
-    create_secret_response::{Secret, SecretAuthor},
+    create_secret_response::Secret,
     environment::Environment,
     event_access::EventAccess,
     event_type::EventType,
     get_secret_request::GetSecretRequest,
     AccessKey, Claims, IntegrationOSError, SanitizedConnection, Store,
 };
+use integrationos_domain::{SecretExt, SecretVersion};
 use jsonwebtoken::EncodingKey;
 use mockito::{Matcher, Server as MockServer, ServerGuard};
 use mongodb::Client;
@@ -83,6 +83,31 @@ pub struct TestServer {
 #[derive(Debug, Clone, Default)]
 pub struct MockSecretsClient {
     secrets: Arc<RwLock<HashMap<GetSecretRequest, Value>>>,
+}
+
+#[async_trait]
+impl SecretExt for MockSecretsClient {
+    async fn get(&self, id: String, buildable_id: String) -> Result<Secret, IntegrationOSError> {
+        Ok(Secret::new(
+            "secret".to_string(),
+            Some(SecretVersion::V2),
+            buildable_id,
+            None,
+        ))
+    }
+
+    async fn create(
+        &self,
+        secret: &Value,
+        buildable_id: String,
+    ) -> Result<Secret, IntegrationOSError> {
+        Ok(Secret::new(
+            "secret".to_string(),
+            Some(SecretVersion::V2),
+            buildable_id,
+            None,
+        ))
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
