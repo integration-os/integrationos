@@ -19,10 +19,10 @@ use integrationos_domain::{
     connection_model_definition::ConnectionModelDefinition,
     connection_model_schema::{ConnectionModelSchema, PublicConnectionModelSchema},
     connection_oauth_definition::{ConnectionOAuthDefinition, Settings},
-    create_secret_response::Secret,
     cursor::Cursor,
     event_access::EventAccess,
     page::PlatformPage,
+    secret::Secret,
     stage::Stage,
     Connection, Event, Pipeline, PlatformData, SecretExt, Store, Transaction,
 };

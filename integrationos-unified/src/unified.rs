@@ -256,14 +256,11 @@ impl UnifiedDestination {
                 .get_or_insert_with_fn(connection.as_ref().clone(), || async {
                     match self
                         .secrets_client
-                        .get(
-                            &connection.secrets_service_id,
-                            &connection.ownership.id
-                        )
+                        .get(&connection.secrets_service_id, &connection.ownership.id)
                         .map(|v| Some(v).transpose())
                         .await
                     {
-                        Ok(Some(c)) => Ok(c.decode::<Value>()?),
+                        Ok(Some(c)) => Ok(c.as_value()?),
                         Ok(None) => Err(InternalError::key_not_found("secret", None)),
                         Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
                     }
@@ -1070,20 +1067,19 @@ impl UnifiedDestination {
             .get_or_insert_with_fn(connection.as_ref().clone(), || async {
                 match self
                     .secrets_client
-                    .get(
-                        &connection.secrets_service_id,
-                        &connection.ownership.id
-                    )
+                    .get(&connection.secrets_service_id, &connection.ownership.id)
                     .map(|v| Some(v).transpose())
                     .await
                 {
                     // TODO: Ask for the real type instead of a generic Value
-                    Ok(Some(c)) => Ok(c.decode::<Value>()?),
+                    Ok(Some(c)) => Ok(c.as_value()?),
                     Ok(None) => Err(InternalError::key_not_found("Secrets", None)),
                     Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
                 }
             })
             .await?;
+
+        println!("Secret: {:?}", secret);
 
         // Template the route for passthrough actions
         let templated_config = match &destination.action {

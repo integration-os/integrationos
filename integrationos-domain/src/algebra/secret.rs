@@ -1,7 +1,7 @@
 use super::{CryptoExt, GoogleCryptoKms, IOSCrypto, MongoStore};
 use crate::{
-    prelude::create_secret_response::Secret, secrets::SecretsConfig, IntegrationOSError,
-    InternalError, SecretVersion,
+    prelude::secret::Secret, secrets::SecretsConfig, IntegrationOSError, InternalError,
+    SecretVersion,
 };
 use async_trait::async_trait;
 use bson::doc;
@@ -38,6 +38,7 @@ impl IOSKms {
 #[async_trait]
 impl SecretExt for IOSKms {
     async fn get(&self, id: &str, buildable_id: &str) -> Result<Secret, IntegrationOSError> {
+        println!("Get secret: {:?}", id);
         let secret = self
             .storage
             .get_one(doc! { "_id": id, "buildableId": buildable_id })
@@ -60,7 +61,7 @@ impl SecretExt for IOSKms {
     async fn create(
         &self,
         secret: &Value,
-        buildable_id: &str
+        buildable_id: &str,
     ) -> Result<Secret, IntegrationOSError> {
         let string = serde_json::to_string(&secret).map_err(|_| {
             InternalError::serialize_error("The provided value is not a valid UTF-8 string", None)

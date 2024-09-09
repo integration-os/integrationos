@@ -2,10 +2,10 @@ use anyhow::{Context, Result};
 use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_domain::{
-    create_secret_response::Secret,
+    secret::Secret,
     secrets::SecretServiceProvider,
     telemetry::{get_subscriber, init_subscriber},
-    GoogleCryptoKms, GoogleKms, IOSKms, MongoStore, SecretExt, Store,
+    GoogleKms, IOSKms, MongoStore, SecretExt, Store,
 };
 use integrationos_event::{
     config::EventCoreConfig,
@@ -55,7 +55,7 @@ async fn main() -> Result<()> {
         SecretServiceProvider::GoogleKms => {
             Arc::new(GoogleKms::new(&config.secrets_config, secrets_store).await?)
         }
-        SecretServiceProvider::IOSKms => {
+        SecretServiceProvider::IosKms => {
             Arc::new(IOSKms::new(&config.secrets_config, secrets_store).await?)
         }
     };

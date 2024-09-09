@@ -160,14 +160,14 @@ impl GoogleCryptoKms {
                         key_id = self.config.google_kms_key_id,
                     ),
                     ciphertext: BASE64_STANDARD.decode(encrypted_secret.as_bytes())
-                        .map_err(|e| InternalError::deserialize_error(&e.to_string(), None))?,
+                        .map_err(|_| InternalError::deserialize_error("The provided value is not a valid UTF-8 string", None))?,
                     ..Default::default()
                 };
 
-                let decrypted_secret = self.client.decrypt(request, None).await.map_err(|e| {
+                let decrypted_secret = self.client.decrypt(request, None).await.map_err(|_| {
                     InternalError::connection_error(
-                        &e.to_string(),
-                        Some("Failed to decrypt secret"),
+                        "The provided value is not a valid UTF-8 string",
+                        None,
                     )
                 })?;
 
@@ -213,42 +213,40 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_to_decrypt_if_the_key_is_different() {
-        // let secret = SecretString::new("secret".to_string());
-        // let crypto = Crypto::new(&secret).expect("Failed to create crypto");
-        //
-        // let data = "lorem_ipsum-dolor_sit-amet";
-        // let encrypted = crypto.encrypt(data).expect("Failed to encrypt data");
-        //
-        // let secret = SecretString::new("different".to_string());
-        // let crypto = Crypto::new(&secret).expect("Failed to create crypto");
-        //
-        // let decrypted = crypto.decrypt(&encrypted);
-        //
-        // assert!(decrypted.is_err());
-        //
         let config = SecretsConfig::default();
         let crypto = IOSCrypto::new(config).expect("Failed to create IOSCrypto client");
 
         let data = "lorem_ipsum-dolor_sit-amet";
+        let encrypted = crypto
+            .encrypt(data.to_owned())
+            .await
+            .expect("Failed to encrypt data");
 
-        todo!()
+        let config = SecretsConfig::new().with_secret("lorem_ipsum-dolor_sit_amet-neque".into());
+        let crypto = IOSCrypto::new(config).expect("Failed to create IOSCrypto client");
+
+        let decrypted = crypto.decrypt(encrypted).await;
+
+        assert!(decrypted.is_err());
     }
 
-    #[test]
-    fn should_fail_to_decrypt_if_the_data_is_tampered() {
-        // let secret = SecretString::new("secret".to_string());
-        // let crypto = Crypto::new(&secret).expect("Failed to create crypto");
-        //
-        // let data = "lorem_ipsum-dolor_sit-amet";
-        // let encrypted = crypto.encrypt(data).expect("Failed to encrypt data");
-        //
-        // let mut obsf = hex::decode(encrypted).expect("Failed to decode encrypted data");
-        // obsf[0] = 0;
-        // let tampered = hex::encode(obsf);
-        //
-        // let decrypted = crypto.decrypt(&tampered);
-        //
-        // assert!(decrypted.is_err());
-        todo!()
+    #[tokio::test]
+    async fn should_fail_to_decrypt_if_the_data_is_tampered() {
+        let config = SecretsConfig::default();
+        let crypto = IOSCrypto::new(config).expect("Failed to create IOSCrypto client");
+
+        let data = "lorem_ipsum-dolor_sit-amet";
+        let encrypted = crypto
+            .encrypt(data.to_owned())
+            .await
+            .expect("Failed to encrypt data");
+
+        let mut obsf = hex::decode(encrypted).expect("Failed to decode encrypted data");
+        obsf[0] = 0;
+        let tampered = hex::encode(obsf);
+
+        let decrypted = crypto.decrypt(tampered).await;
+
+        assert!(decrypted.is_err());
     }
 }

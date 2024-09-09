@@ -2,7 +2,7 @@ use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_api::{config::ConnectionsConfig, server::Server};
-use integrationos_domain::create_secret_response::Secret;
+use integrationos_domain::secret::Secret;
 use integrationos_domain::secrets::SecretServiceProvider;
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use integrationos_domain::{GoogleKms, IOSKms, MongoStore, SecretExt, Store};
@@ -32,7 +32,7 @@ fn main() -> Result<()> {
                     SecretServiceProvider::GoogleKms => {
                         Arc::new(GoogleKms::new(&config.secrets_config, secrets_store).await?)
                     }
-                    SecretServiceProvider::IOSKms => {
+                    SecretServiceProvider::IosKms => {
                         Arc::new(IOSKms::new(&config.secrets_config, secrets_store).await?)
                     }
                 };

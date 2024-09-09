@@ -19,17 +19,16 @@ use integrationos_api::{
 use integrationos_domain::{
     access_key_data::AccessKeyData,
     access_key_prefix::AccessKeyPrefix,
-    algebra::{CryptoExt, MongoStore},
+    algebra::MongoStore,
     api_model_config::{AuthMethod, SamplesInput, SchemasInput},
     connection_definition::{ConnectionDefinition, ConnectionDefinitionType},
     connection_model_definition::{
         ConnectionModelDefinition, CrudAction, CrudMapping, PlatformInfo,
     },
-    create_secret_response::Secret,
     environment::Environment,
     event_access::EventAccess,
     event_type::EventType,
-    get_secret_request::GetSecretRequest,
+    secret::Secret,
     AccessKey, Claims, IntegrationOSError, SanitizedConnection, Store,
 };
 use integrationos_domain::{SecretExt, SecretVersion};
@@ -42,7 +41,7 @@ use serde_json::Value;
 use serde_json::{from_value, to_value};
 use std::{
     collections::{BTreeMap, HashMap},
-    sync::{Arc, OnceLock, RwLock},
+    sync::{Arc, OnceLock},
     time::Duration,
 };
 use testcontainers_modules::{
@@ -81,13 +80,11 @@ pub struct TestServer {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct MockSecretsClient {
-    secrets: Arc<RwLock<HashMap<GetSecretRequest, Value>>>,
-}
+pub struct MockSecretsClient;
 
 #[async_trait]
 impl SecretExt for MockSecretsClient {
-    async fn get(&self, id: &str, buildable_id: &str) -> Result<Secret, IntegrationOSError> {
+    async fn get(&self, _id: &str, buildable_id: &str) -> Result<Secret, IntegrationOSError> {
         Ok(Secret::new(
             "secret".to_string(),
             Some(SecretVersion::V2),
@@ -98,7 +95,7 @@ impl SecretExt for MockSecretsClient {
 
     async fn create(
         &self,
-        secret: &Value,
+        _secret: &Value,
         buildable_id: &str,
     ) -> Result<Secret, IntegrationOSError> {
         Ok(Secret::new(

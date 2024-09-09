@@ -7,8 +7,7 @@ use axum::{
 };
 use bson::doc;
 use integrationos_domain::{
-    algebra::MongoStore, create_secret_response::Secret, event_access::EventAccess,
-    IntegrationOSError,
+    algebra::MongoStore, event_access::EventAccess, secret::Secret, IntegrationOSError,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

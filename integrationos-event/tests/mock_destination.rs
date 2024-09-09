@@ -10,12 +10,12 @@ use integrationos_domain::{
     connection_model_definition::{
         ConnectionModelDefinition, CrudAction, PlatformInfo, TestConnection,
     },
-    create_secret_response::Secret,
     destination::Action,
     environment::Environment,
     id::{prefix::IdPrefix, Id},
     ownership::Ownership,
     record_metadata::RecordMetadata,
+    secret::Secret,
     settings::Settings,
     Connection, ConnectionType, IntegrationOSError, Pipeline, SecretExt, SecretVersion, Throughput,
 };
@@ -171,11 +171,7 @@ async fn test_send_to_destination() {
 
     #[async_trait::async_trait]
     impl SecretExt for SecretsClient {
-        async fn get(
-            &self,
-            _id: &str,
-            _buildable_id: &str,
-        ) -> Result<Secret, IntegrationOSError> {
+        async fn get(&self, _id: &str, _buildable_id: &str) -> Result<Secret, IntegrationOSError> {
             Ok(Secret::new(
                 "encrypted_secret".into(),
                 Some(SecretVersion::V1),
@@ -187,7 +183,7 @@ async fn test_send_to_destination() {
         async fn create(
             &self,
             _secret: &Value,
-            _buildable_id: &str
+            _buildable_id: &str,
         ) -> Result<Secret, IntegrationOSError> {
             Ok(Secret::new(
                 "encrypted_secret".into(),

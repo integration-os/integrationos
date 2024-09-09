@@ -159,7 +159,7 @@ pub async fn test_connection_model_definition(
             e
         })?;
 
-    let mut secret_result = secret_result.decode::<Value>()?;
+    let mut secret_result = secret_result.as_value()?;
 
     let request_string: String = serde_json::to_string(&payload.request.clone()).map_err(|e| {
         error!(
