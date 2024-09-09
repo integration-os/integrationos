@@ -95,7 +95,7 @@ mod tests {
 
         let config_str = format!("{config}");
 
-        let display = "SECRETS_SERVICE_PROVIDER: ios-crypto\n\
+        let display = "SECRETS_SERVICE_PROVIDER: ios-kms\n\
             GOOGLE_KMS_PROJECT_ID: ****\n\
             GOOGLE_KMS_LOCATION_ID: ****\n\
             GOOGLE_KMS_KEY_RING_ID: ****\n\
