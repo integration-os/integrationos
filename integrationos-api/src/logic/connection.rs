@@ -166,7 +166,7 @@ pub async fn create_connection(
         "{}::{}::{}",
         access.environment,
         connection_config.platform,
-        payload.group.to_case(Case::Kebab)
+        payload.group.replace([':', ' '], "_")
     );
 
     let event_access = generate_event_access(
