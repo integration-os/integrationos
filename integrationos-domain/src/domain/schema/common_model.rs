@@ -165,6 +165,7 @@ pub enum DataType<T = CommonModel> {
         element_type: Box<DataType<T>>,
     },
     Unknown,
+    Record,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
@@ -322,6 +323,7 @@ impl DataType {
                 format!("Vec<{}>", name)
             }
             DataType::Unknown => "serde_json::Value".into(),
+            DataType::Record => "serde_json::Value".into(),
         }
     }
 
@@ -344,6 +346,7 @@ impl DataType {
                 format!("{}[]", name)
             }
             DataType::Unknown => "unknown".into(),
+            DataType::Record => "Record<string, unknown>".into(),
         }
     }
 
@@ -435,6 +438,7 @@ impl DataType {
                 }
             }
             DataType::Unknown => "Schema.Unknown".to_string(),
+            DataType::Record => "Schema.Unknown".to_string(),
         }
     }
 
@@ -518,6 +522,10 @@ impl DataType {
                 })),
             },
             DataType::Unknown => ReferenceOr::Item(Box::new(Schema {
+                schema_data: Default::default(),
+                schema_kind: SchemaKind::Type(Type::Object(Default::default())),
+            })),
+            DataType::Record => ReferenceOr::Item(Box::new(Schema {
                 schema_data: Default::default(),
                 schema_kind: SchemaKind::Type(Type::Object(Default::default())),
             })),
@@ -616,6 +624,7 @@ impl DataType {
                 format!("Array<{name}>")
             }
             DataType::Unknown => "unknown".into(),
+            DataType::Record => "Record<string, unknown>".into(),
         }
     }
 }
@@ -677,6 +686,7 @@ impl From<DataType<UnsavedCommonModel>> for DataType {
                 element_type: Box::new(element_type.deref().clone().into()),
             },
             DataType::Unknown => DataType::Unknown,
+            DataType::Record => DataType::Record,
         }
     }
 }

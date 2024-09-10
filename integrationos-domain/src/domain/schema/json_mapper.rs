@@ -191,6 +191,10 @@ impl Field {
                 path: path.clone(),
                 required,
             },
+            DataType::Record => Field::Object {
+                required,
+                fields: HashMap::new(),
+            },
         };
         Ok(field)
     }

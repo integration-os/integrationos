@@ -361,6 +361,14 @@ impl TryFrom<DataType> for Property {
                 items: None,
                 r#enum: None,
             }),
+            DataType::Record => Ok(Property {
+                r#type: "object".to_string(),
+                path: None,
+                description: None,
+                properties: None,
+                items: None,
+                r#enum: None,
+            }),
         }
     }
 }
