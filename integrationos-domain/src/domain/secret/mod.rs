@@ -76,7 +76,8 @@ impl Secret {
     }
 
     pub fn as_value(&self) -> Result<Value, IntegrationOSError> {
-        serde_json::to_value(&self.encrypted_secret)
+        self.decode()
+            .or_else(|_| serde_json::to_value(&self.encrypted_secret))
             .map_err(|e| InternalError::deserialize_error(&e.to_string(), None))
     }
 
@@ -94,5 +95,48 @@ impl Secret {
 
     pub fn encrypted_secret(&self) -> SecretString {
         SecretString::new(self.encrypted_secret.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_should_deserialize_secret_as_value() {
+        let secret = Secret::new(
+            "brand_new_secret".to_string(),
+            None,
+            "buildable_id".to_string(),
+            None,
+        );
+        let value = secret.as_value().unwrap();
+        assert_eq!(value, json!("brand_new_secret"));
+    }
+
+    #[test]
+    fn test_should_deserialize_secret_as_json() {
+        let secret = json!({"SECRET_KEY": "brand_new_secret"});
+        let secret = Secret::new(secret.to_string(), None, "buildable_id".to_string(), None);
+        let value = secret.as_value().unwrap();
+        assert_eq!(value, json!({"SECRET_KEY": "brand_new_secret"}));
+    }
+
+    #[test]
+    fn test_should_deserialize_secret_as_a_custom_type() {
+        #[derive(Deserialize, Serialize)]
+        struct CustomSecret {
+            secret_key: String,
+        }
+        let secret = CustomSecret {
+            secret_key: "brand_new_secret".to_string(),
+        };
+        let secret = serde_json::to_value(secret).expect("Failed to serialize secret");
+
+        let secret = Secret::new(secret.to_string(), None, "buildable_id".to_string(), None);
+        let custom_secret: CustomSecret = secret.decode().expect("Failed to decode secret");
+        assert_eq!(custom_secret.secret_key, "brand_new_secret");
     }
 }

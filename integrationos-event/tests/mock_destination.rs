@@ -132,7 +132,7 @@ async fn get_control_store(
 ) -> MongoControlDataStore {
     MongoControlDataStore::new(config, secrets_client)
         .await
-        .unwrap()
+        .expect("Failed to create control data store")
 }
 
 #[tokio::test]
@@ -173,10 +173,10 @@ async fn test_send_to_destination() {
     impl SecretExt for SecretsClient {
         async fn get(&self, _id: &str, buildable_id: &str) -> Result<Secret, IntegrationOSError> {
             Ok(Secret::new(
-                "secret".into(),
-                Some(SecretVersion::V1),
+                r#"{"STRIPE_SECRET_KEY": "Stripe secret key"}"#.to_string(),
+                Some(SecretVersion::V2),
                 buildable_id.to_string(),
-                Some(1725915939),
+                None,
             ))
         }
 
@@ -186,10 +186,10 @@ async fn test_send_to_destination() {
             buildable_id: &str,
         ) -> Result<Secret, IntegrationOSError> {
             Ok(Secret::new(
-                "secret".into(),
-                Some(SecretVersion::V1),
+                json!({ "STRIPE_SECRET_KEY": "Stripe secret key" }).to_string(),
+                Some(SecretVersion::V2),
                 buildable_id.to_string(),
-                Some(1725915939),
+                None,
             ))
         }
     }

@@ -1071,7 +1071,6 @@ impl UnifiedDestination {
                     .map(|v| Some(v).transpose())
                     .await
                 {
-                    // TODO: Ask for the real type instead of a generic Value
                     Ok(Some(c)) => Ok(c.as_value()?),
                     Ok(None) => Err(InternalError::key_not_found("Secrets", None)),
                     Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
