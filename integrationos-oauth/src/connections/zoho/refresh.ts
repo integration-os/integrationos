@@ -7,11 +7,11 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
             OAUTH_CLIENT_ID: client_id,
             OAUTH_CLIENT_SECRET: client_secret,
             OAUTH_REFRESH_TOKEN: refresh_token,
-            OAUTH_REQUEST_PAYLOAD: {
-                formData: { ZOHO_ACCOUNTS_DOMAIN },
-            },
-            OAUTH_METADATA,
+            OAUTH_METADATA: { meta },
         } = body;
+
+        let refreshToken = refresh_token;
+        const ZOHO_ACCOUNTS_DOMAIN = meta.ZOHO_ACCOUNTS_DOMAIN;
 
         let url = `${ZOHO_ACCOUNTS_DOMAIN}/oauth/v2/token?grant_type=refresh_token`;
         url += `&client_id=${client_id}&client_secret=${client_secret}&refresh_token=${refresh_token}`;
@@ -26,15 +26,17 @@ export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
             },
         } = response;
 
+        // Update refresh token if a new token is allocated
+        if (response.data.refresh_token) {
+            refreshToken = response.data.refresh_token;
+        }
+
         return {
             accessToken,
-            // Refresh token does not expire and stays the same for every request
-            refreshToken: refresh_token,
+            refreshToken,
             expiresIn,
             tokenType,
-            meta: {
-                ...OAUTH_METADATA?.meta,
-            },
+            meta,
         };
     } catch (error) {
         throw new Error(`Error fetching refresh token for Zoho: ${error}`);

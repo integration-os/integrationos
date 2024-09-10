@@ -6,15 +6,17 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
         const {
             clientId,
             clientSecret,
-            metadata: {
-                additionalData,
-                code,
-                formData: { ZOHO_ACCOUNTS_DOMAIN },
-                redirectUri,
-            },
+            metadata: { code, redirectUri, additionalData },
         } = body;
+
+        // Decode the accounts-server for authorization URL
+        const ZOHO_ACCOUNTS_DOMAIN = decodeURIComponent(
+            additionalData['accounts-server'],
+        );
+
         let url = `${ZOHO_ACCOUNTS_DOMAIN}/oauth/v2/token?grant_type=authorization_code`;
-        url += `&client_id=${clientId}&client_secret=${clientSecret}&code=${code}&redirect_uri=${redirectUri}`;
+        url += `&client_id=${clientId}&client_secret=${clientSecret}`;
+        url += `&code=${code}&redirect_uri=${redirectUri}`;
 
         const response = await axios.post(url);
 
@@ -34,8 +36,9 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
             expiresIn,
             tokenType,
             meta: {
-                apiDomain,
                 ...additionalData,
+                ZOHO_ACCOUNTS_DOMAIN,
+                apiDomain,
             },
         };
     } catch (error) {
