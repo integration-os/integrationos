@@ -149,7 +149,7 @@ impl GoogleCryptoKms {
     ) -> Result<String, IntegrationOSError> {
         match version {
             Some(SecretVersion::V2) => self.fallback.decrypt(encrypted_secret).await,
-            _ => {
+            Some(SecretVersion::V1) | None => {
                 let request = DecryptRequest {
                     name: format!(
                         "projects/{project_id}/locations/{location_id}/keyRings/{key_ring_id}/cryptoKeys/{key_id}",
@@ -183,6 +183,7 @@ impl GoogleCryptoKms {
     }
 
     async fn encrypt(&self, secret: String) -> Result<String, IntegrationOSError> {
+        // This is semantically incorrect. But support for Google encryption will be removed in the future, hence the lack of support for V1 encryption.
         self.fallback.encrypt(secret).await
     }
 }
