@@ -1,5 +1,5 @@
 use super::event_access::CreateEventAccessPayloadWithOwnership;
-use crate::server::AppState;
+use crate::{logic::event_access::get_client_throughput, server::AppState};
 use axum::{
     extract::{Path, State},
     routing::post,
@@ -200,6 +200,8 @@ async fn oauth_handler(
         user_event_access.environment, conn_definition.platform, payload.group
     );
 
+    let throughput = get_client_throughput(&user_event_access.ownership.id, &state).await?;
+
     let event_access = CreateEventAccessPayloadWithOwnership {
         name: payload.label.clone(),
         group: Some(payload.group.clone()),
@@ -209,6 +211,7 @@ async fn oauth_handler(
         environment: user_event_access.environment,
         paths: conn_definition.paths.clone(),
         ownership: user_event_access.ownership.clone(),
+        throughput: Some(throughput),
     }
     .as_event_access(&state.config)
     .map_err(|e| {
@@ -230,7 +233,10 @@ async fn oauth_handler(
         event_access_id: event_access.id,
         access_key: event_access.access_key,
         settings: conn_definition.settings,
-        throughput: Throughput { key, limit: 100 },
+        throughput: Throughput {
+            key,
+            limit: throughput,
+        },
         ownership: user_event_access.ownership.clone(),
         oauth: Some(OAuth::Enabled {
             connection_oauth_definition_id: conn_oauth_definition.id,

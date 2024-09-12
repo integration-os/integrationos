@@ -75,6 +75,7 @@ pub struct CreateEventAccessPayloadWithOwnership {
     pub environment: Environment,
     pub paths: Paths,
     pub ownership: Ownership,
+    pub throughput: Option<u64>,
 }
 
 impl CreateEventAccessPayloadWithOwnership {
@@ -143,8 +144,30 @@ pub fn generate_event_access(
         access_key: encoded_access_key.to_string(),
         environment: payload.environment,
         record_metadata: RecordMetadata::default(),
-        throughput: config.event_access_throughput,
+        throughput: payload.throughput.unwrap_or(config.event_access_throughput),
     })
+}
+
+pub async fn get_client_throughput(client_id: &str, state: &Arc<AppState>) -> Result<u64> {
+    let client_record = match state
+        .app_stores
+        .clients
+        .get_one(doc! {
+            "buildableId": client_id,
+        })
+        .await
+    {
+        Ok(record) => record,
+        Err(e) => {
+            error!("Failed to get client throughput: {}", e);
+            return Ok(state.config.event_access_throughput);
+        }
+    };
+
+    Ok(client_record
+        .and_then(|config| config.billing)
+        .map(|billing| billing.throughput)
+        .unwrap_or(state.config.event_access_throughput))
 }
 
 pub async fn create_event_access_for_new_user(
@@ -158,6 +181,13 @@ pub async fn create_event_access_for_new_user(
             None,
         ));
     }
+
+    let throughput = get_client_throughput(&req.ownership.id, &state).await?;
+
+    let req = CreateEventAccessPayloadWithOwnership {
+        throughput: Some(throughput),
+        ..req
+    };
 
     let event_access = generate_event_access(state.config.clone(), req).map_err(|e| {
         error!("Error generating event access for new user: {:?}", e);
@@ -191,6 +221,8 @@ pub async fn create_event_access(
         ));
     }
 
+    let throughput = get_client_throughput(&access.ownership.id, &state).await?;
+
     let event_access_payload = CreateEventAccessPayloadWithOwnership {
         name: payload.name.clone(),
         group: payload.group.clone(),
@@ -200,6 +232,7 @@ pub async fn create_event_access(
         environment: access.environment,
         paths: payload.paths.clone(),
         ownership: access.ownership.clone(),
+        throughput: Some(throughput),
     };
 
     let event_access =
