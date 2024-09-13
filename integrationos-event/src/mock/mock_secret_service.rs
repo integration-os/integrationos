@@ -1,27 +1,21 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use integrationos_domain::{
-    algebra::CryptoExt, create_secret_response::CreateSecretResponse,
-    get_secret_request::GetSecretRequest, IntegrationOSError,
-};
+use integrationos_domain::{algebra::CryptoExt, IntegrationOSError, SecretVersion};
 
 #[derive(Debug, Clone)]
 pub struct MockSecretsClient;
 
 #[async_trait]
 impl CryptoExt for MockSecretsClient {
-    async fn decrypt(
-        &self,
-        _secret: &GetSecretRequest,
-    ) -> Result<serde_json::Value, IntegrationOSError> {
-        Ok(serde_json::Value::Null)
+    async fn encrypt(&self, encrypted_secret: String) -> Result<String, IntegrationOSError> {
+        Ok(encrypted_secret)
     }
 
-    async fn encrypt(
+    async fn decrypt(
         &self,
-        _key: String,
-        _val: &serde_json::Value,
-    ) -> Result<CreateSecretResponse, IntegrationOSError> {
-        unimplemented!()
+        data: String,
+        _version: Option<SecretVersion>,
+    ) -> Result<String, IntegrationOSError> {
+        Ok(data)
     }
 }

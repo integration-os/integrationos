@@ -81,7 +81,6 @@ mod tests {
     #[tokio::test]
     async fn test_local_cache() {
         let cache = TestCache::new(10, Duration::from_secs(3));
-        println!("Policy: {:?}", cache.inner.policy());
 
         let id = Faker.fake();
         let value = Faker.fake();

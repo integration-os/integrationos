@@ -2,8 +2,10 @@ use anyhow::{Context, Result};
 use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_domain::{
-    client::secrets_client::SecretsClient,
+    secret::Secret,
+    secrets::SecretServiceProvider,
     telemetry::{get_subscriber, init_subscriber},
+    GoogleKms, IOSKms, MongoStore, SecretExt, Store,
 };
 use integrationos_event::{
     config::EventCoreConfig,
@@ -14,6 +16,7 @@ use integrationos_event::{
     mongo_control_data_store::MongoControlDataStore,
 };
 use metrics_exporter_prometheus::PrometheusBuilder;
+use mongodb::Client;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio_condvar::Condvar;
@@ -44,13 +47,19 @@ async fn main() -> Result<()> {
         "percentage of total capacity of events currently being concurrently executed by this worker"
     );
 
-    let secrets_client =
-        Arc::new(SecretsClient::new(&config.secrets_config).with_context(|| {
-            format!(
-                "Could not parse secrets service config {:?}",
-                config.secrets_config
-            )
-        })?);
+    let client = Client::with_uri_str(&config.db_config.event_db_url).await?;
+    let database = client.database(&config.db_config.event_db_name);
+    let secrets_store = MongoStore::<Secret>::new(&database, &Store::Secrets).await?;
+
+    let secrets_client: Arc<dyn SecretExt + Sync + Send> = match config.secrets_config.provider {
+        SecretServiceProvider::GoogleKms => {
+            Arc::new(GoogleKms::new(&config.secrets_config, secrets_store).await?)
+        }
+        SecretServiceProvider::IosKms => {
+            Arc::new(IOSKms::new(&config.secrets_config, secrets_store).await?)
+        }
+    };
+
     let control_store = Arc::new(
         MongoControlDataStore::new(&config, secrets_client)
             .await

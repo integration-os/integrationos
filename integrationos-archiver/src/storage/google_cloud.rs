@@ -1,3 +1,8 @@
+use super::{ArchiveName, Storage};
+use crate::config::ArchiverConfig;
+use crate::event::Event;
+use crate::storage::Chunk;
+use crate::Extension;
 use anyhow::{anyhow, Context, Result};
 use chrono::{NaiveDate, Utc};
 use futures::StreamExt;
@@ -19,13 +24,6 @@ use std::time::Duration;
 use tempfile::Builder;
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
-
-use crate::config::ArchiverConfig;
-use crate::event::Event;
-use crate::storage::Chunk;
-use crate::Extension;
-
-use super::{ArchiveName, Storage};
 
 pub struct GoogleCloudStorage {
     client: GClient,

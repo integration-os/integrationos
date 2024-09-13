@@ -6,20 +6,18 @@ use fake::{
 };
 use http::Method;
 use integrationos_domain::{
-    algebra::CryptoExt,
     api_model_config::{ApiModelConfig, AuthMethod, SamplesInput, SchemasInput},
     connection_model_definition::{
         ConnectionModelDefinition, CrudAction, PlatformInfo, TestConnection,
     },
-    create_secret_response::{CreateSecretAuthor, CreateSecretResponse},
     destination::Action,
     environment::Environment,
-    get_secret_request::GetSecretRequest,
     id::{prefix::IdPrefix, Id},
     ownership::Ownership,
     record_metadata::RecordMetadata,
+    secret::Secret,
     settings::Settings,
-    Connection, ConnectionType, IntegrationOSError, Pipeline, Throughput,
+    Connection, ConnectionType, IntegrationOSError, Pipeline, SecretExt, SecretVersion, Throughput,
 };
 use integrationos_event::{
     config::EventCoreConfig, mongo_control_data_store::MongoControlDataStore,
@@ -33,10 +31,10 @@ use testcontainers_modules::{mongo::Mongo, testcontainers::clients::Cli as Docke
 use uuid::Uuid;
 
 pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
-    let client = Client::with_uri_str(&config.db.control_db_url)
+    let client = Client::with_uri_str(&config.db_config.control_db_url)
         .await
         .unwrap();
-    let db = client.database(&config.db.control_db_name);
+    let db = client.database(&config.db_config.control_db_name);
     let ts = Utc::now();
     let uuid = Uuid::nil();
     let event_access_id = Id::new_with_uuid(IdPrefix::EventAccess, ts, uuid);
@@ -130,11 +128,11 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
 
 async fn get_control_store(
     config: &EventCoreConfig,
-    secrets_client: Arc<dyn CryptoExt + Sync + Send>,
+    secrets_client: Arc<dyn SecretExt + Sync + Send>,
 ) -> MongoControlDataStore {
     MongoControlDataStore::new(config, secrets_client)
         .await
-        .unwrap()
+        .expect("Failed to create control data store")
 }
 
 #[tokio::test]
@@ -170,26 +168,29 @@ async fn test_send_to_destination() {
 
     #[derive(Clone)]
     struct SecretsClient;
+
     #[async_trait::async_trait]
-    impl CryptoExt for SecretsClient {
-        async fn decrypt(&self, _secret: &GetSecretRequest) -> Result<Value, IntegrationOSError> {
-            Ok(json!({
-                "STRIPE_SECRET_KEY": "Stripe secret key"
-            }))
+    impl SecretExt for SecretsClient {
+        async fn get(&self, _id: &str, buildable_id: &str) -> Result<Secret, IntegrationOSError> {
+            Ok(Secret::new(
+                r#"{"STRIPE_SECRET_KEY": "Stripe secret key"}"#.to_string(),
+                Some(SecretVersion::V2),
+                buildable_id.to_string(),
+                None,
+            ))
         }
-        async fn encrypt(
+
+        async fn create(
             &self,
-            _key: String,
-            _value: &serde_json::Value,
-        ) -> Result<CreateSecretResponse, IntegrationOSError> {
-            // FIXME: Created at SHOULD NOT be an f64
-            Ok(CreateSecretResponse {
-                id: "id".into(),
-                buildable_id: "buildable_id".into(),
-                created_at: 0.0,
-                author: CreateSecretAuthor { id: "id".into() },
-                encrypted_secret: "encrypted_secret".into(),
-            })
+            _secret: &Value,
+            buildable_id: &str,
+        ) -> Result<Secret, IntegrationOSError> {
+            Ok(Secret::new(
+                json!({ "STRIPE_SECRET_KEY": "Stripe secret key" }).to_string(),
+                Some(SecretVersion::V2),
+                buildable_id.to_string(),
+                None,
+            ))
         }
     }
 

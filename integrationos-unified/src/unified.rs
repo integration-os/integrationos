@@ -26,11 +26,10 @@ use integrationos_domain::{
     destination::{Action, Destination},
     environment::Environment,
     error::InternalError,
-    get_secret_request::GetSecretRequest,
     hashed_secret::HashedSecret,
     id::{prefix::IdPrefix, Id},
-    prelude::{CryptoExt, MongoStore, TimedExt},
-    ApplicationError, Connection, ErrorMeta, IntegrationOSError, Store,
+    prelude::{MongoStore, TimedExt},
+    ApplicationError, Connection, ErrorMeta, IntegrationOSError, SecretExt, Store,
 };
 use js_sandbox_ios::Script;
 use mongodb::{
@@ -58,7 +57,7 @@ pub struct UnifiedDestination {
     pub connection_model_definitions_store: MongoStore<ConnectionModelDefinition>,
     pub connection_model_schemas_cache: ConnectionModelSchemaCache,
     pub connection_model_schemas_store: MongoStore<ConnectionModelSchema>,
-    pub secrets_client: Arc<dyn CryptoExt + Sync + Send>,
+    pub secrets_client: Arc<dyn SecretExt + Sync + Send>,
     pub secrets_cache: SecretCache,
     pub http_client: reqwest::Client,
 }
@@ -74,7 +73,7 @@ impl UnifiedDestination {
     pub async fn new(
         db_config: DatabaseConfig,
         cache_size: u64,
-        secrets_client: Arc<dyn CryptoExt + Sync + Send>,
+        secrets_client: Arc<dyn SecretExt + Sync + Send>,
         cache_ttls: UnifiedCacheTTLs,
     ) -> Result<Self, IntegrationOSError> {
         let http_client = reqwest::Client::new();
@@ -255,17 +254,13 @@ impl UnifiedDestination {
         let secret_fut =
             self.secrets_cache
                 .get_or_insert_with_fn(connection.as_ref().clone(), || async {
-                    let secret_request = GetSecretRequest {
-                        buildable_id: connection.ownership.id.to_string(),
-                        id: connection.secrets_service_id.clone(),
-                    };
                     match self
                         .secrets_client
-                        .decrypt(&secret_request)
+                        .get(&connection.secrets_service_id, &connection.ownership.id)
                         .map(|v| Some(v).transpose())
                         .await
                     {
-                        Ok(Some(c)) => Ok(c),
+                        Ok(Some(c)) => Ok(c.as_value()?),
                         Ok(None) => Err(InternalError::key_not_found("secret", None)),
                         Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
                     }
@@ -315,7 +310,7 @@ impl UnifiedDestination {
 
         let mut secret = join_result
             .1
-            .map_err(|e| InternalError::key_not_found(&format!("secret for key: {e}"), None))?;
+            .map_err(|e| InternalError::key_not_found(e.as_ref(), None))?;
 
         let cms = join_result.2.map_err(|e| {
             InternalError::key_not_found(&format!("model schema {name} for destination: {e}"), None)
@@ -1070,17 +1065,13 @@ impl UnifiedDestination {
         let secret = self
             .secrets_cache
             .get_or_insert_with_fn(connection.as_ref().clone(), || async {
-                let secret_request = GetSecretRequest {
-                    buildable_id: connection.ownership.id.to_string(),
-                    id: connection.secrets_service_id.clone(),
-                };
                 match self
                     .secrets_client
-                    .decrypt(&secret_request)
+                    .get(&connection.secrets_service_id, &connection.ownership.id)
                     .map(|v| Some(v).transpose())
                     .await
                 {
-                    Ok(Some(c)) => Ok(c),
+                    Ok(Some(c)) => Ok(c.as_value()?),
                     Ok(None) => Err(InternalError::key_not_found("Secrets", None)),
                     Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
                 }

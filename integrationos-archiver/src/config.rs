@@ -1,3 +1,4 @@
+use crate::storage::StorageProvider;
 use envconfig::Envconfig;
 use integrationos_domain::database::DatabaseConfig;
 use std::fmt::{Display, Formatter};
@@ -22,6 +23,8 @@ pub struct ArchiverConfig {
     pub gs_storage_bucket: String,
     #[envconfig(from = "GS_STORAGE_URI", default = "gs://integrationos-zsk")]
     pub gs_storage_uri: String,
+    #[envconfig(from = "STORAGE_PROVIDER", default = "google-cloud")]
+    pub storage_provider: StorageProvider,
     #[envconfig(from = "MAX_RETRIES", default = "3")]
     pub max_retries: u32,
     #[envconfig(from = "READ_BUFFER_SIZE_BYTES", default = "262144")]
@@ -37,6 +40,7 @@ impl Display for ArchiverConfig {
         writeln!(f, "GS_STORAGE_BUCKET: {}", self.gs_storage_bucket)?;
         writeln!(f, "GS_STORAGE_URI: {}", self.gs_storage_uri)?;
         writeln!(f, "MAX_RETRIES: {}", self.max_retries)?;
+        writeln!(f, "STORAGE_PROVIDER: {}", self.storage_provider.as_ref())?;
         writeln!(
             f,
             "PROCESSING_CHUNK_TIMEOUT_SECS: {}",

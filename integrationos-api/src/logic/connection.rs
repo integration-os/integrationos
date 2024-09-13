@@ -223,7 +223,7 @@ pub async fn create_connection(
 
     let secret_result = state
         .secrets_client
-        .encrypt(access.ownership.id.to_string(), &auth_form_data_value)
+        .create(&auth_form_data_value, &access.ownership.id)
         .await
         .map_err(|e| {
             error!("Error creating secret for connection: {:?}", e);
@@ -241,7 +241,7 @@ pub async fn create_connection(
         group: payload.group,
         platform: connection_config.platform.into(),
         environment: event_access.environment,
-        secrets_service_id: secret_result.id,
+        secrets_service_id: secret_result.id(),
         event_access_id: event_access.id,
         access_key: event_access.access_key,
         settings: connection_config.settings,
@@ -388,7 +388,7 @@ pub async fn update_connection(
 
         let secret_result = state
             .secrets_client
-            .encrypt(event_access.ownership.id.to_string(), &auth_form_data_value)
+            .create(&auth_form_data_value, &event_access.ownership.id)
             .await
             .map_err(|e| {
                 error!("Error creating secret for connection update: {:?}", e);
@@ -396,7 +396,7 @@ pub async fn update_connection(
                 e
             })?;
 
-        connection.secrets_service_id = secret_result.id;
+        connection.secrets_service_id = secret_result.id();
     }
 
     if let Some(active) = req.active {

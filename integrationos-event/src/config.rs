@@ -17,7 +17,7 @@ pub struct EventCoreConfig {
     #[envconfig(nested = true)]
     pub cache: CacheConfig,
     #[envconfig(nested = true)]
-    pub db: DatabaseConfig,
+    pub db_config: DatabaseConfig,
     #[envconfig(from = "CONNECTION_CACHE_TTL_SECS", default = "86400")]
     pub connection_cache_ttl_secs: u64,
     #[envconfig(from = "CONNECTION_MODEL_SCHEMA_TTL_SECS", default = "86400")]
@@ -40,6 +40,6 @@ impl Display for EventCoreConfig {
         )?;
         write!(f, "{}", self.secrets_config)?;
         write!(f, "{}", self.cache)?;
-        write!(f, "{}", self.db)
+        write!(f, "{}", self.db_config)
     }
 }

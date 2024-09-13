@@ -1,5 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
-
+use super::MockSecretsClient;
 use envconfig::Envconfig;
 use http::StatusCode;
 use integrationos_api::config::ConnectionsConfig as ApiConfig;
@@ -9,12 +8,11 @@ use integrationos_event::{
     mongo_context_store::MongoContextStore, mongo_control_data_store::MongoControlDataStore,
 };
 use integrationos_gateway::config::Config as GatewayConfig;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{
     mpsc::{self, Receiver},
     Mutex,
 };
-
-use super::MockSecretsClient;
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -38,7 +36,7 @@ impl TestCore {
     ) -> Self {
         let mut config = EventCoreConfig::init_from_hashmap(&HashMap::from([])).unwrap();
 
-        config.db = api_config.db_config.clone();
+        config.db_config = api_config.db_config.clone();
         config.cache = gateway_config.redis.clone();
 
         let control_store = Arc::new(

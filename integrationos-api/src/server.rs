@@ -13,7 +13,7 @@ use integrationos_cache::local::{
     event_access_cache::EventAccessCache,
 };
 use integrationos_domain::{
-    algebra::{CryptoExt, DefaultTemplate, MongoStore},
+    algebra::{DefaultTemplate, MongoStore},
     common_model::{CommonEnum, CommonModel},
     connection_definition::{ConnectionDefinition, PublicConnectionDetails},
     connection_model_definition::ConnectionModelDefinition,
@@ -22,9 +22,10 @@ use integrationos_domain::{
     cursor::Cursor,
     event_access::EventAccess,
     page::PlatformPage,
+    secret::Secret,
     stage::Stage,
     user::UserClient,
-    Connection, Event, Pipeline, PlatformData, Store, Transaction,
+    Connection, Event, Pipeline, PlatformData, SecretExt, Store, Transaction,
 };
 use integrationos_unified::unified::{UnifiedCacheTTLs, UnifiedDestination};
 use mongodb::{options::UpdateOptions, Client, Database};
@@ -52,6 +53,7 @@ pub struct AppStores {
     pub pipeline: MongoStore<Pipeline>,
     pub event_access: MongoStore<EventAccess>,
     pub event: MongoStore<Event>,
+    pub secrets: MongoStore<Secret>,
     pub transactions: MongoStore<Transaction>,
     pub cursors: MongoStore<Cursor>,
     pub stages: MongoStore<Stage>,
@@ -68,7 +70,7 @@ pub struct AppState {
     pub connections_cache: ConnectionCacheArcStrHeaderKey,
     pub connection_definitions_cache: ConnectionDefinitionCache,
     pub connection_oauth_definitions_cache: ConnectionOAuthDefinitionCache,
-    pub secrets_client: Arc<dyn CryptoExt + Sync + Send>,
+    pub secrets_client: Arc<dyn SecretExt + Sync + Send>,
     pub extractor_caller: UnifiedDestination,
     pub event_tx: Sender<Event>,
     pub metric_tx: Sender<Metric>,
@@ -83,7 +85,7 @@ pub struct Server {
 impl Server {
     pub async fn init(
         config: ConnectionsConfig,
-        secrets_client: Arc<dyn CryptoExt + Sync + Send + 'static>,
+        secrets_client: Arc<dyn SecretExt + Sync + Send + 'static>,
     ) -> Result<Self> {
         let client = Client::with_uri_str(&config.db_config.control_db_url).await?;
         let db = client.database(&config.db_config.control_db_name);
@@ -100,6 +102,7 @@ impl Server {
             MongoStore::new(&db, &Store::PublicConnectionModelSchemas).await?;
         let common_model = MongoStore::new(&db, &Store::CommonModels).await?;
         let common_enum = MongoStore::new(&db, &Store::CommonEnums).await?;
+        let secrets = MongoStore::new(&db, &Store::Secrets).await?;
         let connection = MongoStore::new(&db, &Store::Connections).await?;
         let platform = MongoStore::new(&db, &Store::Platforms).await?;
         let platform_page = MongoStore::new(&db, &Store::PlatformPages).await?;
@@ -137,6 +140,7 @@ impl Server {
             oauth_config,
             platform_page,
             frontend_oauth_config,
+            secrets,
             model_schema,
             public_model_schema,
             platform,
