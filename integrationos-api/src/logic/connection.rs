@@ -1,6 +1,8 @@
 use super::{delete, read, PublicExt, RequestExt};
 use crate::{
-    logic::event_access::{generate_event_access, CreateEventAccessPayloadWithOwnership},
+    logic::event_access::{
+        generate_event_access, get_client_throughput, CreateEventAccessPayloadWithOwnership,
+    },
     router::ServerResponse,
     server::{AppState, AppStores},
 };
@@ -11,7 +13,6 @@ use axum::{
     Extension, Json, Router,
 };
 use chrono::Utc;
-use convert_case::{Case, Casing};
 use http::HeaderMap;
 use integrationos_domain::{
     algebra::MongoStore,
@@ -169,6 +170,8 @@ pub async fn create_connection(
         payload.group.replace([':', ' '], "_")
     );
 
+    let throughput = get_client_throughput(&access.ownership.id, &state).await?;
+
     let event_access = generate_event_access(
         state.config.clone(),
         CreateEventAccessPayloadWithOwnership {
@@ -180,6 +183,7 @@ pub async fn create_connection(
             environment: access.environment,
             paths: connection_config.paths.clone(),
             ownership: access.ownership.clone(),
+            throughput: Some(throughput),
         },
     )
     .map_err(|e| {
@@ -230,7 +234,10 @@ pub async fn create_connection(
         event_access_id: event_access.id,
         access_key: event_access.access_key,
         settings: connection_config.settings,
-        throughput: Throughput { key, limit: 100 },
+        throughput: Throughput {
+            key,
+            limit: throughput,
+        },
         ownership: event_access.ownership,
         oauth: None,
         record_metadata: RecordMetadata::default(),
