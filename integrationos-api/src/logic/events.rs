@@ -1,4 +1,4 @@
-use super::{read, PublicExt, RequestExt};
+use super::{read_without_count, PublicExt, RequestExt};
 use crate::server::{AppState, AppStores};
 use axum::{routing::get, Router};
 use bson::doc;
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 pub fn get_router() -> Router<Arc<AppState>> {
-    Router::new().route("/", get(read::<CreateEventRequest, Event>))
+    Router::new().route("/", get(read_without_count::<CreateEventRequest, Event>))
 }
 
 #[derive(Serialize, Deserialize)]

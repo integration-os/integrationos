@@ -1,50 +1,48 @@
 import axios from 'axios';
 import qs from 'qs';
 import { DataObject, OAuthResponse } from '../../lib/types';
-import { generateBasicHeaders } from '../../lib/helpers';
 
 export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
     try {
         const {
             clientId: client_id,
             clientSecret: client_secret,
-            metadata: {
-                code,
-                formData: { NETSUITE_ACCOUNT_ID },
-                redirectUri: redirect_uri,
-            },
+            metadata: { code, redirectUri: redirect_uri },
         } = body;
 
         const requestBody = {
             grant_type: 'authorization_code',
             code,
+            client_id,
+            client_secret,
             redirect_uri,
         };
 
         const response = await axios({
-            url: `https://${NETSUITE_ACCOUNT_ID}.suitetalk.api.netsuite.com/services/rest/auth/oauth2/v1/token`,
+            url: 'https://oauth2.googleapis.com/token',
             method: 'POST',
-            headers: generateBasicHeaders(client_id, client_secret),
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Accept: 'application/json',
+            },
             data: qs.stringify(requestBody),
         });
 
         const {
-            data: {
-                access_token: accessToken,
-                refresh_token: refreshToken,
-                expires_in: expiresIn,
-                token_type: tokenType,
-            },
-        } = response;
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            token_type: tokenType,
+            expires_in: expiresIn,
+        } = response.data;
 
         return {
             accessToken,
             refreshToken,
-            expiresIn: +expiresIn,
+            expiresIn,
             tokenType,
             meta: {},
         };
     } catch (error) {
-        throw new Error(`Error fetching access token for Netsuite: ${error}`);
+        throw new Error(`Error fetching access token for Google: ${error}`);
     }
 };

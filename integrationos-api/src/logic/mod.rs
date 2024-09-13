@@ -169,40 +169,20 @@ where
     T: RequestExt<Output = U> + PublicExt<U> + 'static,
     U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
 {
-    let query = shape_mongo_filter(
-        query,
-        access.map(|e| {
-            let Extension(e) = e;
-            e
-        }),
-        Some(headers),
-    );
+    read_common::<T, U>(headers, access, query, State(state), true).await
+}
 
-    let store = T::get_store(state.app_stores.clone());
-    // TODO: Investigate how to improve performance here
-    let total = store.count(query.filter.clone(), None);
-    let find = store.get_many(
-        Some(query.filter),
-        None,
-        None,
-        Some(query.limit),
-        Some(query.skip),
-    );
-
-    let res = match try_join!(find, total) {
-        Ok((rows, total)) => ReadResponse {
-            rows: rows.into_iter().map(T::public).collect(),
-            skip: query.skip,
-            limit: query.limit,
-            total,
-        },
-        Err(e) => {
-            error!("Error reading from store: {e}");
-            return Err(e);
-        }
-    };
-
-    Ok(Json(ServerResponse::new("read", res)))
+pub async fn read_without_count<T, U>(
+    headers: HeaderMap,
+    access: Option<Extension<Arc<EventAccess>>>,
+    query: Option<Query<BTreeMap<String, String>>>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ServerResponse<ReadResponse<Value>>>, IntegrationOSError>
+where
+    T: RequestExt<Output = U> + PublicExt<U> + 'static,
+    U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
+{
+    read_common::<T, U>(headers, access, query, State(state), false).await
 }
 
 #[derive(Serialize, Deserialize)]
@@ -389,4 +369,59 @@ async fn get_connection(
         return Ok(Arc::new(updated_connection));
     }
     Ok(Arc::new(connection))
+}
+
+pub async fn read_common<T, U>(
+    headers: HeaderMap,
+    access: Option<Extension<Arc<EventAccess>>>,
+    query: Option<Query<BTreeMap<String, String>>>,
+    State(state): State<Arc<AppState>>,
+    count: bool,
+) -> Result<Json<ServerResponse<ReadResponse<Value>>>, IntegrationOSError>
+where
+    T: RequestExt<Output = U> + PublicExt<U> + 'static,
+    U: Serialize + DeserializeOwned + Unpin + Sync + Send + Debug + 'static,
+{
+    let query = shape_mongo_filter(
+        query,
+        access.map(|e| {
+            let Extension(e) = e;
+            e
+        }),
+        Some(headers),
+    );
+
+    let store = T::get_store(state.app_stores.clone());
+
+    let filter = query.filter.clone();
+    let total = async {
+        if count {
+            store.count(filter, None).await
+        } else {
+            Ok(0)
+        }
+    };
+
+    let find = store.get_many(
+        Some(query.filter),
+        None,
+        None,
+        Some(query.limit),
+        Some(query.skip),
+    );
+
+    let res = match try_join!(find, total) {
+        Ok((rows, total)) => ReadResponse {
+            rows: rows.into_iter().map(T::public).collect(),
+            skip: query.skip,
+            limit: query.limit,
+            total,
+        },
+        Err(e) => {
+            error!("Error reading from store: {e}");
+            return Err(e);
+        }
+    };
+
+    Ok(Json(ServerResponse::new("read", res)))
 }

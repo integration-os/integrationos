@@ -112,6 +112,7 @@ fn operation(action: &CrudAction, common_model: &CommonModel) -> Operation {
         CrudAction::GetCount => format!("Get {} count", common_model.name.to_case(Case::Pascal)),
         CrudAction::Create => format!("Create {}", common_model.name.to_case(Case::Pascal)),
         CrudAction::Update => format!("Update {}", common_model.name.to_case(Case::Pascal)),
+        CrudAction::Upsert => format!("Upsert {}", common_model.name.to_case(Case::Pascal)),
         CrudAction::Delete => format!("Delete {}", common_model.name.to_case(Case::Pascal)),
         _ => unimplemented!("Not implemented yet"),
     };
@@ -135,6 +136,10 @@ fn operation(action: &CrudAction, common_model: &CommonModel) -> Operation {
         ),
         CrudAction::Update => format!(
             "Update a single {} record",
+            common_model.name.to_case(Case::Pascal)
+        ),
+        CrudAction::Upsert => format!(
+            "Upsert a single {} record",
             common_model.name.to_case(Case::Pascal)
         ),
         CrudAction::Delete => format!(
@@ -228,6 +233,7 @@ fn parameter(action: &CrudAction) -> Vec<ReferenceOr<Parameter>> {
     ];
     match action {
         CrudAction::Create => vec![passthrough_query_param],
+        CrudAction::Upsert => vec![passthrough_query_param],
         CrudAction::GetCount => vec![passthrough_query_param],
         CrudAction::GetOne => path,
         CrudAction::Delete => path
@@ -580,6 +586,9 @@ fn properties(
             );
         }
         CrudAction::Update => {
+            properties.insert(UNIFIED.to_owned(), object_schema(IndexMap::new(), None));
+        }
+        CrudAction::Upsert => {
             properties.insert(UNIFIED.to_owned(), object_schema(IndexMap::new(), None));
         }
         CrudAction::Delete => {

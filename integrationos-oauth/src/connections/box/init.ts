@@ -5,22 +5,20 @@ import { DataObject, OAuthResponse } from '../../lib/types';
 export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
     try {
         const {
-            clientId,
-            clientSecret,
+            clientId: client_id,
+            clientSecret: client_secret,
             metadata: { code },
         } = body;
 
-        const baseUrl = `https://app.attio.com/oauth`;
-
         const requestBody = {
             grant_type: 'authorization_code',
-            code: code,
-            client_id: clientId,
-            client_secret: clientSecret,
+            code,
+            client_id,
+            client_secret,
         };
 
         const response = await axios({
-            url: `${baseUrl}/token`,
+            url: 'https://api.box.com/oauth2/token',
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -30,17 +28,20 @@ export const init = async ({ body }: DataObject): Promise<OAuthResponse> => {
         });
 
         const {
-            data: { access_token: accessToken, token_type: tokenType },
-        } = response;
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            token_type: tokenType,
+            expires_in: expiresIn,
+        } = response.data;
 
         return {
             accessToken,
-            refreshToken: accessToken,
-            expiresIn: 2147483647,
-            tokenType,
+            refreshToken,
+            expiresIn,
+            tokenType: tokenType === 'bearer' ? 'Bearer' : tokenType,
             meta: {},
         };
     } catch (error) {
-        throw new Error(`Error fetching access token for Attio: ${error}`);
+        throw new Error(`Error fetching access token for Box: ${error}`);
     }
 };

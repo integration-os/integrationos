@@ -56,6 +56,7 @@ pub struct AppStores {
     pub transactions: MongoStore<Transaction>,
     pub cursors: MongoStore<Cursor>,
     pub stages: MongoStore<Stage>,
+    pub clients: MongoStore<UserClient>,
 }
 
 #[derive(Clone)]
@@ -114,6 +115,7 @@ impl Server {
         let transactions = MongoStore::new(&db, &Store::Transactions).await?;
         let cursors = MongoStore::new(&db, &Store::Cursors).await?;
         let stages = MongoStore::new(&db, &Store::Stages).await?;
+        let clients = MongoStore::new(&db, &Store::Clients).await?;
 
         let extractor_caller = UnifiedDestination::new(
             config.db_config.clone(),
@@ -153,6 +155,7 @@ impl Server {
             transactions,
             cursors,
             stages,
+            clients,
         };
 
         let event_access_cache =

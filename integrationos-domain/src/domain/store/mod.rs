@@ -96,5 +96,7 @@ generate_stores!(
     PublicConnectionModelSchemas,
     "connection-model-schema",
     Transactions,
-    "event-transactions"
+    "event-transactions",
+    Clients,
+    "clients"
 );

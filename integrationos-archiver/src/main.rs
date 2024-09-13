@@ -47,6 +47,7 @@ async fn main() -> Result<Unit> {
         Mode::Restore => restore(config, &archives, &started, storage).await,
         Mode::Dump => dump(config, &archives, &started, storage, database, false).await,
         Mode::DumpDelete => dump(config, &archives, &started, storage, database, true).await,
+        Mode::NoOp => Ok(()),
     }
 }
 

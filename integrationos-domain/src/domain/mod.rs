@@ -16,6 +16,7 @@ pub mod secret;
 pub mod shared;
 pub mod store;
 pub mod token;
+pub mod user;
 
 pub use access_key::*;
 pub use configuration::*;

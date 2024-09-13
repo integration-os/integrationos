@@ -3,7 +3,7 @@ use crate::{config::Headers, metrics::Metric, server::AppState};
 use axum::{
     extract::{Path, Query, State},
     response::{IntoResponse, Response},
-    routing::{delete, get, patch, post},
+    routing::{delete, get, patch, post, put},
     Extension, Json, Router,
 };
 use bson::doc;
@@ -23,6 +23,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/:model/:id", get(get_request))
         .route("/:model/:id", patch(update_request))
+        .route("/:model", put(upsert_request))
         .route("/:model", get(list_request))
         .route("/:model/count", get(count_request))
         .route("/:model", post(create_request))
@@ -76,6 +77,29 @@ pub async fn update_request(
             name: params.model.to_case(Case::Pascal).into(),
             action: CrudAction::Update,
             id: Some(params.id.into()),
+        },
+        Some(body),
+    )
+    .await
+}
+
+pub async fn upsert_request(
+    access: Extension<Arc<EventAccess>>,
+    state: State<Arc<AppState>>,
+    Path(model): Path<String>,
+    headers: HeaderMap,
+    query_params: Option<Query<HashMap<String, String>>>,
+    Json(body): Json<Value>,
+) -> impl IntoResponse {
+    process_request(
+        access,
+        state,
+        headers,
+        query_params,
+        Action::Unified {
+            name: model.to_case(Case::Pascal).into(),
+            action: CrudAction::Upsert,
+            id: None,
         },
         Some(body),
     )

@@ -1,42 +1,44 @@
-import axios from "axios";
-import { DataObject, OAuthResponse } from "../../lib/types";
+import axios from 'axios';
+import { DataObject, OAuthResponse } from '../../lib/types';
 
 export const refresh = async ({ body }: DataObject): Promise<OAuthResponse> => {
-  try {
-    const {
-      OAUTH_CLIENT_ID: client_id,
-      OAUTH_CLIENT_SECRET: client_secret,
-      OAUTH_REFRESH_TOKEN: refresh_token,
-      OAUTH_REQUEST_PAYLOAD: {
-        formData: { ZOHO_ACCOUNTS_DOMAIN },
-      },
-      OAUTH_METADATA,
-    } = body;
+    try {
+        const {
+            OAUTH_CLIENT_ID: client_id,
+            OAUTH_CLIENT_SECRET: client_secret,
+            OAUTH_REFRESH_TOKEN: refresh_token,
+            OAUTH_METADATA: { meta },
+        } = body;
 
-    let url = `${ZOHO_ACCOUNTS_DOMAIN}/oauth/v2/token?grant_type=refresh_token`;
-    url += `&client_id=${client_id}&client_secret=${client_secret}&refresh_token=${refresh_token}`;
+        let refreshToken = refresh_token;
+        const ZOHO_ACCOUNTS_DOMAIN = meta.ZOHO_ACCOUNTS_DOMAIN;
 
-    const response = await axios.post(url);
+        let url = `${ZOHO_ACCOUNTS_DOMAIN}/oauth/v2/token?grant_type=refresh_token`;
+        url += `&client_id=${client_id}&client_secret=${client_secret}&refresh_token=${refresh_token}`;
 
-    const {
-      data: {
-        access_token: accessToken,
-        token_type: tokenType,
-        expires_in: expiresIn,
-      },
-    } = response;
+        const response = await axios.post(url);
 
-    return {
-      accessToken,
-      // Refresh token does not expire and stays the same for every request
-      refreshToken: refresh_token,
-      expiresIn,
-      tokenType,
-      meta: {
-        ...OAUTH_METADATA?.meta,
-      },
-    };
-  } catch (error) {
-    throw new Error(`Error fetching refresh token for Zoho: ${error}`);
-  }
+        const {
+            data: {
+                access_token: accessToken,
+                token_type: tokenType,
+                expires_in: expiresIn,
+            },
+        } = response;
+
+        // Update refresh token if a new token is allocated
+        if (response.data.refresh_token) {
+            refreshToken = response.data.refresh_token;
+        }
+
+        return {
+            accessToken,
+            refreshToken,
+            expiresIn,
+            tokenType,
+            meta,
+        };
+    } catch (error) {
+        throw new Error(`Error fetching refresh token for Zoho: ${error}`);
+    }
 };

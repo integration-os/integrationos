@@ -161,6 +161,7 @@ pub enum CrudAction {
     GetOne,
     GetMany,
     GetCount,
+    Upsert,
     Update,
     Create,
     Delete,
@@ -173,6 +174,7 @@ impl CrudAction {
             CrudAction::GetOne => "Get one record",
             CrudAction::GetMany => "List records",
             CrudAction::GetCount => "Get count of records",
+            CrudAction::Upsert => "Upsert a record",
             CrudAction::Update => "Update a record",
             CrudAction::Create => "Create a record",
             CrudAction::Delete => "Delete a record",
@@ -244,6 +246,15 @@ impl CrudAction {
                     "unified": {
                         "count": 1
                     },
+                    "passthrough": {},
+                    "meta": meta
+                })
+            }
+            CrudAction::Upsert => {
+                json!({
+                    "status": "success",
+                    "statusCode": 200,
+                    "unified": common_model.sample,
                     "passthrough": {},
                     "meta": meta
                 })
