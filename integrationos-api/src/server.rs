@@ -24,6 +24,7 @@ use integrationos_domain::{
     page::PlatformPage,
     secret::Secret,
     stage::Stage,
+    user::UserClient,
     Connection, Event, Pipeline, PlatformData, SecretExt, Store, Transaction,
 };
 use integrationos_unified::unified::{UnifiedCacheTTLs, UnifiedDestination};
