@@ -192,6 +192,17 @@ pub async fn create_connection(
         e
     })?;
 
+    state
+        .app_stores
+        .event_access
+        .create_one(&event_access)
+        .await
+        .map_err(|e| {
+            error!("Error saving event access for connection: {:?}", e);
+
+            e
+        })?;
+
     let auth_form_data_value =
         serde_json::to_value(payload.auth_form_data.clone()).map_err(|e| {
             error!("Error serializing auth form data for connection: {:?}", e);
