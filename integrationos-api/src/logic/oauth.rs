@@ -215,9 +215,19 @@ async fn oauth_handler(
     }
     .as_event_access(&state.config)
     .map_err(|e| {
-        error!("Error creating event access for connection: {:?}", e);
+        error!("Error creating event access for oauth connection: {:?}", e);
         ApplicationError::service_unavailable("Failed to create event access", None)
     })?;
+
+    state
+        .app_stores
+        .event_access
+        .create_one(&event_access)
+        .await
+        .map_err(|e| {
+            error!("Error saving event access for oauth connection: {:?}", e);
+            e
+        })?;
 
     let connection = Connection {
         id: Id::new(IdPrefix::Connection, Utc::now()),
