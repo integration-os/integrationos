@@ -13,7 +13,7 @@ pub enum SecretServiceProvider {
 
 #[derive(Debug, Clone, Envconfig)]
 pub struct SecretsConfig {
-    #[envconfig(from = "SECRETS_SERVICE_PROVIDER", default = "ios-kms")]
+    #[envconfig(from = "SECRETS_SERVICE_PROVIDER", default = "google-kms")]
     pub provider: SecretServiceProvider,
     #[envconfig(from = "GOOGLE_KMS_PROJECT_ID", default = "buildable-production")]
     pub google_kms_project_id: String,
@@ -95,7 +95,7 @@ mod tests {
 
         let config_str = format!("{config}");
 
-        let display = "SECRETS_SERVICE_PROVIDER: ios-kms\n\
+        let display = "SECRETS_SERVICE_PROVIDER: google-kms\n\
             GOOGLE_KMS_PROJECT_ID: ****\n\
             GOOGLE_KMS_LOCATION_ID: ****\n\
             GOOGLE_KMS_KEY_RING_ID: ****\n\

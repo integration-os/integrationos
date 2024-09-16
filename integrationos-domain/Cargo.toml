@@ -56,7 +56,7 @@ rand.workspace = true
 reqwest = { workspace = true, features = [
     "json",
     "rustls-tls",
-], default-features = false }
+] }
 semver = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive", "rc"] }
 serde_json.workspace = true

@@ -163,14 +163,14 @@ impl GoogleCryptoKms {
                     ..Default::default()
                 };
 
-                let decrypted_secret = self.client.decrypt(request, None).await.map_err(|_| {
+                let decriptes_bytes = self.client.decrypt(request, None).await.map_err(|_| {
                     InternalError::connection_error(
                         "The provided value is not a valid UTF-8 string",
                         None,
                     )
                 })?;
 
-                let plaintext = String::from_utf8(decrypted_secret.plaintext).map_err(|_| {
+                let plaintext = String::from_utf8(decriptes_bytes.plaintext).map_err(|_| {
                     InternalError::deserialize_error(
                         "The provided value is not a valid UTF-8 string",
                         None,
