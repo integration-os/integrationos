@@ -307,14 +307,26 @@ impl UnifiedDestination {
 
             InternalError::key_not_found("model definition", None)
         })?;
+        tracing::debug!(
+            "Connection model definition found for destination with cache key {:?}",
+            key
+        );
 
         let mut secret = join_result
             .1
-            .map_err(|e| InternalError::key_not_found(e.as_ref(), None))?;
+            .map_err(|e| InternalError::key_not_found(e.to_string().as_str(), None))?;
+
+        tracing::debug!("Secret found for destination with cache key {:?}", key);
 
         let cms = join_result.2.map_err(|e| {
             InternalError::key_not_found(&format!("model schema {name} for destination: {e}"), None)
         })?;
+
+        tracing::debug!(
+            "Connection model schema found for destination with cache key {:?}",
+            key
+        );
+
         let ConnectionModelSchema {
             id: schema_id,
             mapping,

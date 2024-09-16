@@ -260,8 +260,8 @@ pub async fn process_request(
         .await
         .map_err(|e| {
             error!(
-                "Error executing connection model definition in unified endpoint: {:?}",
-                e
+                "Error executing connection model definition in unified endpoint: {}",
+                e.to_string()
             );
             e
         })?;
