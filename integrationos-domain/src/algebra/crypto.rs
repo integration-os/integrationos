@@ -191,11 +191,13 @@ impl GoogleCryptoKms {
 #[cfg(test)]
 mod tests {
 
+    use crate::secrets::SecretServiceProvider;
+
     use super::*;
 
     #[tokio::test]
     async fn should_encrypt_and_decrypt_data() {
-        let config = SecretsConfig::default();
+        let config = SecretsConfig::default().with_provider(SecretServiceProvider::IosKms);
         let crypto = IOSCrypto::new(config).expect("Failed to create IOSCrypto client");
 
         let data = "lorem_ipsum-dolor_sit-amet";
@@ -213,7 +215,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_to_decrypt_if_the_key_is_different() {
-        let config = SecretsConfig::default();
+        let config = SecretsConfig::default().with_provider(SecretServiceProvider::IosKms);
         let crypto = IOSCrypto::new(config).expect("Failed to create IOSCrypto client");
 
         let data = "lorem_ipsum-dolor_sit-amet";
@@ -222,7 +224,9 @@ mod tests {
             .await
             .expect("Failed to encrypt data");
 
-        let config = SecretsConfig::new().with_secret("lorem_ipsum-dolor_sit_amet-neque".into());
+        let config = SecretsConfig::new()
+            .with_secret("lorem_ipsum-dolor_sit_amet-neque".into())
+            .with_provider(SecretServiceProvider::IosKms);
         let crypto = IOSCrypto::new(config).expect("Failed to create IOSCrypto client");
 
         let decrypted = crypto.decrypt(encrypted).await;
@@ -232,7 +236,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_to_decrypt_if_the_data_is_tampered() {
-        let config = SecretsConfig::default();
+        let config = SecretsConfig::default().with_provider(SecretServiceProvider::IosKms);
         let crypto = IOSCrypto::new(config).expect("Failed to create IOSCrypto client");
 
         let data = "lorem_ipsum-dolor_sit-amet";

@@ -41,6 +41,12 @@ impl SecretsConfig {
         self.ios_crypto_secret = SecretString::new(secret);
         self
     }
+
+    #[cfg(test)]
+    pub fn with_provider(mut self, provider: SecretServiceProvider) -> Self {
+        self.provider = provider;
+        self
+    }
 }
 
 impl Default for SecretsConfig {
@@ -82,7 +88,7 @@ mod tests {
             config.ios_crypto_secret.expose_secret().as_str(),
             "xTtUQejH8eSNmWP5rlnHLkOWkHeflivG"
         );
-        assert_eq!(config.provider, SecretServiceProvider::IosKms);
+        assert_eq!(config.provider, SecretServiceProvider::GoogleKms);
         assert_eq!(config.google_kms_project_id, "buildable-production");
         assert_eq!(config.google_kms_location_id, "global");
         assert_eq!(config.google_kms_key_ring_id, "secrets-service-local");
