@@ -279,6 +279,7 @@ impl UnifiedDestination {
         };
 
         let schema_key = (connection.platform.clone(), name.clone());
+
         let schema_fut = self
             .connection_model_schemas_cache
             .get_or_insert_with_filter(
@@ -300,6 +301,8 @@ impl UnifiedDestination {
                 ),
             );
 
+        tracing::debug!("Joining futures for {schema_key:?}");
+
         let join_result = join!(config_fut, secret_fut, schema_fut);
 
         let config = join_result.0.map_err(|e| {
@@ -312,9 +315,13 @@ impl UnifiedDestination {
             key
         );
 
-        let mut secret = join_result
-            .1
-            .map_err(|e| InternalError::key_not_found(e.to_string().as_str(), None))?;
+        let mut secret = join_result.1.map_err(|e| {
+            error!(
+                "Error getting secret for destination with cache key {:?}: {e}",
+                key
+            );
+            InternalError::key_not_found(e.to_string().as_str(), None)
+        })?;
 
         tracing::debug!("Secret found for destination with cache key {:?}", key);
 
