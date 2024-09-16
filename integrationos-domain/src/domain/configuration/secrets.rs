@@ -46,7 +46,7 @@ impl SecretsConfig {
 impl Default for SecretsConfig {
     fn default() -> Self {
         Self {
-            provider: SecretServiceProvider::IosKms,
+            provider: SecretServiceProvider::GoogleKms,
             google_kms_project_id: "buildable-production".to_owned(),
             google_kms_location_id: "global".to_owned(),
             google_kms_key_ring_id: "secrets-service-local".to_owned(),
