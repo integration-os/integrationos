@@ -1,7 +1,7 @@
 use crate::server::AppState;
 use axum::{
     extract::{Path, State},
-    routing::post,
+    routing::{get, post},
     Extension, Json, Router,
 };
 use bson::doc;
@@ -11,7 +11,9 @@ use serde_json::Value;
 use std::sync::Arc;
 
 pub fn get_router() -> Router<Arc<AppState>> {
-    Router::new().route("/", post(create_secret).get(get_secret))
+    Router::new()
+        .route("/", post(create_secret))
+        .route("/:id", get(get_secret))
 }
 
 #[derive(Serialize, Deserialize)]
