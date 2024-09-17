@@ -19,7 +19,10 @@ pub struct SecretsConfig {
     pub google_kms_project_id: String,
     #[envconfig(from = "GOOGLE_KMS_LOCATION_ID", default = "global")]
     pub google_kms_location_id: String,
-    #[envconfig(from = "GOOGLE_KMS_KEY_RING_ID", default = "secrets-service-development")]
+    #[envconfig(
+        from = "GOOGLE_KMS_KEY_RING_ID",
+        default = "secrets-service-development"
+    )]
     pub google_kms_key_ring_id: String,
     #[envconfig(from = "GOOGLE_KMS_KEY_ID", default = "secrets-service-development")]
     pub google_kms_key_id: String,
