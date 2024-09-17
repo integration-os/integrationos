@@ -175,8 +175,6 @@ impl GoogleCryptoKms {
                     )
                 })?;
 
-                println!("decrypted: {decriptes_bytes:?}");
-
                 let plaintext = String::from_utf8(decriptes_bytes.plaintext).map_err(|e| {
                     debug!("Error converting decrypted secret to string: {e}");
                     InternalError::deserialize_error(

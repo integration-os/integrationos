@@ -113,7 +113,6 @@ impl SecretExt for GoogleKms {
         let version = secret.version();
 
         let decrypted_secret = self.crypto.decrypt(encrypted_secret, version).await?;
-        println!("decrypted secret: {decrypted_secret}");
 
         Ok(Secret::new(
             decrypted_secret,
