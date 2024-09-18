@@ -10,6 +10,7 @@ use google_cloud_kms::{
     grpc::kms::v1::DecryptRequest,
 };
 use secrecy::ExposeSecret;
+use tracing::debug;
 
 #[async_trait]
 pub trait CryptoExt {
@@ -159,18 +160,23 @@ impl GoogleCryptoKms {
                         key_id = self.config.google_kms_key_id,
                     ),
                     ciphertext: BASE64_STANDARD.decode(encrypted_secret.as_bytes())
-                        .map_err(|_| InternalError::deserialize_error("The provided value is not a valid UTF-8 string", None))?,
+                        .map_err(|e| {
+                            debug!("Error decoding secret: {e}");
+                            InternalError::deserialize_error("The provided value is not a valid UTF-8 string", None)
+                        })?,
                     ..Default::default()
                 };
 
-                let decriptes_bytes = self.client.decrypt(request, None).await.map_err(|_| {
+                let decriptes_bytes = self.client.decrypt(request, None).await.map_err(|e| {
+                    debug!("Error decrypting secret: {e}");
                     InternalError::connection_error(
                         "The provided value is not a valid UTF-8 string",
                         None,
                     )
                 })?;
 
-                let plaintext = String::from_utf8(decriptes_bytes.plaintext).map_err(|_| {
+                let plaintext = String::from_utf8(decriptes_bytes.plaintext).map_err(|e| {
+                    debug!("Error converting decrypted secret to string: {e}");
                     InternalError::deserialize_error(
                         "The provided value is not a valid UTF-8 string",
                         None,
