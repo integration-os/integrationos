@@ -434,7 +434,12 @@ impl DataType {
                     }
                 }
             }
-            DataType::Unknown => "Schema.Unknown".to_string(),
+            DataType::Unknown =>  {
+                match r#type {
+                    SchemaType::Lax => "Schema.optional(Schema.NullishOr(Schema.Unknown))".to_string(),
+                    SchemaType::Strict => "Schema.Unknown".to_string()
+                }
+            }
         }
     }
 
