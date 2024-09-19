@@ -305,6 +305,7 @@ pub struct CreateRequest {
     pub mapping: Option<CrudMapping>,
     pub paths: Option<ModelPaths>,
     pub supported: Option<bool>,
+    pub active: Option<bool>,
 }
 
 impl HookExt<ConnectionModelDefinition> for CreateRequest {}
@@ -401,6 +402,10 @@ impl RequestExt for CreateRequest {
 
         if let Some(supported) = self.supported {
             record.supported = supported;
+        }
+
+        if let Some(active) = self.active {
+            record.record_metadata.active = active;
         }
 
         record

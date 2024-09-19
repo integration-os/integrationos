@@ -70,6 +70,7 @@ async fn test_passthrough_api() {
         is_default_crud_mapping: None,
         mapping: None,
         supported: Some(true),
+        active: Some(true),
     };
 
     let create_model_definition_response = server
