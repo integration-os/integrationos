@@ -274,7 +274,10 @@ impl UnifiedDestination {
                     {
                         Ok(Some(c)) => Ok(c.as_value()?),
                         Ok(None) => Err(InternalError::key_not_found("secret", None)),
-                        Err(e) => Err(InternalError::connection_error(format!("Failed to get secret: {}", e.message().as_ref()).as_str(), None)),
+                        Err(e) => Err(InternalError::connection_error(
+                            format!("Failed to get secret: {}", e.message().as_ref()).as_str(),
+                            None,
+                        )),
                     }
                 });
 
@@ -1083,7 +1086,14 @@ impl UnifiedDestination {
                 "ConnectionModelDefinition",
                 None,
             )),
-            Err(e) => Err(InternalError::connection_error(format!("Failed to get connection model definition: {}", e.message().as_ref()).as_str(), None)),
+            Err(e) => Err(InternalError::connection_error(
+                format!(
+                    "Failed to get connection model definition: {}",
+                    e.message().as_ref()
+                )
+                .as_str(),
+                None,
+            )),
         }?;
 
         if !config.supported {
@@ -1104,7 +1114,10 @@ impl UnifiedDestination {
                 {
                     Ok(Some(c)) => Ok(c.as_value()?),
                     Ok(None) => Err(InternalError::key_not_found("Secrets", None)),
-                    Err(e) => Err(InternalError::connection_error(format!("Failed to get secret: {}", e.message().as_ref()).as_str(), None)),
+                    Err(e) => Err(InternalError::connection_error(
+                        format!("Failed to get secret: {}", e.message().as_ref()).as_str(),
+                        None,
+                    )),
                 }
             })
             .await?;
