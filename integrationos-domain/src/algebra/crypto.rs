@@ -130,10 +130,16 @@ impl GoogleCryptoKms {
     pub async fn new(secrets_config: &SecretsConfig) -> Result<Self, IntegrationOSError> {
         let fallback = IOSCrypto::new(secrets_config.clone())?;
         let config = ClientConfig::default().with_auth().await.map_err(|e| {
-            InternalError::connection_error(&e.to_string(), Some("Failed to create client"))
+            InternalError::connection_error(
+                &format!("Failed to create GoogleCryptoKms client: {e}"),
+                Some("Failed to create client"),
+            )
         })?;
         let client = Client::new(config).await.map_err(|e| {
-            InternalError::connection_error(&e.to_string(), Some("Failed to create client"))
+            InternalError::connection_error(
+                &format!("Failed to create GoogleCryptoKms client: {e}"),
+                Some("Failed to create client"),
+            )
         })?;
 
         Ok(Self {

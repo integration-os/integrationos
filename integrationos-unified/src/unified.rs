@@ -91,7 +91,12 @@ impl UnifiedDestination {
 
         let client = Client::with_uri_str(&db_config.control_db_url)
             .await
-            .map_err(|e| InternalError::connection_error(&e.to_string(), None))?;
+            .map_err(|e| {
+                InternalError::connection_error(
+                    &format!("Failed to create UnifiedDestination client: {e}"),
+                    None,
+                )
+            })?;
 
         let db = client.database(&db_config.control_db_name);
 
@@ -247,7 +252,14 @@ impl UnifiedDestination {
                 match self.get_connection_model_definition(&key).await {
                     Ok(Some(c)) => Ok(c),
                     Ok(None) => Err(InternalError::key_not_found("model definition", None)),
-                    Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
+                    Err(e) => Err(InternalError::connection_error(
+                        format!(
+                            "Failed to get connection model definition: {}",
+                            e.message().as_ref()
+                        )
+                        .as_str(),
+                        None,
+                    )),
                 }
             });
 
@@ -262,7 +274,10 @@ impl UnifiedDestination {
                     {
                         Ok(Some(c)) => Ok(c.as_value()?),
                         Ok(None) => Err(InternalError::key_not_found("secret", None)),
-                        Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
+                        Err(e) => Err(InternalError::connection_error(
+                            format!("Failed to get secret: {}", e.message().as_ref()).as_str(),
+                            None,
+                        )),
                     }
                 });
 
@@ -1071,7 +1086,14 @@ impl UnifiedDestination {
                 "ConnectionModelDefinition",
                 None,
             )),
-            Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
+            Err(e) => Err(InternalError::connection_error(
+                format!(
+                    "Failed to get connection model definition: {}",
+                    e.message().as_ref()
+                )
+                .as_str(),
+                None,
+            )),
         }?;
 
         if !config.supported {
@@ -1092,7 +1114,10 @@ impl UnifiedDestination {
                 {
                     Ok(Some(c)) => Ok(c.as_value()?),
                     Ok(None) => Err(InternalError::key_not_found("Secrets", None)),
-                    Err(e) => Err(InternalError::connection_error(e.message().as_ref(), None)),
+                    Err(e) => Err(InternalError::connection_error(
+                        format!("Failed to get secret: {}", e.message().as_ref()).as_str(),
+                        None,
+                    )),
                 }
             })
             .await?;
