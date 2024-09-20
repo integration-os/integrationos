@@ -582,6 +582,7 @@ async fn create_connection_model_definition(
         is_default_crud_mapping: None,
         mapping: Some(mapping.clone()),
         supported: Some(true),
+        active: Some(true),
     };
 
     let create_model_definition_response = server
