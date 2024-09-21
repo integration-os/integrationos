@@ -1,5 +1,5 @@
 use super::EventMetadata;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use integrationos_domain::Id;
 use serde::{Deserialize, Serialize};
 
@@ -16,10 +16,6 @@ impl Dumped {
             id,
             dumped_at: Utc::now(),
         }
-    }
-
-    pub fn date(&self) -> NaiveDate {
-        self.dumped_at.date_naive()
     }
 }
 
