@@ -8,13 +8,17 @@ use serde::{Deserialize, Serialize};
 pub struct Uploaded {
     id: Id,
     uploaded_at: DateTime<Utc>,
+    start_time: DateTime<Utc>,
+    end_time: DateTime<Utc>,
 }
 
 impl Uploaded {
-    pub fn new(id: Id) -> Self {
+    pub fn new(id: Id, start_time: DateTime<Utc>, end_time: DateTime<Utc>) -> Self {
         Self {
             id,
             uploaded_at: Utc::now(),
+            start_time,
+            end_time,
         }
     }
 }

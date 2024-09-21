@@ -1,12 +1,14 @@
 pub mod completed;
 pub mod dumped;
 pub mod failed;
+pub mod finished;
 pub mod started;
 pub mod uploaded;
 
 use completed::Completed;
 use dumped::Dumped;
 use failed::Failed;
+use finished::Finished;
 use integrationos_domain::Id;
 use serde::{Deserialize, Serialize};
 use started::Started;
@@ -24,5 +26,5 @@ pub enum Event {
     Failed(Failed),
     Uploaded(Uploaded),
     Completed(Completed),
+    Finished(Finished),
 }
-

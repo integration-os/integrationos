@@ -9,14 +9,18 @@ pub struct Completed {
     id: Id,
     path: String,
     completed_at: DateTime<Utc>,
+    start_time: DateTime<Utc>,
+    end_time: DateTime<Utc>,
 }
 
 impl Completed {
-    pub fn new(path: String, id: Id) -> Self {
+    pub fn new(path: String, id: Id, start_time: DateTime<Utc>, end_time: DateTime<Utc>) -> Self {
         Self {
             path,
             id,
             completed_at: Utc::now(),
+            start_time,
+            end_time,
         }
     }
 }

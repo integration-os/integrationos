@@ -2,6 +2,7 @@ mod config;
 mod event;
 mod storage;
 
+use crate::event::finished::Finished;
 use anyhow::{anyhow, Result};
 use bson::{doc, Document};
 use chrono::offset::LocalResult;
@@ -180,6 +181,10 @@ async fn dump(
         tracing::info!("All chunks processed successfully.");
     }
 
+    archives
+        .create_one(&Event::Finished(Finished::new(started.reference())?))
+        .await?;
+
     Ok(())
 }
 
@@ -236,7 +241,11 @@ async fn save(
     }
 
     archive
-        .create_one(&Event::Dumped(Dumped::new(started_event.reference())))
+        .create_one(&Event::Dumped(Dumped::new(
+            started_event.reference(),
+            *start_time,
+            *end_time,
+        )))
         .await?;
 
     let base_path = tmp_dir
@@ -258,7 +267,11 @@ async fn save(
     }
 
     archive
-        .create_one(&Event::Uploaded(Uploaded::new(started_event.reference())))
+        .create_one(&Event::Uploaded(Uploaded::new(
+            started_event.reference(),
+            *start_time,
+            *end_time,
+        )))
         .await?;
 
     if let Err(e) = storage
@@ -274,6 +287,8 @@ async fn save(
         .create_one(&Event::Completed(Completed::new(
             remote_path.clone(),
             started_event.reference(),
+            *start_time,
+            *end_time,
         )))
         .await?;
 

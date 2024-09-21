@@ -1,10 +1,9 @@
-use std::str::FromStr;
-
 use super::EventMetadata;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use integrationos_domain::{prefix::IdPrefix, Id, Store};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]

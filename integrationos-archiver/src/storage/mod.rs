@@ -59,6 +59,6 @@ pub trait Storage {
         base_path: &Path,
         extension: &Extension,
         config: &ArchiverConfig,
-        suffix: String
+        suffix: String,
     ) -> impl Future<Output = Result<Unit>>;
 }

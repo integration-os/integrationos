@@ -50,7 +50,7 @@ impl Storage for GoogleCloudStorage {
         base_path: &Path,
         extension: &Extension,
         config: &ArchiverConfig,
-        suffix: String
+        suffix: String,
     ) -> Result<Unit> {
         upload_file_google(base_path, extension, config, &self.client, suffix).await
     }
@@ -61,7 +61,7 @@ async fn upload_file_google(
     extension: &Extension,
     config: &ArchiverConfig,
     storage: &GClient,
-    suffix: String
+    suffix: String,
 ) -> Result<Unit> {
     let path = base_path.with_extension(extension.as_ref());
     let total = path.metadata()?.len();
@@ -166,7 +166,8 @@ mod tests {
     #[test]
     fn test_get_file_name() {
         let string: String = Faker.fake();
-        let file_name = construct_file_name(&PathBuf::from(string), "1-2".into()).expect("Failed to get file name");
+        let file_name = construct_file_name(&PathBuf::from(string), "1-2".into())
+            .expect("Failed to get file name");
         let now = Utc::now().format("%Y-%m-%d").to_string();
         assert!(file_name.contains('-'));
         assert!(file_name.contains(now.as_str()));
