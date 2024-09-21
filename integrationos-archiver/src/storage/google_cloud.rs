@@ -51,7 +51,7 @@ impl Storage for GoogleCloudStorage {
         extension: &Extension,
         config: &ArchiverConfig,
         suffix: String,
-    ) -> Result<Unit> {
+    ) -> Result<String> {
         upload_file_google(base_path, extension, config, &self.client, suffix).await
     }
 }
@@ -62,12 +62,13 @@ async fn upload_file_google(
     config: &ArchiverConfig,
     storage: &GClient,
     suffix: String,
-) -> Result<Unit> {
+) -> Result<String> {
     let path = base_path.with_extension(extension.as_ref());
     let total = path.metadata()?.len();
 
+    let name = construct_file_name(&path, suffix)?;
     let upload_type = UploadType::Multipart(Box::new(Object {
-        name: construct_file_name(&path, suffix)?,
+        name: name.clone(),
         ..Default::default()
     }));
 
@@ -93,7 +94,7 @@ async fn upload_file_google(
     )
     .await?;
 
-    Ok(())
+    Ok(name)
 }
 
 async fn process_file_in_chunks<F, Fut>(

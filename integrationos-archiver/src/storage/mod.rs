@@ -2,7 +2,6 @@ pub mod google_cloud;
 
 use crate::config::ArchiverConfig;
 use anyhow::Result;
-use integrationos_domain::Unit;
 use std::{future::Future, ops::Deref, path::Path};
 use strum::{AsRefStr, EnumString};
 
@@ -60,5 +59,5 @@ pub trait Storage {
         extension: &Extension,
         config: &ArchiverConfig,
         suffix: String,
-    ) -> impl Future<Output = Result<Unit>>;
+    ) -> impl Future<Output = Result<String>>;
 }

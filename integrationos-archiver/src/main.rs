@@ -274,14 +274,11 @@ async fn save(
         )))
         .await?;
 
-    if let Err(e) = storage
-        .upload_file(&base_path, &Extension::Metadata, config, suffix)
-        .await
-    {
-        return Err(anyhow!("Failed to upload json file: {e}"));
-    }
+    let name = storage
+        .upload_file(&base_path, &Extension::Metadata, config, suffix.clone())
+        .await?;
 
-    let remote_path = format!("gs://{}{}", config.gs_storage_bucket, base_path.display());
+    let remote_path = format!("gs://{}/{}", config.gs_storage_bucket, name);
 
     archive
         .create_one(&Event::Completed(Completed::new(

@@ -19,7 +19,7 @@ pub trait EventMetadata {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(untagged)]
+#[serde(tag = "type")]
 pub enum Event {
     Started(Started),
     Dumped(Dumped),
