@@ -9,7 +9,6 @@ use strum::{AsRefStr, EnumString};
 pub enum Mode {
     Dump,
     DumpDelete,
-    Restore,
     NoOp,
 }
 

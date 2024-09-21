@@ -15,7 +15,6 @@ use event::uploaded::Uploaded;
 use event::{Event, EventMetadata};
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use integrationos_domain::{MongoStore, Store, Unit};
-use mongodb::options::FindOneOptions;
 use mongodb::{Client, Database};
 use std::process::Command;
 use storage::google_cloud::GoogleCloudStorage;
@@ -44,71 +43,9 @@ async fn main() -> Result<Unit> {
         .await?;
 
     match config.mode {
-        Mode::Restore => restore(config, &archives, &started, storage).await,
         Mode::Dump => dump(config, &archives, &started, storage, database, false).await,
         Mode::DumpDelete => dump(config, &archives, &started, storage, database, true).await,
         Mode::NoOp => Ok(()),
-    }
-}
-
-async fn restore(
-    config: ArchiverConfig,
-    archives: &MongoStore<Event>,
-    started: &Started,
-    storage: impl Storage,
-) -> Result<Unit> {
-    tracing::info!(
-        "Starting archiver in restore mode for the {} collection. Events will not be restored to the original collection, rather a new collection will be created",
-        started.collection()
-    );
-
-    let filter = doc! {
-        "completedAt": {
-            "$exists": true,
-        }
-    };
-    let options = FindOneOptions::builder()
-        .sort(doc! { "completedAt": -1 })
-        .build();
-    let archive = archives.collection.find_one(filter, options).await?;
-
-    match archive {
-        None => Err(anyhow!(
-            "No archive found for the collection {}",
-            started.collection()
-        )),
-        Some(event) => {
-            let archive_bson_file_path = storage
-                .download_file(&config, &event, &Extension::Bson)
-                .await?;
-
-            // * Restore: mongorestore --gzip --nsInclude=events-service.clients events-service/clients.bson.gz --verbose (nsInclude=${DB_NAME}.${COLLECTION_NAME})
-            tracing::info!("Restoring collection {}", config.event_collection_name);
-            let output = Command::new("mongorestore")
-                .arg("--gzip")
-                .arg("--nsInclude")
-                .arg(format!(
-                    "{}.{}",
-                    config.db_config.event_db_name, config.event_collection_name
-                ))
-                .arg(archive_bson_file_path)
-                .arg("--verbose")
-                .output()?;
-
-            if !output.status.success() {
-                anyhow::bail!(
-                    "Archive restore failed with status {}",
-                    String::from_utf8_lossy(&output.stderr)
-                );
-            }
-
-            tracing::info!(
-                "Collection {} restored successfully",
-                config.event_collection_name
-            );
-
-            Ok(())
-        }
     }
 }
 
