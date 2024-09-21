@@ -9,8 +9,8 @@ pub struct Completed {
     id: Id,
     path: String,
     completed_at: DateTime<Utc>,
-    start_time: DateTime<Utc>,
-    end_time: DateTime<Utc>,
+    start_time: i64,
+    end_time: i64,
 }
 
 impl Completed {
@@ -19,8 +19,8 @@ impl Completed {
             path,
             id,
             completed_at: Utc::now(),
-            start_time,
-            end_time,
+            start_time: start_time.timestamp_millis(),
+            end_time: end_time.timestamp_millis(),
         }
     }
 }

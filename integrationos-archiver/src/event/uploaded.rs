@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 pub struct Uploaded {
     id: Id,
     uploaded_at: DateTime<Utc>,
-    start_time: DateTime<Utc>,
-    end_time: DateTime<Utc>,
+    start_time: i64,
+    end_time: i64,
 }
 
 impl Uploaded {
@@ -17,8 +17,8 @@ impl Uploaded {
         Self {
             id,
             uploaded_at: Utc::now(),
-            start_time,
-            end_time,
+            start_time: start_time.timestamp_millis(),
+            end_time: end_time.timestamp_millis(),
         }
     }
 }
