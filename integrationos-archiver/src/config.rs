@@ -36,6 +36,8 @@ pub struct ArchiverConfig {
     pub chunk_size_minutes: i64,
     #[envconfig(from = "CONCURRENT_CHUNKS", default = "10")]
     pub concurrent_chunks: usize,
+    #[envconfig(from = "SLEEP_AFTER_FINISH_DUMP_SECS", default = "60")]
+    pub sleep_after_finish: u64,
     #[envconfig(from = "MODE", default = "dump")]
     pub mode: Mode,
 }
@@ -55,6 +57,11 @@ impl Display for ArchiverConfig {
         writeln!(f, "MIN_DATE_DAYS: {}", self.min_date_days)?;
         writeln!(f, "CHUNK_SIZE_MINUTES: {}", self.chunk_size_minutes)?;
         writeln!(f, "EVENT_COLLECTION_NAME: {}", self.event_collection_name)?;
+        writeln!(
+            f,
+            "SLEEP_AFTER_FINISH_DUMP_SECS: {}",
+            self.sleep_after_finish
+        )?;
         writeln!(f, "CONCURRENT_CHUNKS: {}", self.concurrent_chunks)?;
         writeln!(f, "MODE: {}", self.mode.as_ref())?;
         write!(f, "{}", self.db_config)

@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Finished {
-    #[serde(rename = "_id")]
     id: Id,
     finished_at: DateTime<Utc>,
 }

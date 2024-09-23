@@ -23,6 +23,7 @@ use integrationos_domain::{MongoStore, Store, Unit};
 use mongodb::Client;
 use std::process::Command;
 use std::sync::Arc;
+use std::time::Duration;
 use storage::google_cloud::GoogleCloudStorage;
 use storage::{Extension, Storage, StorageProvider};
 use tempfile::TempDir;
@@ -51,15 +52,21 @@ async fn main() -> Result<Unit> {
         .create_one(&Event::Started(started.clone()))
         .await?;
 
-    // loop {
-    match config.mode {
-        Mode::Dump => dump(&config, &archives, &started, &storage, &target_store, false).await,
-        Mode::DumpDelete => dump(&config, &archives, &started, &storage, &target_store, true).await,
-        Mode::NoOp => Ok(()),
-    }
+    loop {
+        let _ = match config.mode {
+            Mode::Dump => dump(&config, &archives, &started, &storage, &target_store, false).await,
+            Mode::DumpDelete => {
+                dump(&config, &archives, &started, &storage, &target_store, true).await
+            }
+            Mode::NoOp => Ok(()),
+        }
+        .map_err(|e| {
+            tracing::error!("Error in archiver: {e}");
+        });
 
-    // tokio::time::sleep(Duration::from_secs(60)).await
-    // }
+        tracing::info!("Sleeping for {} seconds", config.sleep_after_finish);
+        tokio::time::sleep(Duration::from_secs(config.sleep_after_finish)).await;
+    }
 }
 
 async fn dump(
@@ -81,8 +88,8 @@ async fn dump(
             doc! {},
             Some(
                 mongodb::options::FindOneOptions::builder()
-                    .sort(doc! { "arrivedAt": 1 }) // Sort by `arrivedAt` in ascending order
-                    .projection(doc! { "arrivedAt": 1 }) // Only retrieve the `arrivedAt` field
+                    .sort(doc! { "createdAt": 1 }) // Sort by `createdAt` in ascending order
+                    .projection(doc! { "createdAt": 1 }) // Only retrieve the `createdAt` field
                     .build(),
             ),
         )
@@ -91,8 +98,8 @@ async fn dump(
 
     let start = match document {
         Some(document) => document
-            .get_i64("arrivedAt")
-            .map_err(|e| anyhow!("Failed to get arrivedAt from document: {e}"))?,
+            .get_i64("createdAt")
+            .map_err(|e| anyhow!("Failed to get createdAt from document: {e}"))?,
         None => return Err(anyhow!("No events found in collection")),
     };
 
@@ -101,6 +108,12 @@ async fn dump(
         _ => return Err(anyhow!("Invalid timestamp")),
     };
     let end = Utc::now() - CDuration::days(config.min_date_days); // 30 days ago by default
+
+    if start.timestamp_millis() >= end.timestamp_millis() {
+        // If the very first event is after the end time, exit
+        tracing::warn!("No events to process, exiting");
+        return Ok(());
+    }
 
     let chunks = start.divide_by_stream(CDuration::minutes(config.chunk_size_minutes), end); // Chunk size is 20 minutes by default
 
@@ -150,7 +163,7 @@ async fn dump(
         if destructive {
             tracing::warn!("Deleting old events as destructive mode is enabled");
             let filter = doc! {
-                "arrivedAt": {
+                "createdAt": {
                     "$gte": start_time.timestamp_millis(),
                     "$lt": end_time.timestamp_millis()
                 }
@@ -199,7 +212,7 @@ async fn save(
 ) -> Result<u64> {
     let tmp_dir = TempDir::new()?;
     let filter = doc! {
-        "arrivedAt": {
+        "createdAt": {
             "$gte": start_time.timestamp_millis(),
             "$lt": end_time.timestamp_millis()
         }
