@@ -580,6 +580,7 @@ async fn create_connection_model_definition(
         paths: None,
         responses: vec![],
         is_default_crud_mapping: None,
+        test_connection_payload: None,
         mapping: Some(mapping.clone()),
         supported: Some(true),
         active: Some(true),
