@@ -458,7 +458,6 @@ impl TestServer {
         let payload = CreateConnectionPayload {
             connection_definition_id: connection_def.id,
             name: Faker.fake(),
-            group: access_key.data.group.clone(),
             auth_form_data: HashMap::from([(template, bearer_key.to_string())]),
             active: true,
         };

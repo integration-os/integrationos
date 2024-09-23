@@ -30,6 +30,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{collections::HashMap, sync::Arc};
 use tracing::error;
+use uuid::Uuid;
 use validator::Validate;
 
 pub fn get_router() -> Router<Arc<AppState>> {
@@ -45,7 +46,6 @@ pub fn get_router() -> Router<Arc<AppState>> {
 pub struct CreateConnectionPayload {
     pub connection_definition_id: Id,
     pub name: String,
-    pub group: String,
     pub auth_form_data: HashMap<String, String>,
     pub active: bool,
 }
@@ -163,11 +163,11 @@ pub async fn create_connection(
         }
     };
 
+    let group = Uuid::new_v4().to_string().replace('-', "");
+
     let key = format!(
         "{}::{}::{}",
-        access.environment,
-        connection_config.platform,
-        payload.group.replace([':', ' '], "_")
+        access.environment, connection_config.platform, group
     );
 
     let throughput = get_client_throughput(&access.ownership.id, &state).await?;
@@ -176,7 +176,7 @@ pub async fn create_connection(
         state.config.clone(),
         CreateEventAccessPayloadWithOwnership {
             name: payload.name.clone(),
-            group: Some(payload.group.clone()),
+            group: Some(group.clone()),
             platform: connection_config.platform.clone(),
             namespace: None,
             connection_type: connection_config.r#type.clone(),
@@ -238,7 +238,7 @@ pub async fn create_connection(
         r#type: connection_config.to_connection_type(),
         name: payload.name,
         key: key.clone().into(),
-        group: payload.group,
+        group,
         platform: connection_config.platform.into(),
         environment: event_access.environment,
         secrets_service_id: secret_result.id(),
