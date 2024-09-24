@@ -139,6 +139,15 @@ pub async fn create_connection(
         ));
     }
 
+    if let Some(identity) = &payload.identity {
+        if identity.len() > 128 {
+            return Err(ApplicationError::bad_request(
+                "Identity must not exceed 128 characters",
+                None,
+            ));
+        }
+    }
+
     let connection_config = match state
         .app_stores
         .connection_config
