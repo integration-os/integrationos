@@ -169,10 +169,11 @@ pub async fn create_connection(
     };
 
     let group = Uuid::new_v4().to_string().replace('-', "");
+    let namespace = "default".to_string();
 
     let key = format!(
-        "{}::{}::{}",
-        access.environment, connection_config.platform, group
+        "{}::{}::{}::{}",
+        access.environment, connection_config.platform, namespace, group
     );
 
     let throughput = get_client_throughput(&access.ownership.id, &state).await?;
