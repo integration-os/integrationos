@@ -18,6 +18,7 @@ use integrationos_domain::{
     algebra::MongoStore,
     connection_definition::ConnectionDefinition,
     domain::connection::SanitizedConnection,
+    environment::Environment,
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
@@ -46,7 +47,6 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[serde(rename_all = "camelCase")]
 pub struct CreateConnectionPayload {
     pub connection_definition_id: Id,
-    pub name: String,
     pub auth_form_data: HashMap<String, String>,
     pub active: bool,
     pub identity: Option<String>,
@@ -179,6 +179,12 @@ pub async fn create_connection(
 
     let group = Uuid::new_v4().to_string().replace('-', "");
     let namespace = "default".to_string();
+    let name = match access.environment {
+        Environment::Test => format!("{} sandbox account", connection_config.name),
+        Environment::Development => format!("{} sandbox account", connection_config.name),
+        Environment::Live => format!("{} production account", connection_config.name),
+        Environment::Production => format!("{} production account", connection_config.name),
+    };
 
     let key = format!(
         "{}::{}::{}::{}",
@@ -190,7 +196,7 @@ pub async fn create_connection(
     let event_access = generate_event_access(
         state.config.clone(),
         CreateEventAccessPayloadWithOwnership {
-            name: payload.name.clone(),
+            name: name.clone(),
             group: Some(group.clone()),
             platform: connection_config.platform.clone(),
             namespace: None,
@@ -251,7 +257,7 @@ pub async fn create_connection(
         platform_version: connection_config.clone().platform_version,
         connection_definition_id: payload.connection_definition_id,
         r#type: connection_config.to_connection_type(),
-        name: payload.name,
+        name,
         key: key.clone().into(),
         group,
         identity: payload.identity,

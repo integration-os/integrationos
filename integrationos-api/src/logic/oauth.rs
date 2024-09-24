@@ -14,6 +14,7 @@ use integrationos_domain::{
     connection_oauth_definition::{
         Computation, ConnectionOAuthDefinition, OAuthResponse, PlatformSecret, Settings,
     },
+    environment::Environment,
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     oauth_secret::OAuthSecret,
@@ -30,6 +31,7 @@ use std::{
     sync::Arc,
 };
 use tracing::{debug, error};
+use uuid::Uuid;
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new().route("/:platform", post(oauth_handler))
@@ -43,8 +45,6 @@ struct OAuthRequest {
     is_engineering_account: bool,
     connection_definition_id: Id,
     client_id: String,
-    group: String,
-    label: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     payload: Option<Value>,
 }
@@ -189,17 +189,25 @@ async fn oauth_handler(
         })?;
 
     let conn_definition = get_conn_definition(&state, &payload.connection_definition_id).await?;
+    let group = Uuid::new_v4().to_string().replace('-', "");
+    let namespace = "default".to_string();
+    let name = match user_event_access.environment {
+        Environment::Test => format!("{} sandbox account", conn_definition.name),
+        Environment::Development => format!("{} sandbox account", conn_definition.name),
+        Environment::Live => format!("{} production account", conn_definition.name),
+        Environment::Production => format!("{} production account", conn_definition.name),
+    };
 
     let key = format!(
-        "{}::{}::{}",
-        user_event_access.environment, conn_definition.platform, payload.group
+        "{}::{}::{}::{}",
+        user_event_access.environment, conn_definition.platform, namespace, group
     );
 
     let throughput = get_client_throughput(&user_event_access.ownership.id, &state).await?;
 
     let event_access = CreateEventAccessPayloadWithOwnership {
-        name: payload.label.clone(),
-        group: Some(payload.group.clone()),
+        name: name.clone(),
+        group: Some(group.clone()),
         platform: conn_definition.platform.clone(),
         namespace: None,
         connection_type: conn_definition.r#type.clone(),
@@ -229,9 +237,9 @@ async fn oauth_handler(
         platform_version: conn_definition.clone().platform_version,
         connection_definition_id: conn_definition.id,
         r#type: conn_definition.to_connection_type(),
-        name: payload.label,
+        name,
+        group,
         key: key.clone().into(),
-        group: payload.group,
         environment: user_event_access.environment,
         platform: platform.into(),
         secrets_service_id: secret.id(),
