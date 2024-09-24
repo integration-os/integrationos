@@ -460,6 +460,8 @@ impl TestServer {
             name: Faker.fake(),
             auth_form_data: HashMap::from([(template, bearer_key.to_string())]),
             active: true,
+            identity: None,
+            identity_type: None,
         };
 
         let res = self

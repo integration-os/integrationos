@@ -35,6 +35,8 @@ pub struct Connection {
     pub secrets_service_id: String,
     pub event_access_id: Id,
     pub access_key: String,
+    pub identity: Option<String>,
+    pub identity_type: Option<ConnectionIdentityType>,
     pub settings: Settings,
     pub throughput: Throughput,
     pub ownership: Ownership,
@@ -42,6 +44,14 @@ pub struct Connection {
     pub oauth: Option<OAuth>,
     #[serde(flatten, default)]
     pub record_metadata: RecordMetadata,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ConnectionIdentityType {
+    Organization,
+    User,
+    Team,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -59,6 +69,8 @@ pub struct SanitizedConnection {
     pub platform: Arc<str>,
     pub secrets_service_id: String,
     pub event_access_id: Id,
+    pub identity: Option<String>,
+    pub identity_type: Option<ConnectionIdentityType>,
     pub settings: Settings,
     pub throughput: Throughput,
     pub ownership: Ownership,

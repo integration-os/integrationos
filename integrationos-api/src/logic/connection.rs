@@ -22,7 +22,8 @@ use integrationos_domain::{
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
     settings::Settings,
-    ApplicationError, Connection, IntegrationOSError, InternalError, Throughput,
+    ApplicationError, Connection, ConnectionIdentityType, IntegrationOSError, InternalError,
+    Throughput,
 };
 use mongodb::bson::doc;
 use mongodb::bson::Regex;
@@ -48,6 +49,8 @@ pub struct CreateConnectionPayload {
     pub name: String,
     pub auth_form_data: HashMap<String, String>,
     pub active: bool,
+    pub identity: Option<String>,
+    pub identity_type: Option<ConnectionIdentityType>,
 }
 
 async fn test_connection(
@@ -105,6 +108,8 @@ impl PublicExt<Connection> for CreateConnectionPayload {
             platform: input.platform,
             secrets_service_id: input.secrets_service_id,
             event_access_id: input.event_access_id,
+            identity: input.identity,
+            identity_type: input.identity_type,
             settings: input.settings,
             throughput: input.throughput,
             ownership: input.ownership,
@@ -239,6 +244,8 @@ pub async fn create_connection(
         name: payload.name,
         key: key.clone().into(),
         group,
+        identity: None,
+        identity_type: None,
         platform: connection_config.platform.into(),
         environment: event_access.environment,
         secrets_service_id: secret_result.id(),
@@ -277,6 +284,8 @@ pub async fn create_connection(
         platform: connection.platform,
         secrets_service_id: connection.secrets_service_id,
         event_access_id: connection.event_access_id,
+        identity: connection.identity,
+        identity_type: connection.identity_type,
         settings: connection.settings,
         throughput: connection.throughput,
         ownership: connection.ownership,
@@ -289,11 +298,12 @@ pub async fn create_connection(
 #[serde(rename_all = "camelCase")]
 pub struct UpdateConnectionPayload {
     pub name: Option<String>,
-    pub group: Option<String>,
     pub settings: Option<Settings>,
     pub throughput: Option<Throughput>,
     pub auth_form_data: Option<HashMap<String, String>>,
     pub active: Option<bool>,
+    pub identity: Option<String>,
+    pub identity_type: Option<ConnectionIdentityType>,
 }
 
 pub async fn update_connection(
@@ -329,17 +339,20 @@ pub async fn update_connection(
         connection.name = name;
     }
 
-    if let Some(group) = req.group {
-        connection.group.clone_from(&group);
-        connection.key = format!("{}::{}", connection.platform, group).into();
-    }
-
     if let Some(settings) = req.settings {
         connection.settings = settings;
     }
 
     if let Some(throughput) = req.throughput {
         connection.throughput = throughput;
+    }
+
+    if let Some(identity) = req.identity {
+        connection.identity = Some(identity);
+    }
+
+    if let Some(identity_type) = req.identity_type {
+        connection.identity_type = Some(identity_type);
     }
 
     if let Some(auth_form_data) = req.auth_form_data {

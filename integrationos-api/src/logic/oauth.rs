@@ -237,6 +237,8 @@ async fn oauth_handler(
         secrets_service_id: secret.id(),
         event_access_id: event_access.id,
         access_key: event_access.access_key,
+        identity: None,
+        identity_type: None,
         settings: conn_definition.settings,
         throughput: Throughput {
             key,

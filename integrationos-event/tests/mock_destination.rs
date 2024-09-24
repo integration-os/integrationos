@@ -105,6 +105,8 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
         secrets_service_id: "secrets_service_id".to_string(),
         event_access_id,
         access_key: "accessKey".to_string(),
+        identity: None,
+        identity_type: None,
         settings: Settings::default(),
         throughput: Throughput {
             key: "throughputKey".to_string(),
