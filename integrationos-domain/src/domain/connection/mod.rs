@@ -47,6 +47,7 @@ pub struct Connection {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 pub enum ConnectionIdentityType {
     Organization,
     User,
