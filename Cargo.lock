@@ -1985,6 +1985,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "integrationos-storage"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "dotenvy",
+ "envconfig",
+ "futures",
+ "futures-util",
+ "http 1.1.0",
+ "http-serde-ext",
+ "hyper 0.14.30",
+ "integrationos-cache",
+ "integrationos-domain",
+ "integrationos-unified",
+ "rand",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "strum",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "integrationos-unified"
 version = "0.1.0"
 dependencies = [

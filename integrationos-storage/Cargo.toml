@@ -1,0 +1,29 @@
+[package]
+name = "integrationos-storage"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+axum.workspace = true
+chrono.workspace = true
+dotenvy.workspace = true
+envconfig.workspace = true
+futures-util.workspace = true
+futures.workspace = true
+http-serde-ext.workspace = true
+http.workspace = true
+hyper = "0.14.27"
+integrationos-unified = { path = "../integrationos-unified" }
+integrationos-cache = { path = "../integrationos-cache" }
+integrationos-domain = { path = "../integrationos-domain" }
+rand.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+strum.workspace = true
+tokio.workspace = true
+tower = { version = "0.4.13", features = ["filter"] }
+tower-http.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true
