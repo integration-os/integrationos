@@ -226,9 +226,7 @@ impl TestServer {
             .await
             .unwrap();
 
-        let server = Server::init(config.clone())
-            .await
-            .unwrap();
+        let server = Server::init(config.clone()).await.unwrap();
 
         tokio::task::spawn(async move { server.run().await });
 
