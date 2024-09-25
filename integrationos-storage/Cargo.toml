@@ -14,9 +14,11 @@ futures.workspace = true
 http-serde-ext.workspace = true
 http.workspace = true
 hyper = "0.14.27"
-integrationos-unified = { path = "../integrationos-unified" }
 integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain" }
+integrationos-unified = { path = "../integrationos-unified" }
+mongodb.workspace = true
+num_cpus = "1"
 rand.workspace = true
 reqwest.workspace = true
 serde.workspace = true

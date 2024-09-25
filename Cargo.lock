@@ -2001,6 +2001,8 @@ dependencies = [
  "integrationos-cache",
  "integrationos-domain",
  "integrationos-unified",
+ "mongodb",
+ "num_cpus",
  "rand",
  "reqwest",
  "serde",
