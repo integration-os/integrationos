@@ -77,6 +77,7 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
         action: http::Method::POST,
         extractor_config: None,
         test_connection_status: TestConnection::default(),
+        test_connection_payload: None,
         record_metadata: Default::default(),
         is_default_crud_mapping: None,
         mapping: None,

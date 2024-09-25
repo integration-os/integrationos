@@ -75,6 +75,20 @@ async fn test_connection(
             }
         };
 
+        let context = test_connection_model_config
+            .test_connection_payload
+            .as_ref()
+            .map(|test_payload| {
+                serde_json::to_vec(test_payload).map_err(|e| {
+                    error!(
+                        "Failed to convert test_connection_payload to vec. ID: {}, Error: {}",
+                        test_connection_model_config.id, e
+                    );
+                    anyhow::anyhow!("Failed to convert test_connection_payload: {}", e)
+                })
+            })
+            .transpose()?;
+
         let res = state
             .extractor_caller
             .execute_model_definition(
@@ -82,7 +96,7 @@ async fn test_connection(
                 HeaderMap::new(),
                 &HashMap::new(),
                 &Arc::new(auth_form_data_value.clone()),
-                None,
+                context,
             )
             .await?;
 

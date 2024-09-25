@@ -23,9 +23,10 @@ use integrationos_domain::{
     event_access::EventAccess,
     page::PlatformPage,
     secret::Secret,
+    secrets::SecretServiceProvider,
     stage::Stage,
     user::UserClient,
-    Connection, Event, Pipeline, PlatformData, SecretExt, Store, Transaction,
+    Connection, Event, GoogleKms, IOSKms, Pipeline, PlatformData, SecretExt, Store, Transaction,
 };
 use integrationos_unified::unified::{UnifiedCacheTTLs, UnifiedDestination};
 use mongodb::{options::UpdateOptions, Client, Database};
@@ -83,10 +84,7 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn init(
-        config: ConnectionsConfig,
-        secrets_client: Arc<dyn SecretExt + Sync + Send + 'static>,
-    ) -> Result<Self> {
+    pub async fn init(config: ConnectionsConfig) -> Result<Self> {
         let client = Client::with_uri_str(&config.db_config.control_db_url).await?;
         let db = client.database(&config.db_config.control_db_name);
 
@@ -117,6 +115,17 @@ impl Server {
         let cursors = MongoStore::new(&db, &Store::Cursors).await?;
         let stages = MongoStore::new(&db, &Store::Stages).await?;
         let clients = MongoStore::new(&db, &Store::Clients).await?;
+        let secrets_store = MongoStore::<Secret>::new(&db, &Store::Secrets).await?;
+
+        let secrets_client: Arc<dyn SecretExt + Sync + Send> = match config.secrets_config.provider
+        {
+            SecretServiceProvider::GoogleKms => {
+                Arc::new(GoogleKms::new(&config.secrets_config, secrets_store).await?)
+            }
+            SecretServiceProvider::IosKms => {
+                Arc::new(IOSKms::new(&config.secrets_config, secrets_store).await?)
+            }
+        };
 
         let extractor_caller = UnifiedDestination::new(
             config.db_config.clone(),
