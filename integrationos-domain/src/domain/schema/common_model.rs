@@ -372,7 +372,7 @@ impl DataType {
                     SchemaType::Lax => "Schema.optional(Schema.NullishOr(Schema.String.pipe(Schema.filter((d) => !isNaN(new Date(d).getTime())))))".into(),
                     SchemaType::Strict => "Schema.String.pipe(Schema.filter((d) => !isNaN(new Date(d).getTime())))".into()
                 }
-                },
+            },
             DataType::Enum { reference, .. } => {
                 match r#type {
                     SchemaType::Lax => {
@@ -412,14 +412,27 @@ impl DataType {
                 match r#type {
                     SchemaType::Lax => {
                         let name = (*element_type).as_typescript_schema(enum_name, r#type);
-                        let refined = if name.contains("Schema.optional") {
-                            name.replace("Schema.optional(", "")
-                                .replace(')', "")
-                                .replace("Schema.NullishOr(", "")
-                                .replace(')', "")
+
+                        let refined = if name.starts_with("Schema.optional(") && name.ends_with(')') {
+                        let without_optional = name.strip_prefix("Schema.optional(").unwrap_or(&name);
+                    
+                        if without_optional.starts_with("Schema.NullishOr(") && without_optional.ends_with(')') {
+                            // Strip "Schema.NullishOr(" and the last closing ')'
+                            let without_nullish = without_optional.strip_prefix("Schema.NullishOr(")
+                                .unwrap_or(without_optional)
+                                .strip_suffix(')')
+                                .unwrap_or(without_optional);
+                            
+                            // Now strip the final closing ')' from the outer "Schema.optional("
+                            without_nullish.strip_suffix(')').unwrap_or(without_nullish)
+                            } else {
+                                // Just strip the closing ')' from "Schema.optional("
+                                without_optional.strip_suffix(')').unwrap_or(without_optional)
+                            }
                         } else {
-                            name
+                            &name
                         };
+
                         format!(
                             "Schema.optional(Schema.NullishOr(Schema.Array({})))",
                             refined
