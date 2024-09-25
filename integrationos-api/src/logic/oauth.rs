@@ -19,7 +19,8 @@ use integrationos_domain::{
     id::{prefix::IdPrefix, Id},
     oauth_secret::OAuthSecret,
     ownership::Ownership,
-    ApplicationError, Connection, ErrorMeta, IntegrationOSError, InternalError, OAuth, Throughput,
+    ApplicationError, Connection, ConnectionIdentityType, ErrorMeta, IntegrationOSError,
+    InternalError, OAuth, Throughput,
 };
 use mongodb::bson::doc;
 use reqwest::Request;
@@ -47,6 +48,8 @@ struct OAuthRequest {
     client_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     payload: Option<Value>,
+    identity: Option<String>,
+    identity_type: Option<ConnectionIdentityType>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -244,8 +247,8 @@ async fn oauth_handler(
         secrets_service_id: secret.id(),
         event_access_id: event_access.id,
         access_key: event_access.access_key,
-        identity: None,
-        identity_type: None,
+        identity: payload.identity,
+        identity_type: payload.identity_type,
         settings: conn_definition.settings,
         throughput: Throughput {
             key,

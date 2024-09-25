@@ -347,7 +347,7 @@ impl TestServer {
         &mut self,
         environment: Environment,
     ) -> (SanitizedConnection, ConnectionModelDefinition) {
-        let (key, access_key) = match environment {
+        let (key, _access_key) = match environment {
             Environment::Live => (self.live_key.as_ref(), &self.live_access_key),
             Environment::Development => (self.live_key.as_ref(), &self.test_access_key),
             Environment::Test => (self.test_key.as_ref(), &self.test_access_key),
