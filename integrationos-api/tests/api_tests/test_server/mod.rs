@@ -226,7 +226,7 @@ impl TestServer {
             .await
             .unwrap();
 
-        let server = Server::init(config.clone(), secrets_client.clone())
+        let server = Server::init(config.clone())
             .await
             .unwrap();
 
