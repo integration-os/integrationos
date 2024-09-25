@@ -101,7 +101,6 @@ impl PublicExt<Connection> for CreateConnectionPayload {
             platform_version: input.platform_version,
             connection_definition_id: input.connection_definition_id,
             r#type: input.r#type,
-            name: input.name,
             key: input.key,
             group: input.group,
             environment: input.environment,
@@ -257,7 +256,6 @@ pub async fn create_connection(
         platform_version: connection_config.clone().platform_version,
         connection_definition_id: payload.connection_definition_id,
         r#type: connection_config.to_connection_type(),
-        name,
         key: key.clone().into(),
         group,
         identity: payload.identity,
@@ -293,7 +291,6 @@ pub async fn create_connection(
         platform_version: connection.platform_version,
         connection_definition_id: connection.connection_definition_id,
         r#type: connection.r#type,
-        name: connection.name,
         key: connection.key,
         group: connection.group,
         environment: connection.environment,
@@ -313,7 +310,6 @@ pub async fn create_connection(
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateConnectionPayload {
-    pub name: Option<String>,
     pub settings: Option<Settings>,
     pub throughput: Option<Throughput>,
     pub auth_form_data: Option<HashMap<String, String>>,
@@ -349,10 +345,6 @@ pub async fn update_connection(
             "You do not have permission to update this connection",
             None,
         ));
-    }
-
-    if let Some(name) = req.name {
-        connection.name = name;
     }
 
     if let Some(settings) = req.settings {

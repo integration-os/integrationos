@@ -26,7 +26,6 @@ pub struct Connection {
     pub platform_version: String,
     pub connection_definition_id: Id,
     pub r#type: ConnectionType,
-    pub name: String,
     #[serde(default = "key_default")]
     pub key: Arc<str>,
     pub group: String,
@@ -62,7 +61,6 @@ pub struct SanitizedConnection {
     pub platform_version: String,
     pub connection_definition_id: Id,
     pub r#type: ConnectionType,
-    pub name: String,
     pub key: Arc<str>,
     pub group: String,
     pub environment: Environment,

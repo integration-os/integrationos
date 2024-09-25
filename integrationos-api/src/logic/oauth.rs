@@ -237,7 +237,6 @@ async fn oauth_handler(
         platform_version: conn_definition.clone().platform_version,
         connection_definition_id: conn_definition.id,
         r#type: conn_definition.to_connection_type(),
-        name,
         group,
         key: key.clone().into(),
         environment: user_event_access.environment,
