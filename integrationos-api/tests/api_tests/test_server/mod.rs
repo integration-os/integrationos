@@ -162,6 +162,7 @@ impl TestServer {
             ("CACHE_SIZE".to_string(), "0".to_string()),
             ("REDIS_URL".to_string(), redis),
             ("JWT_SECRET".to_string(), token_secret.clone()),
+            ("SECRETS_SERVICE_PROVIDER".to_string(), "ios-kms".to_string()),
         ]))
         .unwrap();
 
