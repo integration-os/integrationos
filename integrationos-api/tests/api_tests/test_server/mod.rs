@@ -162,6 +162,10 @@ impl TestServer {
             ("CACHE_SIZE".to_string(), "0".to_string()),
             ("REDIS_URL".to_string(), redis),
             ("JWT_SECRET".to_string(), token_secret.clone()),
+            (
+                "SECRETS_SERVICE_PROVIDER".to_string(),
+                "ios-kms".to_string(),
+            ),
         ]))
         .unwrap();
 
@@ -226,9 +230,7 @@ impl TestServer {
             .await
             .unwrap();
 
-        let server = Server::init(config.clone(), secrets_client.clone())
-            .await
-            .unwrap();
+        let server = Server::init(config.clone()).await.unwrap();
 
         tokio::task::spawn(async move { server.run().await });
 
