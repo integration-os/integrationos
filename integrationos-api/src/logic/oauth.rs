@@ -194,12 +194,6 @@ async fn oauth_handler(
     let conn_definition = get_conn_definition(&state, &payload.connection_definition_id).await?;
     let group = Uuid::new_v4().to_string().replace('-', "");
     let namespace = "default".to_string();
-    let name = match user_event_access.environment {
-        Environment::Test => format!("{} sandbox account", conn_definition.name),
-        Environment::Development => format!("{} sandbox account", conn_definition.name),
-        Environment::Live => format!("{} production account", conn_definition.name),
-        Environment::Production => format!("{} production account", conn_definition.name),
-    };
 
     let key = format!(
         "{}::{}::{}::{}",
@@ -209,7 +203,10 @@ async fn oauth_handler(
     let throughput = get_client_throughput(&user_event_access.ownership.id, &state).await?;
 
     let event_access = CreateEventAccessPayloadWithOwnership {
-        name: name.clone(),
+        name: format!(
+            "{} {} account",
+            user_event_access.environment, conn_definition.name
+        ),
         group: Some(group.clone()),
         platform: conn_definition.platform.clone(),
         namespace: None,

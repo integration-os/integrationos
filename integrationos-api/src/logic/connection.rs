@@ -178,12 +178,6 @@ pub async fn create_connection(
 
     let group = Uuid::new_v4().to_string().replace('-', "");
     let namespace = "default".to_string();
-    let name = match access.environment {
-        Environment::Test => format!("{} sandbox account", connection_config.name),
-        Environment::Development => format!("{} sandbox account", connection_config.name),
-        Environment::Live => format!("{} production account", connection_config.name),
-        Environment::Production => format!("{} production account", connection_config.name),
-    };
 
     let key = format!(
         "{}::{}::{}::{}",
@@ -195,7 +189,7 @@ pub async fn create_connection(
     let event_access = generate_event_access(
         state.config.clone(),
         CreateEventAccessPayloadWithOwnership {
-            name: name.clone(),
+            name: format!("{} {}", access.environment, connection_config.name),
             group: Some(group.clone()),
             platform: connection_config.platform.clone(),
             namespace: None,
