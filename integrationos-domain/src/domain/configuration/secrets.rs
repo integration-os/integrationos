@@ -66,14 +66,17 @@ impl Default for SecretsConfig {
 }
 
 impl Display for SecretsConfig {
-    // TODO: Update this
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         writeln!(f, "SECRETS_SERVICE_PROVIDER: {}", self.provider.as_ref())?;
-        writeln!(f, "GOOGLE_KMS_PROJECT_ID: ****")?;
-        writeln!(f, "GOOGLE_KMS_LOCATION_ID: ****")?;
-        writeln!(f, "GOOGLE_KMS_KEY_RING_ID: ****")?;
-        writeln!(f, "GOOGLE_KMS_KEY_ID: ****")?;
-        writeln!(f, "IOS_CRYPTO_SECRET: ****")
+        match self.provider {
+            SecretServiceProvider::GoogleKms => {
+                writeln!(f, "GOOGLE_KMS_PROJECT_ID: ****")?;
+                writeln!(f, "GOOGLE_KMS_LOCATION_ID: ****")?;
+                writeln!(f, "GOOGLE_KMS_KEY_RING_ID: ****")?;
+                writeln!(f, "GOOGLE_KMS_KEY_ID: ****")
+            }
+            SecretServiceProvider::IosKms => writeln!(f, "IOS_CRYPTO_SECRET: ****"),
+        }
     }
 }
 
@@ -109,7 +112,6 @@ mod tests {
             GOOGLE_KMS_LOCATION_ID: ****\n\
             GOOGLE_KMS_KEY_RING_ID: ****\n\
             GOOGLE_KMS_KEY_ID: ****\n\
-            IOS_CRYPTO_SECRET: ****\n\
             ";
 
         assert_eq!(config_str, display);

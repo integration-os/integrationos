@@ -44,10 +44,14 @@ pub struct ArchiverConfig {
 
 impl Display for ArchiverConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "GS_STORAGE_BUCKET: {}", self.gs_storage_bucket)?;
-        writeln!(f, "GS_STORAGE_URI: {}", self.gs_storage_uri)?;
         writeln!(f, "MAX_RETRIES: {}", self.max_retries)?;
         writeln!(f, "STORAGE_PROVIDER: {}", self.storage_provider.as_ref())?;
+        match self.storage_provider {
+            StorageProvider::GoogleCloud => {
+                writeln!(f, "GS_STORAGE_BUCKET: {}", self.gs_storage_bucket)?;
+                writeln!(f, "GS_STORAGE_URI: {}", self.gs_storage_uri)?;
+            }
+        }
         writeln!(
             f,
             "PROCESSING_CHUNK_TIMEOUT_SECS: {}",
