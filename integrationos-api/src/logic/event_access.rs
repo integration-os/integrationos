@@ -28,10 +28,10 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{error, warn};
+use uuid::Uuid;
 use validator::Validate;
 
-const DEFAULT_GROUP: &str = "event-inc-internal";
-const DEFAULT_NAMESPACE: &str = "default";
+pub const DEFAULT_NAMESPACE: &str = "default";
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -68,7 +68,6 @@ impl PublicExt<EventAccess> for CreateEventAccessRequest {}
 #[serde(rename_all = "camelCase")]
 pub struct CreateEventAccessPayloadWithOwnership {
     pub name: String,
-    pub group: Option<String>,
     pub platform: String,
     pub namespace: Option<String>,
     pub connection_type: ConnectionDefinitionType,
@@ -91,7 +90,7 @@ pub fn generate_event_access(
     let namespace = payload
         .namespace
         .unwrap_or_else(|| DEFAULT_NAMESPACE.to_string());
-    let group = payload.group.unwrap_or_else(|| DEFAULT_GROUP.to_string());
+    let group = Uuid::new_v4().to_string().replace('-', "");
 
     let access_key = AccessKey {
         prefix: AccessKeyPrefix {
@@ -225,7 +224,6 @@ pub async fn create_event_access(
 
     let event_access_payload = CreateEventAccessPayloadWithOwnership {
         name: payload.name.clone(),
-        group: payload.group.clone(),
         namespace: payload.namespace.clone(),
         platform: payload.platform.clone(),
         connection_type: payload.connection_type.clone(),

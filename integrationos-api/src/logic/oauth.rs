@@ -1,5 +1,8 @@
 use super::event_access::CreateEventAccessPayloadWithOwnership;
-use crate::{logic::event_access::get_client_throughput, server::AppState};
+use crate::{
+    logic::event_access::{get_client_throughput, DEFAULT_NAMESPACE},
+    server::AppState,
+};
 use axum::{
     extract::{Path, State},
     routing::post,
@@ -14,7 +17,6 @@ use integrationos_domain::{
     connection_oauth_definition::{
         Computation, ConnectionOAuthDefinition, OAuthResponse, PlatformSecret, Settings,
     },
-    environment::Environment,
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     oauth_secret::OAuthSecret,
@@ -32,7 +34,6 @@ use std::{
     sync::Arc,
 };
 use tracing::{debug, error};
-use uuid::Uuid;
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new().route("/:platform", post(oauth_handler))
@@ -192,22 +193,17 @@ async fn oauth_handler(
         })?;
 
     let conn_definition = get_conn_definition(&state, &payload.connection_definition_id).await?;
-    let group = Uuid::new_v4().to_string().replace('-', "");
-    let namespace = "default".to_string();
+    let group = user_event_access.group.clone();
 
     let key = format!(
         "{}::{}::{}::{}",
-        user_event_access.environment, conn_definition.platform, namespace, group
+        user_event_access.environment, conn_definition.platform, DEFAULT_NAMESPACE, group
     );
 
     let throughput = get_client_throughput(&user_event_access.ownership.id, &state).await?;
 
     let event_access = CreateEventAccessPayloadWithOwnership {
-        name: format!(
-            "{} {} account",
-            user_event_access.environment, conn_definition.name
-        ),
-        group: Some(group.clone()),
+        name: format!("{} {}", user_event_access.environment, conn_definition.name),
         platform: conn_definition.platform.clone(),
         namespace: None,
         connection_type: conn_definition.r#type.clone(),

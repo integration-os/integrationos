@@ -1,4 +1,4 @@
-use super::{delete, read, PublicExt, RequestExt};
+use super::{delete, event_access::DEFAULT_NAMESPACE, read, PublicExt, RequestExt};
 use crate::{
     logic::event_access::{
         generate_event_access, get_client_throughput, CreateEventAccessPayloadWithOwnership,
@@ -18,7 +18,6 @@ use integrationos_domain::{
     algebra::MongoStore,
     connection_definition::ConnectionDefinition,
     domain::connection::SanitizedConnection,
-    environment::Environment,
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
@@ -32,7 +31,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{collections::HashMap, sync::Arc};
 use tracing::error;
-use uuid::Uuid;
 use validator::Validate;
 
 pub fn get_router() -> Router<Arc<AppState>> {
@@ -190,12 +188,11 @@ pub async fn create_connection(
         }
     };
 
-    let group = Uuid::new_v4().to_string().replace('-', "");
-    let namespace = "default".to_string();
+    let group = access.group.clone();
 
     let key = format!(
         "{}::{}::{}::{}",
-        access.environment, connection_config.platform, namespace, group
+        access.environment, connection_config.platform, DEFAULT_NAMESPACE, group
     );
 
     let throughput = get_client_throughput(&access.ownership.id, &state).await?;
@@ -204,7 +201,6 @@ pub async fn create_connection(
         state.config.clone(),
         CreateEventAccessPayloadWithOwnership {
             name: format!("{} {}", access.environment, connection_config.name),
-            group: Some(group.clone()),
             platform: connection_config.platform.clone(),
             namespace: None,
             connection_type: connection_config.r#type.clone(),
