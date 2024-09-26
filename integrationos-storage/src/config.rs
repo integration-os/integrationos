@@ -1,11 +1,11 @@
 use envconfig::Envconfig;
-
-use integrationos_domain::{cache::CacheConfig, environment::Environment};
 use integrationos_domain::database::DatabaseConfig;
+use integrationos_domain::{cache::CacheConfig, environment::Environment};
 use std::{
     fmt::{Display, Formatter, Result},
     net::SocketAddr,
 };
+use strum::{AsRefStr, EnumString};
 
 #[derive(Envconfig, Clone)]
 pub struct StorageConfig {
@@ -21,7 +21,10 @@ pub struct StorageConfig {
     pub cache: CacheConfig,
     #[envconfig(from = "ENVIRONMENT", default = "development")]
     pub environment: Environment,
-
+    #[envconfig(nested = true)]
+    pub postgres_config: PostgresConfig,
+    #[envconfig(from = "STORAGE_CONFIG_TYPE", default = "postgres")]
+    pub storage_config_type: StorageConfigType,
 }
 
 impl Display for StorageConfig {
@@ -31,6 +34,48 @@ impl Display for StorageConfig {
         writeln!(f, "CACHE_SIZE: {}", self.cache_size)?;
         writeln!(f, "{}", self.environment)?;
         writeln!(f, "{}", self.cache)?;
+        match self.storage_config_type {
+            StorageConfigType::Postgres => writeln!(f, "{}", self.postgres_config)?,
+        }
         writeln!(f, "{}", self.db_config)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, EnumString, AsRefStr)]
+#[strum(serialize_all = "kebab-case")]
+pub enum StorageConfigType {
+    Postgres,
+}
+
+#[derive(Debug, Clone, Envconfig)]
+pub struct PostgresConfig {
+    #[envconfig(env = "DATABASE_USER", default = "postgres")]
+    pub user: String,
+    #[envconfig(env = "DATABASE_PASSWORD", default = "postgres")]
+    pub password: String,
+    #[envconfig(env = "DATABASE_PORT", default = "5432")]
+    pub port: u16,
+    #[envconfig(env = "DATABASE_NAME", default = "postgres")]
+    pub name: String,
+    #[envconfig(env = "DATABASE_HOST", default = "localhost")]
+    pub host: String,
+    #[envconfig(env = "DATABASE_SSL", default = "false")]
+    pub ssl: bool,
+    #[envconfig(env = "DATABASE_WAIT_TIMEOUT", default = "1000")]
+    pub timeout: u64,
+    #[envconfig(env = "DATABASE_POOL_SIZE", default = "10")]
+    pub pool_size: u32,
+}
+
+impl Display for PostgresConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        writeln!(f, "DATABASE_USER: ****")?;
+        writeln!(f, "DATABASE_PASSWORD: ****")?;
+        writeln!(f, "DATABASE_PORT: ****")?;
+        writeln!(f, "DATABASE_HOST: ****")?;
+        writeln!(f, "DATABASE_NAME: {}", self.name)?;
+        writeln!(f, "DATABASE_SSL: {}", self.ssl)?;
+        writeln!(f, "DATABASE_WAIT_TIMEOUT: {}", self.timeout)?;
+        writeln!(f, "DATABASE_POOL_SIZE: {}", self.pool_size)
     }
 }
