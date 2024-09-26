@@ -1,11 +1,12 @@
+use anyhow::Result as AnyhowResult;
 use envconfig::Envconfig;
-use integrationos_domain::database::DatabaseConfig;
 use integrationos_domain::{cache::CacheConfig, environment::Environment};
 use std::{
     fmt::{Display, Formatter, Result},
     net::SocketAddr,
 };
 use strum::{AsRefStr, EnumString};
+use crate::storage::{PostgresStorage, Storage};
 
 #[derive(Envconfig, Clone)]
 pub struct StorageConfig {
@@ -15,8 +16,6 @@ pub struct StorageConfig {
     pub address: SocketAddr,
     #[envconfig(from = "CACHE_SIZE", default = "100")]
     pub cache_size: u64,
-    #[envconfig(nested = true)]
-    pub db_config: DatabaseConfig,
     #[envconfig(nested = true)]
     pub cache: CacheConfig,
     #[envconfig(from = "ENVIRONMENT", default = "development")]
@@ -35,9 +34,8 @@ impl Display for StorageConfig {
         writeln!(f, "{}", self.environment)?;
         writeln!(f, "{}", self.cache)?;
         match self.storage_config_type {
-            StorageConfigType::Postgres => writeln!(f, "{}", self.postgres_config)?,
+            StorageConfigType::Postgres => writeln!(f, "{}", self.postgres_config)
         }
-        writeln!(f, "{}", self.db_config)
     }
 }
 
@@ -45,6 +43,14 @@ impl Display for StorageConfig {
 #[strum(serialize_all = "kebab-case")]
 pub enum StorageConfigType {
     Postgres,
+}
+
+impl StorageConfigType {
+    pub async fn init(&self, configuration: &StorageConfig) -> AnyhowResult<impl Storage> {
+        match self {
+            StorageConfigType::Postgres => PostgresStorage::new(configuration).await,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Envconfig)]
@@ -61,7 +67,7 @@ pub struct PostgresConfig {
     pub host: String,
     #[envconfig(env = "DATABASE_SSL", default = "false")]
     pub ssl: bool,
-    #[envconfig(env = "DATABASE_WAIT_TIMEOUT", default = "1000")]
+    #[envconfig(env = "DATABASE_WAIT_TIMEOUT_IN_MILLIS", default = "1000")]
     pub timeout: u64,
     #[envconfig(env = "DATABASE_POOL_SIZE", default = "10")]
     pub pool_size: u32,
@@ -75,7 +81,7 @@ impl Display for PostgresConfig {
         writeln!(f, "DATABASE_HOST: ****")?;
         writeln!(f, "DATABASE_NAME: {}", self.name)?;
         writeln!(f, "DATABASE_SSL: {}", self.ssl)?;
-        writeln!(f, "DATABASE_WAIT_TIMEOUT: {}", self.timeout)?;
+        writeln!(f, "DATABASE_WAIT_TIMEOUT_IN_MILLIS: {}", self.timeout)?;
         writeln!(f, "DATABASE_POOL_SIZE: {}", self.pool_size)
     }
 }
