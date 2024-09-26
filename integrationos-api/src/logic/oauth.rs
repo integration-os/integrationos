@@ -34,6 +34,7 @@ use std::{
     sync::Arc,
 };
 use tracing::{debug, error};
+use uuid::Uuid;
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new().route("/:platform", post(oauth_handler))
@@ -193,7 +194,7 @@ async fn oauth_handler(
         })?;
 
     let conn_definition = get_conn_definition(&state, &payload.connection_definition_id).await?;
-    let group = user_event_access.group.clone();
+    let group = Uuid::new_v4().to_string().replace('-', "");
 
     let key = format!(
         "{}::{}::{}::{}",

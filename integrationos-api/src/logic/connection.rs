@@ -31,6 +31,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{collections::HashMap, sync::Arc};
 use tracing::error;
+use uuid::Uuid;
 use validator::Validate;
 
 pub fn get_router() -> Router<Arc<AppState>> {
@@ -188,7 +189,7 @@ pub async fn create_connection(
         }
     };
 
-    let group = access.group.clone();
+    let group = Uuid::new_v4().to_string().replace('-', "");
 
     let key = format!(
         "{}::{}::{}::{}",
