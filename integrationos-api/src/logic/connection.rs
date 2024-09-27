@@ -131,6 +131,7 @@ impl PublicExt<Connection> for CreateConnectionPayload {
         .to_value()
     }
 }
+
 impl RequestExt for CreateConnectionPayload {
     type Output = Connection;
 

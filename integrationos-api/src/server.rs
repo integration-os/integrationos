@@ -26,7 +26,8 @@ use integrationos_domain::{
     secrets::SecretServiceProvider,
     stage::Stage,
     user::UserClient,
-    Connection, Event, GoogleKms, IOSKms, Pipeline, PlatformData, SecretExt, Store, Transaction,
+    Connection, Event, GoogleKms, IOSKms, Pipeline, PlatformData, PublicConnection, SecretExt,
+    Store, Transaction,
 };
 use integrationos_unified::unified::{UnifiedCacheTTLs, UnifiedDestination};
 use mongodb::{options::UpdateOptions, Client, Database};
@@ -46,6 +47,7 @@ pub struct AppStores {
     pub common_model: MongoStore<CommonModel>,
     pub common_enum: MongoStore<CommonEnum>,
     pub connection: MongoStore<Connection>,
+    pub public_connection: MongoStore<PublicConnection>,
     pub public_connection_details: MongoStore<PublicConnectionDetails>,
     pub platform: MongoStore<PlatformData>,
     pub platform_page: MongoStore<PlatformPage>,
@@ -102,6 +104,7 @@ impl Server {
         let common_enum = MongoStore::new(&db, &Store::CommonEnums).await?;
         let secrets = MongoStore::new(&db, &Store::Secrets).await?;
         let connection = MongoStore::new(&db, &Store::Connections).await?;
+        let public_connection = MongoStore::new(&db, &Store::Connections).await?;
         let platform = MongoStore::new(&db, &Store::Platforms).await?;
         let platform_page = MongoStore::new(&db, &Store::PlatformPages).await?;
         let public_connection_details =
@@ -157,6 +160,7 @@ impl Server {
             common_model,
             common_enum,
             connection,
+            public_connection,
             public_connection_details,
             connection_config,
             pipeline,

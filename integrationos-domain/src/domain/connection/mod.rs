@@ -56,6 +56,22 @@ pub enum ConnectionIdentityType {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PublicConnection {
+    #[serde(rename = "_id")]
+    pub id: Id,
+    pub platform_version: String,
+    pub r#type: ConnectionType,
+    pub key: Arc<str>,
+    pub environment: Environment,
+    pub platform: Arc<str>,
+    pub identity: Option<String>,
+    pub identity_type: Option<ConnectionIdentityType>,
+    #[serde(flatten, default)]
+    pub record_metadata: RecordMetadata,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SanitizedConnection {
     #[serde(rename = "_id")]
     pub id: Id,
