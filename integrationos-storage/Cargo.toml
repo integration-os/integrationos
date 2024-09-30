@@ -25,7 +25,7 @@ reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 strum.workspace = true
-sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-native-tls", "postgres", "json" ] }
+sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-native-tls", "postgres", "json", "macros", "chrono", "uuid", "rust_decimal", "ipnetwork"] }
 tokio.workspace = true
 tower = { version = "0.4.13", features = ["filter"] }
 tower-http.workspace = true

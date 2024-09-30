@@ -1,3 +1,4 @@
-pub mod config;
+pub mod domain;
+pub mod router;
 pub mod server;
-pub mod storage;
+pub mod service;

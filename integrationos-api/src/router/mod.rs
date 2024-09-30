@@ -3,12 +3,8 @@ pub mod secured_jwt;
 pub mod secured_key;
 
 use crate::server::AppState;
-use axum::{
-    body::Body, extract::Request, middleware::Next, response::IntoResponse, routing::get, Json,
-    Router,
-};
+use axum::{response::IntoResponse, routing::get, Json, Router};
 use http::StatusCode;
-use integrationos_domain::TimedExt;
 use serde::{ser::SerializeMap, Deserialize, Serialize, Serializer};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -51,6 +47,7 @@ where
         }
     }
 }
+
 impl<T> ServerResponse<T>
 where
     T: Serialize,
@@ -104,37 +101,4 @@ pub async fn not_found_handler() -> impl IntoResponse {
             }),
         }),
     )
-}
-
-pub async fn log_request_middleware(
-    req: Request<Body>,
-    next: Next,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let path = req.uri().path().to_string();
-    let method = req.method().to_string();
-    let res = next
-        .run(req)
-        .timed(|response, elapsed| {
-            let status = response.status();
-            let logger = |str| {
-                if status.is_server_error() {
-                    tracing::error!("{}", str)
-                } else if status.is_client_error() {
-                    tracing::warn!("{}", str)
-                } else {
-                    tracing::info!("{}", str)
-                }
-            };
-
-            logger(format!(
-                "[{} {}] Elapsed time: {}ms | Status: {}",
-                method,
-                path,
-                elapsed.as_millis(),
-                status,
-            ));
-        })
-        .await;
-
-    Ok(res)
 }

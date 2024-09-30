@@ -1,4 +1,3 @@
-use anyhow::Result as AnyhowResult;
 use envconfig::Envconfig;
 use integrationos_domain::{cache::CacheConfig, environment::Environment};
 use std::{
@@ -6,13 +5,12 @@ use std::{
     net::SocketAddr,
 };
 use strum::{AsRefStr, EnumString};
-use crate::storage::{PostgresStorage, Storage};
 
 #[derive(Envconfig, Clone)]
 pub struct StorageConfig {
     #[envconfig(from = "WORKER_THREADS")]
     pub worker_threads: Option<usize>,
-    #[envconfig(from = "INTERNAL_SERVER_ADDRESS", default = "0.0.0.0:3005")]
+    #[envconfig(from = "INTERNAL_SERVER_ADDRESS", default = "0.0.0.0:5005")]
     pub address: SocketAddr,
     #[envconfig(from = "CACHE_SIZE", default = "100")]
     pub cache_size: u64,
@@ -34,7 +32,7 @@ impl Display for StorageConfig {
         writeln!(f, "{}", self.environment)?;
         writeln!(f, "{}", self.cache)?;
         match self.storage_config_type {
-            StorageConfigType::Postgres => writeln!(f, "{}", self.postgres_config)
+            StorageConfigType::Postgres => writeln!(f, "{}", self.postgres_config),
         }
     }
 }
@@ -43,14 +41,6 @@ impl Display for StorageConfig {
 #[strum(serialize_all = "kebab-case")]
 pub enum StorageConfigType {
     Postgres,
-}
-
-impl StorageConfigType {
-    pub async fn init(&self, configuration: &StorageConfig) -> AnyhowResult<impl Storage> {
-        match self {
-            StorageConfigType::Postgres => PostgresStorage::new(configuration).await,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Envconfig)]
@@ -75,10 +65,15 @@ pub struct PostgresConfig {
 
 impl Display for PostgresConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        writeln!(f, "DATABASE_USER: ****")?;
-        writeln!(f, "DATABASE_PASSWORD: ****")?;
-        writeln!(f, "DATABASE_PORT: ****")?;
-        writeln!(f, "DATABASE_HOST: ****")?;
+        // writeln!(f, "DATABASE_USER: ****")?;
+        // writeln!(f, "DATABASE_PASSWORD: ****")?;
+        // writeln!(f, "DATABASE_PORT: ****")?;
+        // writeln!(f, "DATABASE_HOST: ****")?;
+        writeln!(f, "DATABASE_USER: {}", self.user)?;
+        writeln!(f, "DATABASE_PASSWORD: {}", self.password)?;
+        writeln!(f, "DATABASE_PORT: {}", self.port)?;
+        writeln!(f, "DATABASE_HOST: {}", self.host)?;
+
         writeln!(f, "DATABASE_NAME: {}", self.name)?;
         writeln!(f, "DATABASE_SSL: {}", self.ssl)?;
         writeln!(f, "DATABASE_WAIT_TIMEOUT_IN_MILLIS: {}", self.timeout)?;

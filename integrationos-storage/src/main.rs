@@ -3,8 +3,11 @@ use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use integrationos_storage::{
-    config::{StorageConfig, StorageConfigType},
-    server::Server,
+    domain::{
+        config::{StorageConfig, StorageConfigType},
+        postgres::PostgresStorage,
+    },
+    service::init::Initializer,
 };
 use tracing::info;
 
@@ -23,7 +26,7 @@ fn main() -> Result<()> {
         .build()?
         .block_on(async move {
             match config.storage_config_type {
-                StorageConfigType::Postgres => Server::init(config).await?.run().await,
+                StorageConfigType::Postgres => PostgresStorage::init(&config).await?.run().await,
             }
         })
 }

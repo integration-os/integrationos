@@ -1,4 +1,3 @@
-use super::log_request_middleware;
 use crate::{
     logic::{
         common_enum, common_model,
@@ -17,7 +16,7 @@ use axum::{
 };
 use integrationos_domain::{
     common_model::{CommonEnum, CommonModel},
-    connection_definition::{ConnectionDefinition, PublicConnectionDetails},
+    connection_definition::{ConnectionDefinition, PublicConnectionDetails}, telemetry::log_request_middleware,
 };
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
