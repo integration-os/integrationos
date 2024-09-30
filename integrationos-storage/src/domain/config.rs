@@ -65,15 +65,10 @@ pub struct PostgresConfig {
 
 impl Display for PostgresConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        // writeln!(f, "DATABASE_USER: ****")?;
-        // writeln!(f, "DATABASE_PASSWORD: ****")?;
-        // writeln!(f, "DATABASE_PORT: ****")?;
-        // writeln!(f, "DATABASE_HOST: ****")?;
-        writeln!(f, "DATABASE_USER: {}", self.username)?;
-        writeln!(f, "DATABASE_PASSWORD: {}", self.password)?;
-        writeln!(f, "DATABASE_PORT: {}", self.port)?;
-        writeln!(f, "DATABASE_HOST: {}", self.host)?;
-
+        writeln!(f, "DATABASE_USER: ****")?;
+        writeln!(f, "DATABASE_PASSWORD: ****")?;
+        writeln!(f, "DATABASE_PORT: ****")?;
+        writeln!(f, "DATABASE_HOST: ****")?;
         writeln!(f, "DATABASE_NAME: {}", self.name)?;
         writeln!(f, "DATABASE_SSL: {}", self.ssl)?;
         writeln!(f, "DATABASE_WAIT_TIMEOUT_IN_MILLIS: {}", self.timeout)?;
