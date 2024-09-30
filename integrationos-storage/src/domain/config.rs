@@ -46,7 +46,7 @@ pub enum StorageConfigType {
 #[derive(Debug, Clone, Envconfig)]
 pub struct PostgresConfig {
     #[envconfig(env = "DATABASE_USER", default = "postgres")]
-    pub user: String,
+    pub username: String,
     #[envconfig(env = "DATABASE_PASSWORD", default = "postgres")]
     pub password: String,
     #[envconfig(env = "DATABASE_PORT", default = "5432")]
@@ -69,7 +69,7 @@ impl Display for PostgresConfig {
         // writeln!(f, "DATABASE_PASSWORD: ****")?;
         // writeln!(f, "DATABASE_PORT: ****")?;
         // writeln!(f, "DATABASE_HOST: ****")?;
-        writeln!(f, "DATABASE_USER: {}", self.user)?;
+        writeln!(f, "DATABASE_USER: {}", self.username)?;
         writeln!(f, "DATABASE_PASSWORD: {}", self.password)?;
         writeln!(f, "DATABASE_PORT: {}", self.port)?;
         writeln!(f, "DATABASE_HOST: {}", self.host)?;

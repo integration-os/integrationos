@@ -1,10 +1,17 @@
-use std::time::Duration;
 use super::config::StorageConfig;
 use anyhow::Result;
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use serde::ser::Error;
+use serde::Serializer;
+use serde_json::Value;
+use sqlx::postgres::PgValueRef;
+use sqlx::types::{Decimal, Uuid};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     PgPool,
 };
+use sqlx::{Decode, Postgres, TypeInfo, ValueRef as PgValue};
+use std::time::Duration;
 
 #[derive(Clone)]
 pub struct PostgresStorage {
@@ -14,7 +21,7 @@ pub struct PostgresStorage {
 impl PostgresStorage {
     pub async fn new(configuration: &StorageConfig) -> Result<Self> {
         let options = PgConnectOptions::new()
-            .username(&configuration.postgres_config.user)
+            .username(&configuration.postgres_config.username)
             .password(&configuration.postgres_config.password)
             .host(&configuration.postgres_config.host)
             .ssl_mode(if configuration.postgres_config.ssl {
@@ -31,5 +38,206 @@ impl PostgresStorage {
             .await?;
 
         Ok(Self { pool })
+    }
+}
+
+pub fn serialize_pgvalueref<S>(value: &PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    if value.is_null() {
+        return s.serialize_none();
+    }
+    let value = value.clone();
+    let info = value.type_info();
+    let name = info.name();
+    match name {
+        "BOOL" => serialize_bool(value, s),
+        "INT2" => serialize_i16(value, s),
+        "INT4" => serialize_i32(value, s),
+        "INT8" => serialize_i64(value, s),
+        "FLOAT4" => serialize_f32(value, s),
+        "FLOAT8" => serialize_f64(value, s),
+        "NUMERIC" => serialize_numeric(value, s),
+        "CHAR" | "VARCHAR" | "TEXT" | "\"CHAR\"" => serialize_string(value, s),
+        "BYTEA" => serialize_bytea(value, s),
+        "JSON" | "JSONB" => serialize_json(value, s),
+        "TIMESTAMP" => serialize_timestamp(value, s),
+        "TIMESTAMPTZ" => serialize_timestamptz(value, s),
+        "DATE" => serialize_date(value, s),
+        "TIME" => serialize_time(value, s),
+        "UUID" => serialize_uuid(value, s),
+        _ => Err(Error::custom(format!(
+            "This type is not supported, please contact platform: {}",
+            name
+        ))),
+    }
+}
+
+fn serialize_bool<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<bool, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_bool(val),
+        Err(e) => Err(Error::custom(format!("Failed to decode BOOL: {}", e))),
+    }
+}
+
+fn serialize_i16<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<i16, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_i16(val),
+        Err(e) => Err(Error::custom(format!("Failed to decode INT2: {}", e))),
+    }
+}
+
+fn serialize_i32<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<i32, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_i32(val),
+        Err(e) => Err(Error::custom(format!("Failed to decode INT4: {}", e))),
+    }
+}
+
+fn serialize_i64<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<i64, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_i64(val),
+        Err(e) => Err(Error::custom(format!("Failed to decode INT8: {}", e))),
+    }
+}
+
+fn serialize_f32<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<f32, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_f32(val),
+        Err(e) => Err(Error::custom(format!("Failed to decode FLOAT4: {}", e))),
+    }
+}
+
+fn serialize_f64<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<f64, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_f64(val),
+        Err(e) => Err(Error::custom(format!("Failed to decode FLOAT8: {}", e))),
+    }
+}
+
+fn serialize_numeric<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<Decimal, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_str(&val.to_string()),
+        Err(e) => Err(Error::custom(format!("Failed to decode NUMERIC: {}", e))),
+    }
+}
+
+fn serialize_string<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<String, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_str(&val),
+        Err(e) => Err(Error::custom(format!("Failed to decode STRING: {}", e))),
+    }
+}
+
+fn serialize_bytea<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<Vec<u8>, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_some(&val),
+        Err(e) => Err(Error::custom(format!("Failed to decode BYTEA: {}", e))),
+    }
+}
+
+fn serialize_json<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<Value, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_some(&val),
+        Err(e) => Err(Error::custom(format!("Failed to decode JSON: {}", e))),
+    }
+}
+
+fn serialize_timestamp<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<NaiveDateTime, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_str(&val.format("%Y-%m-%dT%H:%M:%S.%f").to_string()),
+        Err(e) => Err(Error::custom(format!("Failed to decode TIMESTAMP: {}", e))),
+    }
+}
+
+fn serialize_timestamptz<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<DateTime<Utc>, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_str(&val.to_rfc3339()),
+        Err(e) => Err(Error::custom(format!(
+            "Failed to decode TIMESTAMPTZ: {}",
+            e
+        ))),
+    }
+}
+
+fn serialize_date<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<NaiveDate, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_str(&val.to_string()),
+        Err(e) => Err(Error::custom(format!("Failed to decode DATE: {}", e))),
+    }
+}
+
+fn serialize_time<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<NaiveTime, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_str(&val.to_string()),
+        Err(e) => Err(Error::custom(format!("Failed to decode TIME: {}", e))),
+    }
+}
+
+fn serialize_uuid<S>(value: PgValueRef, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let v: Result<Uuid, _> = Decode::<Postgres>::decode(value);
+    match v {
+        Ok(val) => s.serialize_str(&val.to_string()),
+        Err(e) => Err(Error::custom(format!("Failed to decode UUID: {}", e))),
     }
 }

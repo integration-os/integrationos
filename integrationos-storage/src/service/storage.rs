@@ -1,9 +1,11 @@
+use crate::domain::postgres::serialize_pgvalueref;
 use crate::domain::postgres::PostgresStorage;
 use async_trait::async_trait;
 use futures::{StreamExt, TryStreamExt};
 use integrationos_domain::{ApplicationError, IntegrationOSError};
+use serde_json::Value;
 use sqlx::postgres::PgRow;
-use sqlx::{query, Column, PgPool, Row, ValueRef as PgValue};
+use sqlx::{query, Column, PgPool, Row};
 use std::collections::HashMap;
 
 const MAX_LIMIT: usize = 100;
@@ -13,16 +15,16 @@ const MAX_LIMIT: usize = 100;
 pub trait Storage: Send + Sync {
     async fn execute_raw(
         &self,
-        query: &'static str,
-    ) -> Result<Vec<HashMap<String, Option<String>>>, IntegrationOSError>;
+        query: &str,
+    ) -> Result<Vec<HashMap<String, Value>>, IntegrationOSError>;
 }
 
 #[async_trait]
 impl Storage for PostgresStorage {
     async fn execute_raw(
         &self,
-        sql: &'static str,
-    ) -> Result<Vec<HashMap<String, Option<String>>>, IntegrationOSError> {
+        sql: &str,
+    ) -> Result<Vec<HashMap<String, Value>>, IntegrationOSError> {
         let rows = fetch_query(sql, &self.pool).await;
 
         let json_results = process_rows(rows)?;
@@ -31,7 +33,7 @@ impl Storage for PostgresStorage {
     }
 }
 
-async fn fetch_query(sql: &'static str, pool: &PgPool) -> Vec<Result<PgRow, IntegrationOSError>> {
+async fn fetch_query(sql: &str, pool: &PgPool) -> Vec<Result<PgRow, IntegrationOSError>> {
     query(sql)
         .fetch(pool)
         .take(MAX_LIMIT)
@@ -44,7 +46,7 @@ async fn fetch_query(sql: &'static str, pool: &PgPool) -> Vec<Result<PgRow, Inte
 
 fn process_rows(
     rows: Vec<Result<PgRow, IntegrationOSError>>,
-) -> Result<Vec<HashMap<String, Option<String>>>, IntegrationOSError> {
+) -> Result<Vec<HashMap<String, Value>>, IntegrationOSError> {
     rows.into_iter()
         .map(|result| {
             result.and_then(|row| {
@@ -56,10 +58,10 @@ fn process_rows(
                 })
             })
         })
-        .collect::<Result<Vec<HashMap<String, Option<String>>>, IntegrationOSError>>()
+        .collect::<Result<Vec<HashMap<String, Value>>, IntegrationOSError>>()
 }
 
-fn process_columns(row: PgRow) -> Result<HashMap<String, Option<String>>, IntegrationOSError> {
+fn process_columns(row: PgRow) -> Result<HashMap<String, Value>, IntegrationOSError> {
     row.columns()
         .iter()
         .try_fold(HashMap::new(), |mut acc, col| {
@@ -67,13 +69,21 @@ fn process_columns(row: PgRow) -> Result<HashMap<String, Option<String>>, Integr
                 ApplicationError::bad_request(&format!("Failed to get raw value: {}", e), None)
             })?;
 
-            let value = if value.is_null() {
-                None
-            } else {
-                value.as_str().map(|v| Some(v.to_string())).unwrap_or(None)
-            };
+            let mut buffer = Vec::new();
+            let mut json_serializer = serde_json::Serializer::new(&mut buffer);
 
-            acc.insert(col.name().to_string(), value);
+            // Serialize the value
+            serialize_pgvalueref(&value, &mut json_serializer).map_err(|e| {
+                ApplicationError::bad_request(&format!("Failed to serialize value: {}", e), None)
+            })?;
+
+            // Convert buffer to String
+            // This assumes serialize_pgvalueref returns a valid JSON-like format.
+            let serialized: Value = serde_json::from_slice(&buffer).map_err(|e| {
+                ApplicationError::bad_request(&format!("Failed to serialize value: {}", e), None)
+            })?;
+
+            acc.insert(col.name().to_string(), serialized);
 
             Ok(acc)
         })
