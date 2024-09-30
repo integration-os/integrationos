@@ -98,7 +98,6 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
         platform_version: "platformVersion".to_string(),
         connection_definition_id: Id::new_with_uuid(IdPrefix::ConnectionDefinition, ts, uuid),
         r#type: ConnectionType::Api {},
-        name: "name".to_string(),
         key: "key".into(),
         group: "group".to_string(),
         platform: "platform".to_string().into(),
@@ -106,6 +105,8 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
         secrets_service_id: "secrets_service_id".to_string(),
         event_access_id,
         access_key: "accessKey".to_string(),
+        identity: None,
+        identity_type: None,
         settings: Settings::default(),
         throughput: Throughput {
             key: "throughputKey".to_string(),

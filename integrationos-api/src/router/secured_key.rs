@@ -7,7 +7,7 @@ use crate::{
             public_get_connection_model_schema, PublicGetConnectionModelSchema,
         },
         event_access, events, metrics, oauth, passthrough, pipeline, secrets, transactions,
-        unified,
+        unified, vault_connection,
     },
     middleware::{
         blocker::{handle_blocked_error, BlockInvalidHeaders},
@@ -32,6 +32,7 @@ use tracing::warn;
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let routes = Router::new()
         .nest("/connections", connection::get_router())
+        .nest("/vault/connections", vault_connection::get_router())
         .nest("/event-access", event_access::get_router())
         .nest("/events", events::get_router())
         .nest("/oauth", oauth::get_router())

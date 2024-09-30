@@ -172,8 +172,7 @@ impl TestServer {
         let secrets_client = Arc::new(MockSecretsClient::default());
 
         let data: AccessKeyData = Faker.fake();
-        // this is missing a setup part
-
+        let group = data.group.clone();
         let ownership_id = data.id.clone();
         let prefix = AccessKeyPrefix {
             environment: Environment::Live,
@@ -211,6 +210,7 @@ impl TestServer {
         live.ownership.id = ownership_id.clone().into();
         live.environment = Environment::Live;
         live.record_metadata = Default::default();
+        live.group = group.clone();
         live.access_key = live_encrypted_key.to_string();
 
         let mut test: EventAccess = Faker.fake();
@@ -218,6 +218,7 @@ impl TestServer {
         test.ownership.id = ownership_id.into();
         test.environment = Environment::Test;
         test.record_metadata = Default::default();
+        test.group = group.clone();
         test.access_key = test_encrypted_key.to_string();
 
         let db = Client::with_uri_str(&db).await.unwrap().database(&db_name);
@@ -349,7 +350,7 @@ impl TestServer {
         &mut self,
         environment: Environment,
     ) -> (SanitizedConnection, ConnectionModelDefinition) {
-        let (key, access_key) = match environment {
+        let (key, _) = match environment {
             Environment::Live => (self.live_key.as_ref(), &self.live_access_key),
             Environment::Development => (self.live_key.as_ref(), &self.test_access_key),
             Environment::Test => (self.test_key.as_ref(), &self.test_access_key),
@@ -459,10 +460,10 @@ impl TestServer {
 
         let payload = CreateConnectionPayload {
             connection_definition_id: connection_def.id,
-            name: Faker.fake(),
-            group: access_key.data.group.clone(),
             auth_form_data: HashMap::from([(template, bearer_key.to_string())]),
             active: true,
+            identity: None,
+            identity_type: None,
         };
 
         let res = self
