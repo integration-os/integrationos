@@ -16,7 +16,6 @@ use integrationos_domain::telemetry::log_request_middleware;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
-
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let routes = Router::new()
         .nest(

@@ -22,7 +22,9 @@ use axum::{
     Router,
 };
 use http::HeaderName;
-use integrationos_domain::{connection_model_schema::PublicConnectionModelSchema, telemetry::log_request_middleware};
+use integrationos_domain::{
+    connection_model_schema::PublicConnectionModelSchema, telemetry::log_request_middleware,
+};
 use std::{iter::once, sync::Arc};
 use tower::{filter::FilterLayer, ServiceBuilder};
 use tower_http::{sensitive_headers::SetSensitiveRequestHeadersLayer, trace::TraceLayer};
