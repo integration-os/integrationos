@@ -1,6 +1,4 @@
-pub mod connection;
-
-use crate::server::AppState;
+use crate::{logic::connection, server::AppState};
 use axum::{response::IntoResponse, routing::get, Json, Router};
 use http::StatusCode;
 use serde_json::json;

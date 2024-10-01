@@ -2185,6 +2185,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "strum",
+ "testcontainers-modules",
  "tokio",
  "tower",
  "tower-http",
