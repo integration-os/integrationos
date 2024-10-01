@@ -5,6 +5,7 @@ use axum::{
     routing::{get, patch, post},
     Router,
 };
+use fake::Dummy;
 use integrationos_domain::{
     algebra::MongoStore,
     api_model_config::Lang,
@@ -35,8 +36,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
         .route("/:id/expand", get(expand))
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Dummy)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
     #[serde(rename = "_id")]

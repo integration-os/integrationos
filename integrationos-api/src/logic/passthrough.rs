@@ -1,5 +1,5 @@
 use super::{get_connection, INTEGRATION_OS_PASSTHROUGH_HEADER};
-use crate::{metrics::Metric, server::AppState};
+use crate::{domain::metrics::Metric, server::AppState};
 use axum::{
     extract::{Query, State},
     response::IntoResponse,

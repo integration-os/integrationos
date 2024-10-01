@@ -9,7 +9,7 @@ use integrationos_api::logic::{
     connection_definition::CreateRequest as CreateConnectionDefinitionRequest,
 };
 use integrationos_api::{
-    config::ConnectionsConfig,
+    domain::config::ConnectionsConfig,
     logic::{
         connection_model_definition::CreateRequest as CreateConnectionModelDefinitionRequest,
         ReadResponse,
@@ -53,27 +53,23 @@ use tokio::net::TcpListener;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};
 use uuid::Uuid;
 
-pub mod test_core;
-#[cfg(test)]
-pub mod test_gateway;
-
-#[allow(dead_code)]
+// CONSTANTS
 pub const PUBLIC_PATHS: &[&str] = &["connection-definitions", "openapi"];
 
-static TRACING: OnceLock<()> = OnceLock::new();
-
-pub(crate) static DOCKER: OnceLock<Docker> = OnceLock::new();
-static MONGO: OnceLock<Container<'static, Mongo>> = OnceLock::new();
-static REDIS: OnceLock<Container<'static, Redis>> = OnceLock::new();
+// STATICS
+pub static TRACING: OnceLock<()> = OnceLock::new();
+pub static DOCKER: OnceLock<Docker> = OnceLock::new();
+pub static MONGO: OnceLock<Container<'static, Mongo>> = OnceLock::new();
+pub static REDIS: OnceLock<Container<'static, Redis>> = OnceLock::new();
 
 pub struct TestServer {
-    port: u16,
+    pub port: u16,
     pub config: ConnectionsConfig,
     pub live_key: String,
     pub live_access_key: AccessKey,
     pub test_key: String,
     pub test_access_key: AccessKey,
-    client: reqwest::Client,
+    pub client: reqwest::Client,
     pub mock_server: ServerGuard,
     pub secrets_client: Arc<MockSecretsClient>,
     pub token: String,
@@ -162,14 +158,17 @@ impl TestServer {
             ("CACHE_SIZE".to_string(), "0".to_string()),
             ("REDIS_URL".to_string(), redis),
             ("JWT_SECRET".to_string(), token_secret.clone()),
+            (
+                "SECRETS_SERVICE_PROVIDER".to_string(),
+                "ios-kms".to_string(),
+            ),
         ]))
         .unwrap();
 
-        let secrets_client = Arc::new(MockSecretsClient::default());
+        let secrets_client = Arc::new(MockSecretsClient);
 
         let data: AccessKeyData = Faker.fake();
-        // this is missing a setup part
-
+        let group = data.group.clone();
         let ownership_id = data.id.clone();
         let prefix = AccessKeyPrefix {
             environment: Environment::Live,
@@ -207,6 +206,7 @@ impl TestServer {
         live.ownership.id = ownership_id.clone().into();
         live.environment = Environment::Live;
         live.record_metadata = Default::default();
+        live.group = group.clone();
         live.access_key = live_encrypted_key.to_string();
 
         let mut test: EventAccess = Faker.fake();
@@ -214,6 +214,7 @@ impl TestServer {
         test.ownership.id = ownership_id.into();
         test.environment = Environment::Test;
         test.record_metadata = Default::default();
+        test.group = group.clone();
         test.access_key = test_encrypted_key.to_string();
 
         let db = Client::with_uri_str(&db).await.unwrap().database(&db_name);
@@ -226,9 +227,7 @@ impl TestServer {
             .await
             .unwrap();
 
-        let server = Server::init(config.clone(), secrets_client.clone())
-            .await
-            .unwrap();
+        let server = Server::init(config.clone()).await.unwrap();
 
         tokio::task::spawn(async move { server.run().await });
 
@@ -342,12 +341,11 @@ impl TestServer {
             .await
     }
 
-    #[allow(dead_code)]
     pub async fn create_connection(
         &mut self,
         environment: Environment,
     ) -> (SanitizedConnection, ConnectionModelDefinition) {
-        let (key, access_key) = match environment {
+        let (key, _) = match environment {
             Environment::Live => (self.live_key.as_ref(), &self.live_access_key),
             Environment::Development => (self.live_key.as_ref(), &self.test_access_key),
             Environment::Test => (self.test_key.as_ref(), &self.test_access_key),
@@ -457,10 +455,10 @@ impl TestServer {
 
         let payload = CreateConnectionPayload {
             connection_definition_id: connection_def.id,
-            name: Faker.fake(),
-            group: access_key.data.group.clone(),
             auth_form_data: HashMap::from([(template, bearer_key.to_string())]),
             active: true,
+            identity: None,
+            identity_type: None,
         };
 
         let res = self

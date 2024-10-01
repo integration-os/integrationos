@@ -1,5 +1,5 @@
 use super::EventMetadata;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use integrationos_domain::Id;
 use serde::{Deserialize, Serialize};
 
@@ -8,20 +8,20 @@ use serde::{Deserialize, Serialize};
 pub struct Failed {
     id: Id,
     failed_at: DateTime<Utc>,
+    start_time: i64,
+    end_time: i64,
     reason: String,
 }
 
 impl Failed {
-    pub fn new(reason: String, id: Id) -> Self {
+    pub fn new(reason: String, id: Id, start_time: DateTime<Utc>, end_time: DateTime<Utc>) -> Self {
         Self {
             id,
             reason,
+            start_time: start_time.timestamp_millis(),
+            end_time: end_time.timestamp_millis(),
             failed_at: Utc::now(),
         }
-    }
-
-    pub fn date(&self) -> NaiveDate {
-        self.failed_at.date_naive()
     }
 }
 

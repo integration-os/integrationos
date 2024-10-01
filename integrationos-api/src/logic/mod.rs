@@ -42,6 +42,7 @@ pub mod secrets;
 pub mod transactions;
 pub mod unified;
 pub mod utils;
+pub mod vault_connection;
 
 const INTEGRATION_OS_PASSTHROUGH_HEADER: &str = "x-integrationos-passthrough";
 

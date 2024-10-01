@@ -72,10 +72,10 @@ import { AuthKitToken } from "@integrationos/authkit-node";
 app.post("/authkit-token", async (request, response) => {
   const authKitToken = new AuthKitToken(process.env.INTEGRATIONOS_SANDBOX_API_KEY);
 
-// Specifying how the token will be constructed
+  // Specifying how the token will be constructed
   const token = await authKitToken.create({
-    group: "org_123", // a meaningful identifier (i.e., organizationId)
-    label: "Acme" // a human-friendly label (i.e., organizationName)
+    identity: orgId // a meaningful identifier (i.e., userId, teamId or organizationId)
+    identityType: "organization" // this can either be "user", "team" or "organization"
   });
 
   response.send(token);

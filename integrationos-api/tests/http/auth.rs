@@ -1,4 +1,4 @@
-use super::test_server::{ApiResponse, TestServer, PUBLIC_PATHS};
+use crate::context::{ApiResponse, TestServer, PUBLIC_PATHS};
 use http::{Method, StatusCode};
 use serde_json::{json, Value};
 

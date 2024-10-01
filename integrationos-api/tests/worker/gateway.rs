@@ -1,7 +1,8 @@
+use crate::context::DOCKER;
 use anyhow::Result;
 use envconfig::Envconfig;
 use http::StatusCode;
-use integrationos_api::config::ConnectionsConfig as ApiConfig;
+use integrationos_api::domain::config::ConnectionsConfig as ApiConfig;
 use integrationos_domain::event_response::EventResponse;
 use integrationos_gateway::{config::Config, finalizer::Finalizer, server::Server};
 use serde_json::{json, Value};
@@ -35,7 +36,7 @@ impl TestGateway {
             .unwrap()
             .port();
 
-        let docker = super::DOCKER.get_or_init(Default::default);
+        let docker = DOCKER.get_or_init(Default::default);
         let node = docker.run(Redis);
         let host_port = node.get_host_port_ipv4(6379);
         let redis = format!("redis://127.0.0.1:{host_port}");

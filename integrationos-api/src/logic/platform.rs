@@ -4,6 +4,7 @@ use axum::{
     routing::{patch, post},
     Router,
 };
+use fake::Dummy;
 use integrationos_domain::{
     algebra::MongoStore,
     id::{prefix::IdPrefix, Id},
@@ -27,8 +28,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
         )
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize, Dummy)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
     #[serde(rename = "_id")]

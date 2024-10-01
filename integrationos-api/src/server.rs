@@ -1,7 +1,6 @@
 use crate::{
-    config::ConnectionsConfig,
+    domain::{ConnectionsConfig, Metric},
     logic::{connection_oauth_definition::FrontendOauthConnectionDefinition, openapi::OpenAPIData},
-    metrics::Metric,
     router,
 };
 use anyhow::{anyhow, Context, Result};
@@ -23,9 +22,11 @@ use integrationos_domain::{
     event_access::EventAccess,
     page::PlatformPage,
     secret::Secret,
+    secrets::SecretServiceProvider,
     stage::Stage,
     user::UserClient,
-    Connection, Event, Pipeline, PlatformData, SecretExt, Store, Transaction,
+    Connection, Event, GoogleKms, IOSKms, Pipeline, PlatformData, PublicConnection, SecretExt,
+    Store, Transaction,
 };
 use integrationos_unified::unified::{UnifiedCacheTTLs, UnifiedDestination};
 use mongodb::{options::UpdateOptions, Client, Database};
@@ -45,6 +46,7 @@ pub struct AppStores {
     pub common_model: MongoStore<CommonModel>,
     pub common_enum: MongoStore<CommonEnum>,
     pub connection: MongoStore<Connection>,
+    pub public_connection: MongoStore<PublicConnection>,
     pub public_connection_details: MongoStore<PublicConnectionDetails>,
     pub platform: MongoStore<PlatformData>,
     pub platform_page: MongoStore<PlatformPage>,
@@ -83,10 +85,7 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn init(
-        config: ConnectionsConfig,
-        secrets_client: Arc<dyn SecretExt + Sync + Send + 'static>,
-    ) -> Result<Self> {
+    pub async fn init(config: ConnectionsConfig) -> Result<Self> {
         let client = Client::with_uri_str(&config.db_config.control_db_url).await?;
         let db = client.database(&config.db_config.control_db_name);
 
@@ -104,6 +103,7 @@ impl Server {
         let common_enum = MongoStore::new(&db, &Store::CommonEnums).await?;
         let secrets = MongoStore::new(&db, &Store::Secrets).await?;
         let connection = MongoStore::new(&db, &Store::Connections).await?;
+        let public_connection = MongoStore::new(&db, &Store::Connections).await?;
         let platform = MongoStore::new(&db, &Store::Platforms).await?;
         let platform_page = MongoStore::new(&db, &Store::PlatformPages).await?;
         let public_connection_details =
@@ -117,6 +117,17 @@ impl Server {
         let cursors = MongoStore::new(&db, &Store::Cursors).await?;
         let stages = MongoStore::new(&db, &Store::Stages).await?;
         let clients = MongoStore::new(&db, &Store::Clients).await?;
+        let secrets_store = MongoStore::<Secret>::new(&db, &Store::Secrets).await?;
+
+        let secrets_client: Arc<dyn SecretExt + Sync + Send> = match config.secrets_config.provider
+        {
+            SecretServiceProvider::GoogleKms => {
+                Arc::new(GoogleKms::new(&config.secrets_config, secrets_store).await?)
+            }
+            SecretServiceProvider::IosKms => {
+                Arc::new(IOSKms::new(&config.secrets_config, secrets_store).await?)
+            }
+        };
 
         let extractor_caller = UnifiedDestination::new(
             config.db_config.clone(),
@@ -148,6 +159,7 @@ impl Server {
             common_model,
             common_enum,
             connection,
+            public_connection,
             public_connection_details,
             connection_config,
             pipeline,

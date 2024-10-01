@@ -1,14 +1,8 @@
 pub mod google_cloud;
 
-use crate::{config::ArchiverConfig, event::Event};
+use crate::config::ArchiverConfig;
 use anyhow::Result;
-use chrono::NaiveDate;
-use integrationos_domain::Unit;
-use std::{
-    future::Future,
-    ops::Deref,
-    path::{Path, PathBuf},
-};
+use std::{future::Future, ops::Deref, path::Path};
 use strum::{AsRefStr, EnumString};
 
 #[derive(Debug, Clone, PartialEq, Eq, EnumString, AsRefStr)]
@@ -35,35 +29,10 @@ impl Chunk {
     }
 }
 
-#[derive(Debug)]
-struct ArchiveName {
-    date: NaiveDate,
-    name: String,
-    extension: Extension,
-}
-
-impl ArchiveName {
-    fn name(&self) -> String {
-        format!(
-            "{}-{}.{}",
-            self.date.format("%Y-%m-%d"),
-            self.name,
-            self.extension.as_ref()
-        )
-    }
-}
-
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Extension {
     Bson,
     Metadata,
-}
-
-impl Extension {
-    /// Returns the file extension for the given extension with the leading dot
-    fn with_leading_dot(self) -> String {
-        ".".to_owned() + self.as_ref()
-    }
 }
 
 impl AsRef<str> for Extension {
@@ -89,12 +58,6 @@ pub trait Storage {
         base_path: &Path,
         extension: &Extension,
         config: &ArchiverConfig,
-    ) -> impl Future<Output = Result<Unit>>;
-
-    fn download_file(
-        &self,
-        config: &ArchiverConfig,
-        event: &Event,
-        extension: &Extension,
-    ) -> impl Future<Output = Result<PathBuf>>;
+        suffix: String,
+    ) -> impl Future<Output = Result<String>>;
 }

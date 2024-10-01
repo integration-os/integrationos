@@ -1,4 +1,7 @@
-use crate::test_server::{test_core::TestCore, test_gateway::TestGateway, TestServer};
+use crate::{
+    context::TestServer,
+    worker::{event::TestCore, gateway::TestGateway},
+};
 use fake::{Fake, Faker};
 use http::{Method, StatusCode};
 use integrationos_api::logic::{pipeline::CreatePipelineRequest, ReadResponse};
@@ -13,7 +16,10 @@ use std::time::Duration;
 async fn test_event_core() {
     let mut server = TestServer::new(None).await;
 
-    let (connection, conn_def) = server.create_connection(Environment::Live).await;
+    let (mut connection, conn_def) = server.create_connection(Environment::Live).await;
+
+    // We need to set the group on the connection to the group on the access key
+    connection.group = server.live_access_key.data.group.clone();
 
     let event_name: String = Faker.fake();
 

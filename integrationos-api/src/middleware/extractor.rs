@@ -1,4 +1,4 @@
-use crate::{metrics::Metric, server::AppState};
+use crate::{domain::metrics::Metric, server::AppState};
 use anyhow::{Context, Result};
 use axum::{
     body::Body,
@@ -36,9 +36,8 @@ impl RateLimiter {
 
         let mut redis = RedisCache::new(&state.config.cache_config)
             .await
-            .map(|redis| {
+            .inspect(|_| {
                 tracing::info!("Connected to redis at {}", state.config.cache_config.url);
-                redis
             })
             .context(format!(
                 "Could not connect to redis at {}",

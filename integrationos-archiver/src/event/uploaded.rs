@@ -1,5 +1,5 @@
 use super::EventMetadata;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use integrationos_domain::Id;
 use serde::{Deserialize, Serialize};
 
@@ -8,18 +8,18 @@ use serde::{Deserialize, Serialize};
 pub struct Uploaded {
     id: Id,
     uploaded_at: DateTime<Utc>,
+    start_time: i64,
+    end_time: i64,
 }
 
 impl Uploaded {
-    pub fn new(id: Id) -> Self {
+    pub fn new(id: Id, start_time: DateTime<Utc>, end_time: DateTime<Utc>) -> Self {
         Self {
             id,
             uploaded_at: Utc::now(),
+            start_time: start_time.timestamp_millis(),
+            end_time: end_time.timestamp_millis(),
         }
-    }
-
-    pub fn date(&self) -> NaiveDate {
-        self.uploaded_at.date_naive()
     }
 }
 

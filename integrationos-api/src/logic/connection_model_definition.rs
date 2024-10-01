@@ -10,6 +10,7 @@ use axum::{
     Extension, Json, Router,
 };
 use chrono::Utc;
+use fake::Dummy;
 use http::HeaderMap;
 use integrationos_domain::{
     algebra::MongoStore,
@@ -55,8 +56,7 @@ pub struct TestConnectionPayload {
     pub request: TestConnectionRequest,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[derive(Debug, Clone, Deserialize, Serialize, Dummy)]
 #[serde(rename_all = "camelCase")]
 pub struct TestConnectionRequest {
     #[serde(
@@ -270,8 +270,7 @@ pub async fn test_connection_model_definition(
     )))
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Dummy)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
     #[serde(rename = "_id")]
