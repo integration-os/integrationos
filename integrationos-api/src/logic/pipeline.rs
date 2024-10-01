@@ -2,6 +2,7 @@ use super::{create, delete, read, update, HookExt, PublicExt, RequestExt};
 use crate::server::{AppState, AppStores};
 use axum::{routing::post, Router};
 use bson::doc;
+use fake::Dummy;
 use integrationos_domain::{
     algebra::MongoStore,
     configuration::pipeline::PipelineConfig,
@@ -31,8 +32,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
         )
 }
 
-#[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[derive(Serialize, Deserialize, Dummy)]
 pub struct CreatePipelineRequest {
     pub name: String,
     pub key: String,

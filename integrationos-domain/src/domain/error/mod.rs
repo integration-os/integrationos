@@ -1135,7 +1135,6 @@ impl From<IntegrationOSError> for StatusCode {
 }
 
 impl IntegrationOSError {
-    #[cfg(feature = "actix-error")]
     pub fn status(&self) -> u16 {
         StatusCode::from(self).as_u16()
     }

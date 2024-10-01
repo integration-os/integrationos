@@ -1,7 +1,7 @@
 use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
-use integrationos_api::{config::ConnectionsConfig, server::Server};
+use integrationos_api::{domain::config::ConnectionsConfig, server::Server};
 use integrationos_domain::secret::Secret;
 use integrationos_domain::secrets::SecretServiceProvider;
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};

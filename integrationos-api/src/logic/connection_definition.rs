@@ -8,6 +8,7 @@ use axum::{
     routing::{patch, post},
     Json, Router,
 };
+use fake::Dummy;
 use integrationos_domain::{
     algebra::MongoStore,
     api_model_config::AuthMethod,
@@ -40,8 +41,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
         )
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Dummy)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
     #[serde(rename = "_id")]
@@ -70,8 +70,7 @@ pub struct CreateRequest {
 impl HookExt<ConnectionDefinition> for CreateRequest {}
 impl PublicExt<ConnectionDefinition> for CreateRequest {}
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Dummy)]
 pub struct AuthenticationItem {
     pub name: String,
     pub label: String,

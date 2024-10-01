@@ -283,9 +283,8 @@ where
                     .with_timeout(Duration::from_secs(TICK_INTERVAL_MILLIS));
                 let value: Value = script
                     .call("transform", (event.clone(), contexts))
-                    .map_err(|e| {
+                    .inspect_err(|_| {
                         error!("Failed to transform data with contexts");
-                        e
                     })?;
 
                 trace!("Executed transformer");

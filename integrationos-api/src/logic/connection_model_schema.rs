@@ -9,6 +9,7 @@ use axum::{
     routing::{patch, post},
     Extension, Json, Router,
 };
+use fake::Dummy;
 use futures::try_join;
 use integrationos_domain::{
     algebra::MongoStore,
@@ -40,8 +41,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
         )
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Dummy)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicGetConnectionModelSchema;
 
@@ -146,8 +146,7 @@ pub async fn get_platform_models(
     )))
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Dummy)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRequest {
     #[serde(rename = "_id")]
@@ -161,7 +160,6 @@ pub struct CreateRequest {
     pub schema: JsonSchema,
     pub sample: Value,
     pub paths: Option<SchemaPaths>,
-    #[cfg_attr(feature = "dummy", dummy(default))]
     pub mapping: Option<Mappings>,
 }
 
