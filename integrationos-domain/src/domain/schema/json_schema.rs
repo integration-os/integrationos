@@ -487,7 +487,7 @@ pub fn generate_value_schema(value: &Value, json_path: &str) -> Value {
     }
 }
 
-#[cfg(all(test, not(feature = "notest")))]
+#[cfg(test)]
 mod tests {
     use super::*;
 

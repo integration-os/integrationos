@@ -1,7 +1,6 @@
 use crate::{
-    config::ConnectionsConfig,
+    domain::{ConnectionsConfig, Metric},
     logic::{connection_oauth_definition::FrontendOauthConnectionDefinition, openapi::OpenAPIData},
-    metrics::Metric,
     router,
 };
 use anyhow::{anyhow, Context, Result};

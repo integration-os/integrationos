@@ -1,6 +1,6 @@
 use super::{delete, read, PublicExt, RequestExt};
 use crate::{
-    config::ConnectionsConfig,
+    domain::config::ConnectionsConfig,
     router::ServerResponse,
     server::{AppState, AppStores},
 };
@@ -10,6 +10,7 @@ use axum::{
     routing::{delete as axum_delete, get, post},
     Extension, Json, Router,
 };
+use fake::Dummy;
 use integrationos_domain::{
     access_key_data::AccessKeyData,
     access_key_prefix::AccessKeyPrefix,
@@ -63,8 +64,7 @@ impl RequestExt for CreateEventAccessRequest {
 }
 impl PublicExt<EventAccess> for CreateEventAccessRequest {}
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
-#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate, Dummy)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateEventAccessPayloadWithOwnership {
     pub name: String,

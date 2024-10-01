@@ -575,41 +575,6 @@ impl DataType {
         }
     }
 
-    #[cfg(dummy)]
-    fn to_fake(&self) -> Value {
-        match &self {
-            DataType::String => Value::String(fake::Faker.fake()),
-            DataType::Number => Value::Number(fake::Faker.fake()),
-            DataType::Boolean => Value::Bool(fake::Faker.fake()),
-            DataType::Date => Value::Number(fake::Faker.fake()),
-            DataType::Enum { options } => {
-                let i: usize = (0..options.len()).fake();
-                Value::String(options[i].clone())
-            }
-            DataType::Unknown => Value::Null,
-            DataType::Expandable(expandable) => match expandable {
-                Expandable::Expanded { model, .. } => {
-                    let mut map = Map::new();
-                    for field in &model.fields {
-                        map.insert(field.name.clone(), field.datatype.to_fake());
-                    }
-                    Value::Object(map)
-                }
-                _ => panic!(
-                    "CommonModel must be fully expanded. Call `CommonModel::expand_all` first."
-                ),
-            },
-            DataType::Array { element_type } => {
-                let i: usize = (1..3).fake();
-                let mut arr = vec![];
-                for _ in 0..i {
-                    arr.push((*element_type.clone()).to_fake());
-                }
-                Value::Array(arr)
-            }
-        }
-    }
-
     pub fn to_name(&self) -> String {
         match &self {
             DataType::String => "String".to_owned(),
@@ -617,7 +582,6 @@ impl DataType {
             DataType::Boolean => "Boolean".to_owned(),
             DataType::Date => "Date".to_owned(),
             DataType::Enum { options, .. } => {
-                // TODO: Add reference call
                 let options = options.as_ref().unwrap_or(&vec![]).join("|");
                 format!("Enum<{}>", options)
             }
@@ -1613,17 +1577,6 @@ impl CommonModel {
                 InternalError::invalid_argument(&e.to_string(), Some("common model names"))
             })?
             .list)
-    }
-
-    #[cfg(dummy)]
-    pub fn to_fake(self) -> Value {
-        let mut fake = Map::new();
-
-        for field in self.fields {
-            fake.insert(field.name, field.datatype.to_fake());
-        }
-
-        Value::Object(fake)
     }
 
     pub fn to_flat_json(&self) -> Value {

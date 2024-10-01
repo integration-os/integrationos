@@ -1,5 +1,5 @@
 use super::{get_connection, INTEGRATION_OS_PASSTHROUGH_HEADER};
-use crate::{config::Headers, metrics::Metric, server::AppState};
+use crate::{domain::config::Headers, domain::metrics::Metric, server::AppState};
 use axum::{
     extract::{Path, Query, State},
     response::{IntoResponse, Response},
@@ -258,12 +258,11 @@ pub async fn process_request(
             payload,
         )
         .await
-        .map_err(|e| {
+        .inspect_err(|e| {
             error!(
                 "Error executing connection model definition in unified endpoint: {}",
                 e.to_string()
             );
-            e
         })?;
 
     *response.response.headers_mut() = response

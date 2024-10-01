@@ -9,6 +9,7 @@ use axum::{
     Extension, Json, Router,
 };
 use chrono::{Duration, Utc};
+use fake::Dummy;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use integrationos_domain::{
     algebra::{MongoStore, TemplateExt},
@@ -40,8 +41,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
     Router::new().route("/:platform", post(oauth_handler))
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Dummy)]
 #[serde(rename_all = "camelCase")]
 struct OAuthRequest {
     #[serde(rename = "__isEngineeringAccount__", default)]
@@ -54,8 +54,7 @@ struct OAuthRequest {
     identity_type: Option<ConnectionIdentityType>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "dummy", derive(fake::Dummy))]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Dummy)]
 #[serde(rename_all = "camelCase")]
 struct OAuthPayload {
     client_id: String,

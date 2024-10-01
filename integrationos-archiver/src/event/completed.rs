@@ -1,5 +1,5 @@
 use super::EventMetadata;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use integrationos_domain::Id;
 use serde::{Deserialize, Serialize};
 
@@ -9,25 +9,19 @@ pub struct Completed {
     id: Id,
     path: String,
     completed_at: DateTime<Utc>,
+    start_time: i64,
+    end_time: i64,
 }
 
 impl Completed {
-    pub fn new(path: String, id: Id) -> Self {
+    pub fn new(path: String, id: Id, start_time: DateTime<Utc>, end_time: DateTime<Utc>) -> Self {
         Self {
             path,
             id,
             completed_at: Utc::now(),
+            start_time: start_time.timestamp_millis(),
+            end_time: end_time.timestamp_millis(),
         }
-    }
-
-    pub fn date(&self) -> NaiveDate {
-        self.completed_at.date_naive()
-    }
-
-    #[cfg(test)]
-    pub fn with_date(mut self, date: DateTime<Utc>) -> Self {
-        self.completed_at = date;
-        self
     }
 }
 

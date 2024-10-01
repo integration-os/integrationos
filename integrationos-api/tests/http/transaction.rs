@@ -1,4 +1,7 @@
-use crate::test_server::{test_core::TestCore, test_gateway::TestGateway, TestServer};
+use crate::{
+    context::TestServer,
+    worker::{event::TestCore, gateway::TestGateway},
+};
 use fake::{Fake, Faker};
 use http::{Method, StatusCode};
 use integrationos_api::logic::{pipeline::CreatePipelineRequest, ReadResponse};
