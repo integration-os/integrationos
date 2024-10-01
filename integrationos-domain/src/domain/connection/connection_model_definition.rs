@@ -42,6 +42,7 @@ pub struct ConnectionModelDefinition {
     pub extractor_config: Option<ExtractorConfig>,
 
     pub test_connection_status: TestConnection,
+    pub test_connection_payload: Option<Value>,
 
     pub is_default_crud_mapping: Option<bool>,
     pub mapping: Option<CrudMapping>,

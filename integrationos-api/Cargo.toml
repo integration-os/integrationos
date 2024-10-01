@@ -40,10 +40,10 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 validator.workspace = true
 serde_yaml = "0.9.34"
+uuid.workspace = true
 
 [dev-dependencies]
 testcontainers-modules = { workspace = true, features = ["mongo", "redis"] }
 integrationos-event = { path = "../integrationos-event" }
 integrationos-gateway = { path = "../integrationos-gateway" }
 mockito.workspace = true
-uuid.workspace = true

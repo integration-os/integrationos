@@ -14,7 +14,9 @@ pub struct RecordMetadata {
     pub version: Version,
     pub last_modified_by: String,
     pub deleted: bool,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub change_log: BTreeMap<String, i64>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
     pub active: bool,
     pub deprecated: bool,

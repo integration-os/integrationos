@@ -1,4 +1,4 @@
-use super::{delete, read, PublicExt, RequestExt};
+use super::{delete, event_access::DEFAULT_NAMESPACE, read, PublicExt, RequestExt};
 use crate::{
     logic::event_access::{
         generate_event_access, get_client_throughput, CreateEventAccessPayloadWithOwnership,
@@ -22,7 +22,8 @@ use integrationos_domain::{
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
     settings::Settings,
-    ApplicationError, Connection, IntegrationOSError, InternalError, Throughput,
+    ApplicationError, Connection, ConnectionIdentityType, IntegrationOSError, InternalError,
+    Throughput,
 };
 use mongodb::bson::doc;
 use mongodb::bson::Regex;
@@ -30,6 +31,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{collections::HashMap, sync::Arc};
 use tracing::error;
+use uuid::Uuid;
 use validator::Validate;
 
 pub fn get_router() -> Router<Arc<AppState>> {
@@ -44,10 +46,10 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[serde(rename_all = "camelCase")]
 pub struct CreateConnectionPayload {
     pub connection_definition_id: Id,
-    pub name: String,
-    pub group: String,
     pub auth_form_data: HashMap<String, String>,
     pub active: bool,
+    pub identity: Option<String>,
+    pub identity_type: Option<ConnectionIdentityType>,
 }
 
 async fn test_connection(
@@ -72,6 +74,20 @@ async fn test_connection(
             }
         };
 
+        let context = test_connection_model_config
+            .test_connection_payload
+            .as_ref()
+            .map(|test_payload| {
+                serde_json::to_vec(test_payload).map_err(|e| {
+                    error!(
+                        "Failed to convert test_connection_payload to vec. ID: {}, Error: {}",
+                        test_connection_model_config.id, e
+                    );
+                    anyhow::anyhow!("Failed to convert test_connection_payload: {}", e)
+                })
+            })
+            .transpose()?;
+
         let res = state
             .extractor_caller
             .execute_model_definition(
@@ -79,7 +95,7 @@ async fn test_connection(
                 HeaderMap::new(),
                 &HashMap::new(),
                 &Arc::new(auth_form_data_value.clone()),
-                None,
+                context,
             )
             .await?;
 
@@ -98,13 +114,14 @@ impl PublicExt<Connection> for CreateConnectionPayload {
             platform_version: input.platform_version,
             connection_definition_id: input.connection_definition_id,
             r#type: input.r#type,
-            name: input.name,
             key: input.key,
             group: input.group,
             environment: input.environment,
             platform: input.platform,
             secrets_service_id: input.secrets_service_id,
             event_access_id: input.event_access_id,
+            identity: input.identity,
+            identity_type: input.identity_type,
             settings: input.settings,
             throughput: input.throughput,
             ownership: input.ownership,
@@ -114,6 +131,7 @@ impl PublicExt<Connection> for CreateConnectionPayload {
         .to_value()
     }
 }
+
 impl RequestExt for CreateConnectionPayload {
     type Output = Connection;
 
@@ -132,6 +150,15 @@ pub async fn create_connection(
             &format!("Invalid payload: {:?}", validation_errors),
             None,
         ));
+    }
+
+    if let Some(identity) = &payload.identity {
+        if identity.len() > 128 {
+            return Err(ApplicationError::bad_request(
+                "Identity must not exceed 128 characters",
+                None,
+            ));
+        }
     }
 
     let connection_config = match state
@@ -163,11 +190,11 @@ pub async fn create_connection(
         }
     };
 
+    let group = Uuid::new_v4().to_string().replace('-', "");
+
     let key = format!(
-        "{}::{}::{}",
-        access.environment,
-        connection_config.platform,
-        payload.group.replace([':', ' '], "_")
+        "{}::{}::{}::{}",
+        access.environment, connection_config.platform, DEFAULT_NAMESPACE, group
     );
 
     let throughput = get_client_throughput(&access.ownership.id, &state).await?;
@@ -175,8 +202,7 @@ pub async fn create_connection(
     let event_access = generate_event_access(
         state.config.clone(),
         CreateEventAccessPayloadWithOwnership {
-            name: payload.name.clone(),
-            group: Some(payload.group.clone()),
+            name: format!("{} {}", access.environment, connection_config.name),
             platform: connection_config.platform.clone(),
             namespace: None,
             connection_type: connection_config.r#type.clone(),
@@ -236,9 +262,10 @@ pub async fn create_connection(
         platform_version: connection_config.clone().platform_version,
         connection_definition_id: payload.connection_definition_id,
         r#type: connection_config.to_connection_type(),
-        name: payload.name,
         key: key.clone().into(),
-        group: payload.group,
+        group,
+        identity: payload.identity,
+        identity_type: payload.identity_type,
         platform: connection_config.platform.into(),
         environment: event_access.environment,
         secrets_service_id: secret_result.id(),
@@ -270,13 +297,14 @@ pub async fn create_connection(
         platform_version: connection.platform_version,
         connection_definition_id: connection.connection_definition_id,
         r#type: connection.r#type,
-        name: connection.name,
         key: connection.key,
         group: connection.group,
         environment: connection.environment,
         platform: connection.platform,
         secrets_service_id: connection.secrets_service_id,
         event_access_id: connection.event_access_id,
+        identity: connection.identity,
+        identity_type: connection.identity_type,
         settings: connection.settings,
         throughput: connection.throughput,
         ownership: connection.ownership,
@@ -288,12 +316,12 @@ pub async fn create_connection(
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateConnectionPayload {
-    pub name: Option<String>,
-    pub group: Option<String>,
     pub settings: Option<Settings>,
     pub throughput: Option<Throughput>,
     pub auth_form_data: Option<HashMap<String, String>>,
     pub active: Option<bool>,
+    pub identity: Option<String>,
+    pub identity_type: Option<ConnectionIdentityType>,
 }
 
 pub async fn update_connection(
@@ -325,21 +353,20 @@ pub async fn update_connection(
         ));
     }
 
-    if let Some(name) = req.name {
-        connection.name = name;
-    }
-
-    if let Some(group) = req.group {
-        connection.group.clone_from(&group);
-        connection.key = format!("{}::{}", connection.platform, group).into();
-    }
-
     if let Some(settings) = req.settings {
         connection.settings = settings;
     }
 
     if let Some(throughput) = req.throughput {
         connection.throughput = throughput;
+    }
+
+    if let Some(identity) = req.identity {
+        connection.identity = Some(identity);
+    }
+
+    if let Some(identity_type) = req.identity_type {
+        connection.identity_type = Some(identity_type);
     }
 
     if let Some(auth_form_data) = req.auth_form_data {

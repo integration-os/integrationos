@@ -1,4 +1,4 @@
-# Event Gateway
+# IntegrationOS Gateway
 
 Receives events by POSTing to the `/emit/:access_key` endpoint. Validates the access key and then stores the event in mongodb and transmits it over redis.
 

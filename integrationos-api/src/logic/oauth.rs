@@ -1,5 +1,8 @@
 use super::event_access::CreateEventAccessPayloadWithOwnership;
-use crate::{logic::event_access::get_client_throughput, server::AppState};
+use crate::{
+    logic::event_access::{get_client_throughput, DEFAULT_NAMESPACE},
+    server::AppState,
+};
 use axum::{
     extract::{Path, State},
     routing::post,
@@ -19,7 +22,8 @@ use integrationos_domain::{
     id::{prefix::IdPrefix, Id},
     oauth_secret::OAuthSecret,
     ownership::Ownership,
-    ApplicationError, Connection, ErrorMeta, IntegrationOSError, InternalError, OAuth, Throughput,
+    ApplicationError, Connection, ConnectionIdentityType, ErrorMeta, IntegrationOSError,
+    InternalError, OAuth, Throughput,
 };
 use mongodb::bson::doc;
 use reqwest::Request;
@@ -31,6 +35,7 @@ use std::{
     sync::Arc,
 };
 use tracing::{debug, error};
+use uuid::Uuid;
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new().route("/:platform", post(oauth_handler))
@@ -43,10 +48,10 @@ struct OAuthRequest {
     is_engineering_account: bool,
     connection_definition_id: Id,
     client_id: String,
-    group: String,
-    label: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     payload: Option<Value>,
+    identity: Option<String>,
+    identity_type: Option<ConnectionIdentityType>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Dummy)]
@@ -188,17 +193,17 @@ async fn oauth_handler(
         })?;
 
     let conn_definition = get_conn_definition(&state, &payload.connection_definition_id).await?;
+    let group = Uuid::new_v4().to_string().replace('-', "");
 
     let key = format!(
-        "{}::{}::{}",
-        user_event_access.environment, conn_definition.platform, payload.group
+        "{}::{}::{}::{}",
+        user_event_access.environment, conn_definition.platform, DEFAULT_NAMESPACE, group
     );
 
     let throughput = get_client_throughput(&user_event_access.ownership.id, &state).await?;
 
     let event_access = CreateEventAccessPayloadWithOwnership {
-        name: payload.label.clone(),
-        group: Some(payload.group.clone()),
+        name: format!("{} {}", user_event_access.environment, conn_definition.name),
         platform: conn_definition.platform.clone(),
         namespace: None,
         connection_type: conn_definition.r#type.clone(),
@@ -228,14 +233,15 @@ async fn oauth_handler(
         platform_version: conn_definition.clone().platform_version,
         connection_definition_id: conn_definition.id,
         r#type: conn_definition.to_connection_type(),
-        name: payload.label,
+        group,
         key: key.clone().into(),
-        group: payload.group,
         environment: user_event_access.environment,
         platform: platform.into(),
         secrets_service_id: secret.id(),
         event_access_id: event_access.id,
         access_key: event_access.access_key,
+        identity: payload.identity,
+        identity_type: payload.identity_type,
         settings: conn_definition.settings,
         throughput: Throughput {
             key,
