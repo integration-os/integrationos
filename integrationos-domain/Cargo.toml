@@ -33,7 +33,7 @@ fake = { workspace = true, features = [
     "semver",
 ], optional = true }
 futures.workspace = true
-google-cloud-kms = { version = "0.4.0", features = [
+google-cloud-kms = { version = "0.5.1", features = [
     "async-trait",
     "k256",
     "trace",
