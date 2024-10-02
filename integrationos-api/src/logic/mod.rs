@@ -28,6 +28,7 @@ pub mod connection_definition;
 pub mod connection_model_definition;
 pub mod connection_model_schema;
 pub mod connection_oauth_definition;
+pub mod database;
 pub mod event_access;
 pub mod events;
 pub mod metrics;
