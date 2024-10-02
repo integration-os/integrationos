@@ -99,6 +99,7 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
         connection_definition_id: Id::new_with_uuid(IdPrefix::ConnectionDefinition, ts, uuid),
         r#type: ConnectionType::Api {},
         key: "key".into(),
+        name: None,
         group: "group".to_string(),
         platform: "platform".to_string().into(),
         environment: Environment::Live,

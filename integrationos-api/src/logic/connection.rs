@@ -23,7 +23,7 @@ use integrationos_domain::{
     record_metadata::RecordMetadata,
     settings::Settings,
     ApplicationError, Connection, ConnectionIdentityType, IntegrationOSError, InternalError,
-    Throughput,
+    StringExt, Throughput,
 };
 use mongodb::bson::doc;
 use mongodb::bson::Regex;
@@ -50,6 +50,8 @@ pub struct CreateConnectionPayload {
     pub active: bool,
     pub identity: Option<String>,
     pub identity_type: Option<ConnectionIdentityType>,
+    pub group: Option<String>,
+    pub name: Option<String>,
 }
 
 async fn test_connection(
@@ -116,6 +118,7 @@ impl PublicExt<Connection> for CreateConnectionPayload {
             r#type: input.r#type,
             key: input.key,
             group: input.group,
+            name: input.name,
             environment: input.environment,
             platform: input.platform,
             secrets_service_id: input.secrets_service_id,
@@ -190,11 +193,19 @@ pub async fn create_connection(
         }
     };
 
-    let group = Uuid::new_v4().to_string().replace('-', "");
+    let uuid = Uuid::new_v4().to_string().replace('-', "");
+    let group = payload.group.unwrap_or_else(|| uuid.clone());
+    let identity = payload.identity.unwrap_or_else(|| group.clone());
+
+    let key_suffix = if identity == uuid {
+        uuid.clone()
+    } else {
+        format!("{}-{}", uuid, identity.kebab_case())
+    };
 
     let key = format!(
         "{}::{}::{}::{}",
-        access.environment, connection_config.platform, DEFAULT_NAMESPACE, group
+        access.environment, connection_config.platform, DEFAULT_NAMESPACE, key_suffix
     );
 
     let throughput = get_client_throughput(&access.ownership.id, &state).await?;
@@ -264,7 +275,8 @@ pub async fn create_connection(
         r#type: connection_config.to_connection_type(),
         key: key.clone().into(),
         group,
-        identity: payload.identity,
+        identity: Some(identity),
+        name: payload.name,
         identity_type: payload.identity_type,
         platform: connection_config.platform.into(),
         environment: event_access.environment,
@@ -299,6 +311,7 @@ pub async fn create_connection(
         r#type: connection.r#type,
         key: connection.key,
         group: connection.group,
+        name: connection.name,
         environment: connection.environment,
         platform: connection.platform,
         secrets_service_id: connection.secrets_service_id,

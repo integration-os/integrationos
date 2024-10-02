@@ -23,7 +23,7 @@ use integrationos_domain::{
     oauth_secret::OAuthSecret,
     ownership::Ownership,
     ApplicationError, Connection, ConnectionIdentityType, ErrorMeta, IntegrationOSError,
-    InternalError, OAuth, Throughput,
+    InternalError, OAuth, StringExt, Throughput,
 };
 use mongodb::bson::doc;
 use reqwest::Request;
@@ -50,6 +50,8 @@ struct OAuthRequest {
     client_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     payload: Option<Value>,
+    name: Option<String>,
+    group: Option<String>,
     identity: Option<String>,
     identity_type: Option<ConnectionIdentityType>,
 }
@@ -193,11 +195,20 @@ async fn oauth_handler(
         })?;
 
     let conn_definition = get_conn_definition(&state, &payload.connection_definition_id).await?;
-    let group = Uuid::new_v4().to_string().replace('-', "");
+
+    let uuid = Uuid::new_v4().to_string().replace('-', "");
+    let group = payload.group.unwrap_or_else(|| uuid.clone());
+    let identity = payload.identity.unwrap_or_else(|| group.clone());
+
+    let key_suffix = if identity == uuid {
+        uuid.clone()
+    } else {
+        format!("{}-{}", uuid, identity.kebab_case())
+    };
 
     let key = format!(
         "{}::{}::{}::{}",
-        user_event_access.environment, conn_definition.platform, DEFAULT_NAMESPACE, group
+        user_event_access.environment, conn_definition.platform, DEFAULT_NAMESPACE, key_suffix
     );
 
     let throughput = get_client_throughput(&user_event_access.ownership.id, &state).await?;
@@ -234,13 +245,14 @@ async fn oauth_handler(
         connection_definition_id: conn_definition.id,
         r#type: conn_definition.to_connection_type(),
         group,
+        name: payload.name,
         key: key.clone().into(),
         environment: user_event_access.environment,
         platform: platform.into(),
         secrets_service_id: secret.id(),
         event_access_id: event_access.id,
         access_key: event_access.access_key,
-        identity: payload.identity,
+        identity: Some(identity),
         identity_type: payload.identity_type,
         settings: conn_definition.settings,
         throughput: Throughput {
