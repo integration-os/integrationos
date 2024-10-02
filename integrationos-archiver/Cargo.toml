@@ -9,7 +9,7 @@ bson.workspace = true
 chrono.workspace = true
 envconfig.workspace = true
 futures.workspace = true
-google-cloud-storage = "0.20.0"
+google-cloud-storage = "0.22.1"
 http.workspace = true
 integrationos-domain = { path = "../integrationos-domain" }
 integrationos-unified = { path = "../integrationos-unified" }
