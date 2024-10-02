@@ -1867,7 +1867,7 @@ dependencies = [
 
 [[package]]
 name = "integrationos-domain"
-version = "7.0.0"
+version = "8.0.0"
 dependencies = [
  "aes",
  "anyhow",
