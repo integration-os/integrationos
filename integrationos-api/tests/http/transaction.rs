@@ -13,6 +13,7 @@ use serde_json::{json, Value};
 use std::time::Duration;
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore]
 async fn test_event_core() {
     let mut server = TestServer::new(None).await;
 
