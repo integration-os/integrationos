@@ -19,7 +19,7 @@ use integrationos_domain::{
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     json_schema::JsonSchema,
-    ApplicationError, IntegrationOSError,
+    ApplicationError, IntegrationOSError, StringExt,
 };
 use mongodb::bson::doc;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -145,7 +145,13 @@ pub async fn get_platform_models(
         .into_iter()
         .map(|r| PlatformModelResponse {
             common_model: r.mapping.common_model_name,
-            platform_model: r.model_name,
+            platform_model: r
+                .model_name
+                .split(':')
+                .last()
+                .unwrap_or(&r.model_name)
+                .pascal_case()
+                .to_string(),
         })
         .collect();
 
