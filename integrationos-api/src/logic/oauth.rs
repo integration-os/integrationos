@@ -23,7 +23,7 @@ use integrationos_domain::{
     oauth_secret::OAuthSecret,
     ownership::Ownership,
     ApplicationError, Connection, ConnectionIdentityType, ErrorMeta, IntegrationOSError,
-    InternalError, OAuth, StringExt, Throughput,
+    InternalError, OAuth, Throughput,
 };
 use mongodb::bson::doc;
 use reqwest::Request;
@@ -203,7 +203,7 @@ async fn oauth_handler(
     let key_suffix = if identity == uuid {
         uuid.clone()
     } else {
-        format!("{}-{}", uuid, identity.kebab_case())
+        format!("{}|{}", uuid, identity.replace(&[' ', ':'][..], "-"))
     };
 
     let key = format!(
