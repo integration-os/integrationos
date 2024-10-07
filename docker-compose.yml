@@ -1,14 +1,13 @@
-version: "3.8"
-
 services:
   typescript-services:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/typescript-services:1.11.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/typescript-services:1.24.0
     ports:
       - 3001:3001
     environment:
       - BUILDABLE_SECRET=${BUILDABLE_SECRET}
       - CONNECTIONS_API_BASE_URL=http://connections-api:3005/
+      - DEFAULT_CLIENT_THROUGHPUT=500
       - DEFAULT_LIVE_ACCESS_KEY=${DEFAULT_LIVE_ACCESS_KEY}
       - DEFAULT_TEST_ACCESS_KEY=${DEFAULT_TEST_ACCESS_KEY}
       - DEMO_ACCOUNT_EVENT_ACCESS_KEY=${DEVELOPER_ACCOUNT_ACCESS_KEY}
@@ -24,11 +23,11 @@ services:
       - QA_ACCOUNT_BUILDABLE_ID=build-${DEVELOPER_ACCOUNT_ID}
       - QA_ACCOUNT_EVENT_ACCESS_KEY=${DEVELOPER_ACCOUNT_ACCESS_KEY}
       - SALT_ROUNDS=10
-      - SECRETS_SERVICE_BASE_URL=http://secrets-service:3006/
+      - SECRETS_SERVICE_BASE_URL=http://connections-api:3005/
 
   connections-api:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/api:1.11.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/api:1.24.0
     ports:
       - 3005:3005
     environment:
@@ -39,16 +38,26 @@ services:
       - DEBUG_MODE=false
       - ENGINEERING_ACCOUNT_ID=${DEVELOPER_ACCOUNT_ID}
       - EVENT_ACCESS_PASSWORD=${EVENT_ACCESS_PASSWORD}
+      - EVENT_DATABASE_NAME=events-service
+      - EVENT_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_KMS_KEY_ID=${KMS_KEY_ID}
+      - GOOGLE_KMS_KEY_RING_ID=${KMS_KEY_RING_ID}
+      - GOOGLE_KMS_LOCATION_ID=${GCP_LOCATION_ID}
+      - GOOGLE_KMS_PROJECT_ID=${GCP_PROJECT_ID}
       - INTERNAL_SERVER_ADDRESS=0.0.0.0:3005
+      - IOS_CRYPTO_SECRET=${IOS_CRYPTO_SECRET}
       - JWT_SECRET=${JWT_SECRET}
       - REDIS_URL=redis://redis:6379
       - RUST_LOG=api=info,tower_http=info,udm=info,integrationos_domain=info
-      - SECRETS_SERVICE_BASE_URL=http://secrets-service:3006/
+      - SECRETS_SERVICE_PROVIDER=google-kms
       - WORKER_THREADS=4
+    volumes:
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
 
   event-core:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/event-core:1.11.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/event-core:1.24.0
     environment:
       - CONTEXT_COLLECTION_NAME=event-transactions
       - CONTEXT_DATABASE_NAME=events-service
@@ -57,13 +66,21 @@ services:
       - CONTROL_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
       - EVENT_DATABASE_NAME=events-service
       - EVENT_DATABASE_URL-mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_KMS_KEY_ID=${KMS_KEY_ID}
+      - GOOGLE_KMS_KEY_RING_ID=${KMS_KEY_RING_ID}
+      - GOOGLE_KMS_LOCATION_ID=${GCP_LOCATION_ID}
+      - GOOGLE_KMS_PROJECT_ID=${GCP_PROJECT_ID}
+      - IOS_CRYPTO_SECRET=${IOS_CRYPTO_SECRET}
       - REDIS_URL=redis://redis:6379
       - RUST_LOG=event_core=info
-      - SECRETS_SERVICE_BASE_URL=http://secrets-service:3006/
+      - SECRETS_SERVICE_PROVIDER=google-kms
+    volumes:
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
 
   gateway:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/gateway:1.11.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/gateway:1.24.0
     ports:
       - 3002:3002
     environment:
@@ -79,9 +96,9 @@ services:
       - SECRET=${GATEWAY_SECRET}
       - SERVER_ADDRESS=0.0.0.0:3002
 
-  oauth-api:
+  oauth-refresh:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/oauth:1.11.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/oauth-refresh:1.24.0
     ports:
       - 3003:3003
     environment:
@@ -93,33 +110,21 @@ services:
       - CONTEXT_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
       - CONTROL_DATABASE_NAME=events-service
       - CONTROL_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - CREATE_SECRET_PATH=http://connections-api:3005/v1/secrets
       - ENVIRONMENT=production
       - EVENT_DATABASE_NAME=events-service
       - EVENT_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - GET_SECRET_PATH=http://connections-api:3005/v1/secrets
       - HOST=0.0.0.0
       - JWT_SECRET=${JWT_SECRET}
       - PORT=3003
       - REFRESH_BEFORE_IN_MINUTES=10
       - RUST_LOG=info
-      - SECRETS_SERVICE_BASE_URL=http://secrets-service:3006/
       - SLEEP_TIMER_IN_SECONDS=60
-
-  secrets-service:
-    platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/secrets-service:1.11.0
-    environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
-      - KEY_ID=${KMS_KEY_ID}
-      - KEY_RING_ID=${KMS_KEY_RING_ID}
-      - LOCATION_ID=${GCP_LOCATION_ID}
-      - MONGO_URI=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017/events-service?authSource=admin
-      - PROJECT_ID=${GCP_PROJECT_ID}
-    volumes:
-      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
 
   watchdog:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/watchdog:1.11.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/watchdog:1.24.0
     environment:
       - CONTEXT_COLLECTION_NAME=event-transactions
       - CONTEXT_DATABASE_NAME=events-service
