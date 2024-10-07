@@ -23,7 +23,7 @@ use integrationos_domain::{
     record_metadata::RecordMetadata,
     settings::Settings,
     ApplicationError, Connection, ConnectionIdentityType, IntegrationOSError, InternalError,
-    StringExt, Throughput,
+    Throughput,
 };
 use mongodb::bson::doc;
 use mongodb::bson::Regex;
@@ -200,7 +200,7 @@ pub async fn create_connection(
     let key_suffix = if identity == uuid {
         uuid.clone()
     } else {
-        format!("{}-{}", uuid, identity.kebab_case())
+        format!("{}|{}", uuid, identity.replace(&[' ', ':'][..], "-"))
     };
 
     let key = format!(
