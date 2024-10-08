@@ -1,7 +1,7 @@
 use crate::server::AppState;
 use axum::{
     extract::{Query, State},
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use integrationos_domain::IntegrationOSError;
@@ -11,7 +11,7 @@ use std::{collections::HashMap, sync::Arc};
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/", get(get_raw))
+        .route("/", post(get_raw))
         .route("/probe", get(test_probe))
 }
 
