@@ -25,6 +25,15 @@ impl Server {
 
         let tcp_listener = TcpListener::bind(&self.state.config.address).await?;
 
+        // Probing the storage to ensure it is up and running before starting the server
+        self.state
+            .storage
+            .execute_raw("SELECT 1")
+            .await
+            .inspect_err(|e| {
+                tracing::error!("Could not fetch common model: {e}");
+            })?;
+
         axum::serve(tcp_listener, app.into_make_service())
             .await
             .map_err(|e| anyhow::anyhow!("Server error: {}", e))
