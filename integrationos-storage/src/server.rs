@@ -28,7 +28,7 @@ impl Server {
         // Probing the storage to ensure it is up and running before starting the server
         self.state
             .storage
-            .execute_raw("SELECT 1")
+            .probe()
             .await
             .inspect_err(|e| {
                 tracing::error!("Could not fetch common model: {e}");

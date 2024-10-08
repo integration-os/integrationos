@@ -17,6 +17,8 @@ pub trait Storage: Send + Sync {
         &self,
         query: &str,
     ) -> Result<Vec<HashMap<String, Value>>, IntegrationOSError>;
+
+    async fn probe(&self) -> Result<bool, IntegrationOSError>;
 }
 
 #[async_trait]
@@ -31,6 +33,10 @@ impl Storage for PostgresStorage {
 
         Ok(json_results)
     }
+
+    async fn probe(&self) -> Result<bool, IntegrationOSError> {
+        self.execute_raw("SELECT 1").await.map(|_| true)
+    }
 }
 
 async fn fetch_query(sql: &str, pool: &PgPool) -> Vec<Result<PgRow, IntegrationOSError>> {
@@ -43,6 +49,8 @@ async fn fetch_query(sql: &str, pool: &PgPool) -> Vec<Result<PgRow, IntegrationO
         .collect::<Vec<Result<PgRow, IntegrationOSError>>>()
         .await
 }
+
+// PostgresStorage
 
 fn process_rows(
     rows: Vec<Result<PgRow, IntegrationOSError>>,
