@@ -2,7 +2,7 @@ use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
-use integrationos_storage::{
+use integrationos_database::{
     domain::{
         config::{StorageConfig, StorageConfigType},
         postgres::PostgresStorage,

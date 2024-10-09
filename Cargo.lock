@@ -2041,6 +2041,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "integrationos-database"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum",
+ "chrono",
+ "dotenvy",
+ "envconfig",
+ "futures",
+ "futures-util",
+ "http 1.1.0",
+ "http-serde-ext",
+ "hyper 0.14.30",
+ "integrationos-cache",
+ "integrationos-domain",
+ "integrationos-unified",
+ "mongodb",
+ "num_cpus",
+ "rand",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "strum",
+ "testcontainers-modules",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "integrationos-domain"
 version = "7.0.0"
 dependencies = [
@@ -2157,40 +2191,6 @@ dependencies = [
  "tower",
  "tower-http",
  "tracing",
-]
-
-[[package]]
-name = "integrationos-storage"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "axum",
- "chrono",
- "dotenvy",
- "envconfig",
- "futures",
- "futures-util",
- "http 1.1.0",
- "http-serde-ext",
- "hyper 0.14.30",
- "integrationos-cache",
- "integrationos-domain",
- "integrationos-unified",
- "mongodb",
- "num_cpus",
- "rand",
- "reqwest",
- "serde",
- "serde_json",
- "sqlx",
- "strum",
- "testcontainers-modules",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

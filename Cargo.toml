@@ -7,7 +7,7 @@ members = [
     "integrationos-domain",
     "integrationos-event",
     "integrationos-gateway",
-    "integrationos-storage",
+    "integrationos-database",
     "integrationos-unified",
     "integrationos-watchdog",
 ]
