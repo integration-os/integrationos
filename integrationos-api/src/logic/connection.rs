@@ -22,8 +22,8 @@ use integrationos_domain::{
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
     settings::Settings,
-    ApplicationError, Connection, ConnectionIdentityType, IntegrationOSError, InternalError,
-    Throughput,
+    ApplicationError, Connection, ConnectionIdentityType, ConnectionType, IntegrationOSError,
+    InternalError, Throughput,
 };
 use mongodb::bson::doc;
 use mongodb::bson::Regex;
@@ -190,6 +190,16 @@ pub async fn create_connection(
         }
     };
 
+    // Early return if the platform is not supported for SQL connections
+    if connection_config.to_connection_type().as_ref() == "database_sql"
+        && connection_config.platform != "postgresql"
+    {
+        return Err(ApplicationError::bad_request(
+            "Unsupported platform for SQL connection",
+            None,
+        ));
+    }
+
     let group = Uuid::new_v4().to_string().replace('-', "");
 
     let key = format!(
@@ -229,14 +239,14 @@ pub async fn create_connection(
             e
         })?;
 
-    let auth_form_data_value =
+    let auth_form_data =
         serde_json::to_value(payload.auth_form_data.clone()).map_err(|e| {
             error!("Error serializing auth form data for connection: {:?}", e);
 
             ApplicationError::bad_request(&format!("Invalid auth form data: {:?}", e), None)
         })?;
 
-    test_connection(&state, &connection_config, &auth_form_data_value)
+    test_connection(&state, &connection_config, &auth_form_data)
         .await
         .map_err(|e| {
             error!(
@@ -247,15 +257,31 @@ pub async fn create_connection(
             ApplicationError::bad_request("Invalid connection credentials: {:?}", None)
         })?;
 
-    let secret_result = state
-        .secrets_client
-        .create(&auth_form_data_value, &access.ownership.id)
-        .await
-        .map_err(|e| {
-            error!("Error creating secret for connection: {:?}", e);
+    let secret_result = match connection_config.to_connection_type() {
+        integrationos_domain::ConnectionType::DatabaseSql {} => {
+            match connection_config.platform.as_ref() {
+                "postgresql" =>  {
+                    // let value = 
+                    todo!()
+                }
+                platform => {
+                    return Err(ApplicationError::bad_request(
+                        format!("Unsupported platform for SQL connection: {platform}").as_ref(),
+                        None,
+                    ))
+                }
+            }
+        }
+        _ => state
+            .secrets_client
+            .create(&auth_form_data, &access.ownership.id)
+            .await
+            .inspect_err(|e| {
+                error!("Error creating secret for connection: {:?}", e);
+            })?,
+    };
 
-            e
-        })?;
+    // let secret_result =
 
     let connection = Connection {
         id: Id::new(IdPrefix::Connection, Utc::now()),

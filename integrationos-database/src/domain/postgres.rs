@@ -1,6 +1,6 @@
-use super::config::StorageConfig;
 use anyhow::Result;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use integrationos_domain::database::DatabaseConnectionConfig;
 use serde::ser::Error;
 use serde::Serializer;
 use serde_json::Value;
@@ -19,7 +19,7 @@ pub struct PostgresStorage {
 }
 
 impl PostgresStorage {
-    pub async fn new(configuration: &StorageConfig) -> Result<Self> {
+    pub async fn new(configuration: &DatabaseConnectionConfig) -> Result<Self> {
         let options = PgConnectOptions::new()
             .username(&configuration.postgres_config.username)
             .password(&configuration.postgres_config.password)

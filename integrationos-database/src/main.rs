@@ -4,7 +4,7 @@ use envconfig::Envconfig;
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use integrationos_database::{
     domain::{
-        config::{StorageConfig, StorageConfigType},
+        config::{DatabaseConnectionConfig, DatabaseConnectionType},
         postgres::PostgresStorage,
     },
     service::init::Initializer,
@@ -13,7 +13,7 @@ use tracing::info;
 
 fn main() -> Result<()> {
     dotenv().ok();
-    let config = StorageConfig::init_from_env()?;
+    let config = DatabaseConnectionConfig::init_from_env()?;
 
     let subscriber = get_subscriber("storage".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
@@ -25,8 +25,8 @@ fn main() -> Result<()> {
         .enable_all()
         .build()?
         .block_on(async move {
-            match config.storage_config_type {
-                StorageConfigType::Postgres => PostgresStorage::init(&config).await?.run().await,
+            match config.database_connection_type {
+                DatabaseConnectionType::Postgres => PostgresStorage::init(&config).await?.run().await,
             }
         })
 }

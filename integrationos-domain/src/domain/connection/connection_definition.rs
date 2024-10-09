@@ -134,10 +134,6 @@ impl ConnectionDefinition {
             ConnectionDefinitionType::Custom => ConnectionType::Custom,
         }
     }
-
-    pub fn set_oauth(&mut self, oauth: bool) {
-        self.settings.oauth = oauth;
-    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]

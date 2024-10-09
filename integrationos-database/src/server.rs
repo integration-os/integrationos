@@ -1,12 +1,13 @@
-use crate::{domain::config::StorageConfig, router, service::storage::Storage};
+use crate::{router, service::storage::Storage};
 use anyhow::Result as AnyhowResult;
 use axum::Router;
+use integrationos_domain::database::DatabaseConnectionConfig;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub config: StorageConfig,
+    pub config: DatabaseConnectionConfig,
     pub storage: Arc<dyn Storage>,
 }
 
@@ -26,13 +27,9 @@ impl Server {
         let tcp_listener = TcpListener::bind(&self.state.config.address).await?;
 
         // Probing the storage to ensure it is up and running before starting the server
-        self.state
-            .storage
-            .probe()
-            .await
-            .inspect_err(|e| {
-                tracing::error!("Could not fetch common model: {e}");
-            })?;
+        self.state.storage.probe().await.inspect_err(|e| {
+            tracing::error!("Could not fetch common model: {e}");
+        })?;
 
         axum::serve(tcp_listener, app.into_make_service())
             .await

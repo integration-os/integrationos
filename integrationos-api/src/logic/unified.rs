@@ -12,7 +12,7 @@ use http::{HeaderMap, HeaderName};
 use integrationos_domain::{
     connection_model_definition::CrudAction, destination::Action,
     encrypted_access_key::EncryptedAccessKey, encrypted_data::PASSWORD_LENGTH,
-    event_access::EventAccess, AccessKey, ApplicationError, Event, IntegrationOSError,
+    event_access::EventAccess, AccessKey, ApplicationError, Event,
     InternalError,
 };
 use serde::{Deserialize, Serialize};
