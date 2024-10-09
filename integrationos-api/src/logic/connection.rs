@@ -17,13 +17,14 @@ use http::HeaderMap;
 use integrationos_domain::{
     algebra::MongoStore,
     connection_definition::ConnectionDefinition,
+    database::DatabaseConnectionConfig,
     domain::connection::SanitizedConnection,
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
     settings::Settings,
-    ApplicationError, Connection, ConnectionIdentityType, ConnectionType, IntegrationOSError,
-    InternalError, Throughput,
+    ApplicationError, Connection, ConnectionIdentityType, IntegrationOSError, InternalError,
+    Throughput,
 };
 use mongodb::bson::doc;
 use mongodb::bson::Regex;
@@ -50,6 +51,14 @@ pub struct CreateConnectionPayload {
     pub active: bool,
     pub identity: Option<String>,
     pub identity_type: Option<ConnectionIdentityType>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub struct DatabaseConnectionSecret {
+    #[serde(flatten)]
+    pub value: DatabaseConnectionConfig,
+    pub connection_id: String,
 }
 
 async fn test_connection(
@@ -190,7 +199,7 @@ pub async fn create_connection(
         }
     };
 
-    // Early return if the platform is not supported for SQL connections
+    // TODO: Should be an enum instead, temporary
     if connection_config.to_connection_type().as_ref() == "database_sql"
         && connection_config.platform != "postgresql"
     {
@@ -239,12 +248,11 @@ pub async fn create_connection(
             e
         })?;
 
-    let auth_form_data =
-        serde_json::to_value(payload.auth_form_data.clone()).map_err(|e| {
-            error!("Error serializing auth form data for connection: {:?}", e);
+    let auth_form_data = serde_json::to_value(payload.auth_form_data.clone()).map_err(|e| {
+        error!("Error serializing auth form data for connection: {:?}", e);
 
-            ApplicationError::bad_request(&format!("Invalid auth form data: {:?}", e), None)
-        })?;
+        ApplicationError::bad_request(&format!("Invalid auth form data: {:?}", e), None)
+    })?;
 
     test_connection(&state, &connection_config, &auth_form_data)
         .await
@@ -256,13 +264,29 @@ pub async fn create_connection(
 
             ApplicationError::bad_request("Invalid connection credentials: {:?}", None)
         })?;
+    let connection_id = Id::new(IdPrefix::Connection, Utc::now());
 
     let secret_result = match connection_config.to_connection_type() {
         integrationos_domain::ConnectionType::DatabaseSql {} => {
             match connection_config.platform.as_ref() {
-                "postgresql" =>  {
-                    // let value = 
-                    todo!()
+                "postgresql" => {
+                    let database_connection_config = DatabaseConnectionConfig::default()
+                        .merge_unknown(payload.auth_form_data)?;
+
+                    let secret = DatabaseConnectionSecret {
+                        value: database_connection_config,
+                        connection_id: connection_id.to_string().replace("::", "-"),
+                    };
+
+                    let value = serde_json::to_value(secret).map_err(|e| {
+                        error!("Error serializing secret for connection: {:?}", e);
+                        InternalError::serialize_error("Could not serialize secret", None)
+                    })?;
+
+                    state
+                        .secrets_client
+                        .create(&value, &access.ownership.id)
+                        .await?
                 }
                 platform => {
                     return Err(ApplicationError::bad_request(
@@ -281,10 +305,10 @@ pub async fn create_connection(
             })?,
     };
 
-    // let secret_result =
+    // TODO: if this is a database type then we need to create a k8s pod
 
     let connection = Connection {
-        id: Id::new(IdPrefix::Connection, Utc::now()),
+        id: connection_id,
         platform_version: connection_config.clone().platform_version,
         connection_definition_id: payload.connection_definition_id,
         r#type: connection_config.to_connection_type(),

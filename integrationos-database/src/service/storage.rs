@@ -1,5 +1,5 @@
 use crate::domain::postgres::serialize_pgvalueref;
-use crate::domain::postgres::PostgresStorage;
+use crate::domain::postgres::PostgresDatabaseConnection;
 use async_trait::async_trait;
 use futures::{StreamExt, TryStreamExt};
 use integrationos_domain::{ApplicationError, IntegrationOSError};
@@ -22,7 +22,7 @@ pub trait Storage: Send + Sync {
 }
 
 #[async_trait]
-impl Storage for PostgresStorage {
+impl Storage for PostgresDatabaseConnection {
     async fn execute_raw(
         &self,
         sql: &str,

@@ -1,13 +1,12 @@
 use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
-use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use integrationos_database::{
-    domain::{
-        config::{DatabaseConnectionConfig, DatabaseConnectionType},
-        postgres::PostgresStorage,
-    },
-    service::init::Initializer,
+    domain::postgres::PostgresDatabaseConnection, service::init::Initializer,
+};
+use integrationos_domain::{
+    database::{DatabaseConnectionConfig, DatabaseConnectionType},
+    telemetry::{get_subscriber, init_subscriber},
 };
 use tracing::info;
 
@@ -26,7 +25,9 @@ fn main() -> Result<()> {
         .build()?
         .block_on(async move {
             match config.database_connection_type {
-                DatabaseConnectionType::Postgres => PostgresStorage::init(&config).await?.run().await,
+                DatabaseConnectionType::Postgres => {
+                    PostgresDatabaseConnection::init(&config).await?.run().await
+                }
             }
         })
 }

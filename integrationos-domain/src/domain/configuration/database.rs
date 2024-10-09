@@ -1,6 +1,9 @@
-use super::{cache::CacheConfig, environment::Environment};
+use super::environment::Environment;
+use crate::{ApplicationError, IntegrationOSError};
 use envconfig::Envconfig;
+use serde::{Deserialize, Serialize};
 use std::{
+    collections::HashMap,
     fmt::{Display, Formatter},
     net::SocketAddr,
 };
@@ -68,16 +71,12 @@ impl Display for DatabaseConfig {
     }
 }
 
-#[derive(Envconfig, Clone)]
+#[derive(Envconfig, Clone, Serialize, Deserialize)]
 pub struct DatabaseConnectionConfig {
     #[envconfig(from = "WORKER_THREADS")]
     pub worker_threads: Option<usize>,
     #[envconfig(from = "INTERNAL_SERVER_ADDRESS", default = "0.0.0.0:5005")]
     pub address: SocketAddr,
-    #[envconfig(from = "CACHE_SIZE", default = "100")]
-    pub cache_size: u64,
-    #[envconfig(nested = true)]
-    pub cache: CacheConfig,
     #[envconfig(from = "ENVIRONMENT", default = "development")]
     pub environment: Environment,
     #[envconfig(nested = true)]
@@ -86,55 +85,131 @@ pub struct DatabaseConnectionConfig {
     pub database_connection_type: DatabaseConnectionType,
 }
 
+impl DatabaseConnectionConfig {
+    /// Merges the unknown fields from the environment
+    /// into the current config
+    ///
+    /// # Arguments
+    /// * `other` - The unknown fields from the environment
+    ///
+    /// # Returns
+    /// * `Result<Self, IntegrationOSError>` - The updated config
+    pub fn merge_unknown(
+        mut self,
+        other: HashMap<String, String>,
+    ) -> Result<Self, IntegrationOSError> {
+        if let Some(worker_threads) = other.get("WORKER_THREADS") {
+            self.worker_threads = Some(worker_threads.parse::<usize>().map_err(|e| {
+                ApplicationError::bad_request(&format!("Invalid worker threads: {}", e), None)
+            })?);
+        }
+
+        if let Some(address) = other.get("INTERNAL_SERVER_ADDRESS") {
+            self.address = address.parse::<SocketAddr>().map_err(|e| {
+                ApplicationError::bad_request(&format!("Invalid address: {}", e), None)
+            })?;
+        }
+
+        if let Some(environment) = other.get("ENVIRONMENT") {
+            self.environment = environment.parse().map_err(|e| {
+                ApplicationError::bad_request(&format!("Invalid environment: {}", e), None)
+            })?;
+        }
+
+        if let Some(database_connection_type) = other.get("DATABASE_CONNECTION_TYPE") {
+            self.database_connection_type = database_connection_type.parse().map_err(|e| {
+                ApplicationError::bad_request(
+                    &format!("Invalid database connection type: {}", e),
+                    None,
+                )
+            })?;
+        };
+
+        // if connection type is postgres, get all the fields for postgres config
+        match self.database_connection_type {
+            DatabaseConnectionType::Postgres => {
+                // get all the fields for postgres config
+                let mut postgres_config: HashMap<String, String> = HashMap::new();
+                for (key, value) in other {
+                    if key.starts_with("POSTGRES_") {
+                        postgres_config.insert(key, value.to_string());
+                    }
+                }
+
+                self.postgres_config = PostgresConfig::init_from_hashmap(&postgres_config)
+                    .map_err(|e| {
+                        ApplicationError::bad_request(
+                            &format!("Invalid postgres config: {}", e),
+                            None,
+                        )
+                    })?;
+            }
+        }
+
+        Ok(self)
+
+    }
+}
+
+impl Default for DatabaseConnectionConfig {
+    fn default() -> Self {
+        Self {
+            worker_threads: Some(1),
+            address: SocketAddr::new("0.0.0.0".parse().expect("Invalid address"), 5005),
+            environment: Environment::Development,
+            postgres_config: PostgresConfig::default(),
+            database_connection_type: DatabaseConnectionType::Postgres,
+        }
+    }
+}
+
 impl Display for DatabaseConnectionConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "WORKER_THREADS: {:?}", self.worker_threads)?;
         writeln!(f, "INTERNAL_SERVER_ADDRESS: {}", self.address)?;
-        writeln!(f, "CACHE_SIZE: {}", self.cache_size)?;
         writeln!(f, "{}", self.environment)?;
-        writeln!(f, "{}", self.cache)?;
         match self.database_connection_type {
             DatabaseConnectionType::Postgres => writeln!(f, "{}", self.postgres_config),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, EnumString, AsRefStr)]
+#[derive(Debug, Clone, PartialEq, Eq, EnumString, AsRefStr, Serialize, Deserialize)]
 #[strum(serialize_all = "kebab-case")]
 pub enum DatabaseConnectionType {
     Postgres,
 }
 
-#[derive(Debug, Clone, Envconfig)]
+#[derive(Debug, Clone, Envconfig, Default, Serialize, Deserialize)]
 pub struct PostgresConfig {
-    #[envconfig(env = "DATABASE_USER", default = "postgres")]
+    #[envconfig(env = "POSTGRES_USERNAME")]
     pub username: String,
-    #[envconfig(env = "DATABASE_PASSWORD", default = "postgres")]
+    #[envconfig(env = "POSTGRES_PASSWORD")]
     pub password: String,
-    #[envconfig(env = "DATABASE_PORT", default = "5432")]
+    #[envconfig(env = "POSTGRES_PORT")]
     pub port: u16,
-    #[envconfig(env = "DATABASE_NAME", default = "postgres")]
+    #[envconfig(env = "POSTGRES_NAME")]
     pub name: String,
-    #[envconfig(env = "DATABASE_HOST", default = "localhost")]
+    #[envconfig(env = "POSTGRES_HOST")]
     pub host: String,
-    #[envconfig(env = "DATABASE_SSL", default = "false")]
+    #[envconfig(env = "POSTGRES_SSL", default = "false")]
     pub ssl: bool,
-    #[envconfig(env = "DATABASE_WAIT_TIMEOUT_IN_MILLIS", default = "1000")]
+    #[envconfig(env = "POSTGRES_WAIT_TIMEOUT_IN_MILLIS", default = "1000")]
     pub timeout: u64,
-    #[envconfig(env = "DATABASE_POOL_SIZE", default = "10")]
+    #[envconfig(env = "POSTGRES_POOL_SIZE", default = "10")]
     pub pool_size: u32,
 }
 
 impl Display for PostgresConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "DATABASE_USER: ****")?;
-        writeln!(f, "DATABASE_PASSWORD: ****")?;
-        writeln!(f, "DATABASE_PORT: ****")?;
-        writeln!(f, "DATABASE_HOST: ****")?;
-        writeln!(f, "DATABASE_NAME: {}", self.name)?;
-        writeln!(f, "DATABASE_SSL: {}", self.ssl)?;
-        writeln!(f, "DATABASE_WAIT_TIMEOUT_IN_MILLIS: {}", self.timeout)?;
-        writeln!(f, "DATABASE_POOL_SIZE: {}", self.pool_size)
+        writeln!(f, "POSTGRES_USER: ****")?;
+        writeln!(f, "POSTGRES_PASSWORD: ****")?;
+        writeln!(f, "POSTGRES_PORT: ****")?;
+        writeln!(f, "POSTGRES_HOST: ****")?;
+        writeln!(f, "POSTGRES_NAME: {}", self.name)?;
+        writeln!(f, "POSTGRES_SSL: {}", self.ssl)?;
+        writeln!(f, "POSTGRES_WAIT_TIMEOUT_IN_MILLIS: {}", self.timeout)?;
+        writeln!(f, "POSTGRES_POOL_SIZE: {}", self.pool_size)
     }
 }
 

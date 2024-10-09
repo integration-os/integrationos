@@ -1,9 +1,10 @@
 use super::storage::Storage;
 use crate::{
-    domain::{config::DatabaseConnectionConfig, postgres::PostgresStorage},
+    domain::postgres::PostgresDatabaseConnection,
     server::{AppState, Server},
 };
 use axum::async_trait;
+use integrationos_domain::database::DatabaseConnectionConfig;
 use std::sync::Arc;
 
 #[async_trait]
@@ -12,9 +13,9 @@ pub trait Initializer {
 }
 
 #[async_trait]
-impl Initializer for PostgresStorage {
+impl Initializer for PostgresDatabaseConnection {
     async fn init(config: &DatabaseConnectionConfig) -> Result<Server, anyhow::Error> {
-        let postgres: PostgresStorage = PostgresStorage::new(config).await?;
+        let postgres: PostgresDatabaseConnection = PostgresDatabaseConnection::new(config).await?;
         let storage: Arc<dyn Storage> = Arc::new(postgres);
 
         Ok(Server {

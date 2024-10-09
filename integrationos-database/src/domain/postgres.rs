@@ -14,11 +14,11 @@ use sqlx::{Decode, Postgres, TypeInfo, ValueRef as PgValue};
 use std::time::Duration;
 
 #[derive(Clone)]
-pub struct PostgresStorage {
+pub struct PostgresDatabaseConnection {
     pub pool: PgPool,
 }
 
-impl PostgresStorage {
+impl PostgresDatabaseConnection {
     pub async fn new(configuration: &DatabaseConnectionConfig) -> Result<Self> {
         let options = PgConnectOptions::new()
             .username(&configuration.postgres_config.username)
