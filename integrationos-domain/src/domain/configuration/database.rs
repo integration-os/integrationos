@@ -71,7 +71,7 @@ impl Display for DatabaseConfig {
     }
 }
 
-#[derive(Envconfig, Clone, Serialize, Deserialize)]
+#[derive(Envconfig, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DatabaseConnectionConfig {
     #[envconfig(from = "WORKER_THREADS")]
     pub worker_threads: Option<usize>,
@@ -180,7 +180,7 @@ pub enum DatabaseConnectionType {
     Postgres,
 }
 
-#[derive(Debug, Clone, Envconfig, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Envconfig, Default, Serialize, Deserialize, PartialEq)]
 pub struct PostgresConfig {
     #[envconfig(env = "POSTGRES_USERNAME")]
     pub username: String,

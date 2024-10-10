@@ -19,6 +19,7 @@ use integrationos_domain::{
     connection_definition::ConnectionDefinition,
     database::DatabaseConnectionConfig,
     domain::connection::SanitizedConnection,
+    environment::Environment,
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
@@ -53,12 +54,13 @@ pub struct CreateConnectionPayload {
     pub identity_type: Option<ConnectionIdentityType>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct DatabaseConnectionSecret {
     #[serde(flatten)]
     pub value: DatabaseConnectionConfig,
-    pub connection_id: String,
+    pub namespace: String,
+    pub service_name: String,
 }
 
 async fn test_connection(
@@ -270,12 +272,28 @@ pub async fn create_connection(
         integrationos_domain::ConnectionType::DatabaseSql {} => {
             match connection_config.platform.as_ref() {
                 "postgresql" => {
-                    let database_connection_config = DatabaseConnectionConfig::default()
-                        .merge_unknown(payload.auth_form_data)?;
+                    // Override for security reasons
+                    let auth_form_data: HashMap<String, String> = payload
+                        .auth_form_data
+                        .into_iter()
+                        .chain(vec![
+                            ("WORKER_THREADS".into(), "1".into()),
+                            ("INTERNAL_SERVER_ADDRESS".into(), "0.0.0.0:5005".into()),
+                        ])
+                        .collect();
+
+                    let database_connection_config =
+                        DatabaseConnectionConfig::default().merge_unknown(auth_form_data)?;
+
+                    let namespace = match state.config.environment {
+                        Environment::Test | Environment::Development => "development-db-conns",
+                        Environment::Live | Environment::Production => "production-db-conns",
+                    };
 
                     let secret = DatabaseConnectionSecret {
                         value: database_connection_config,
-                        connection_id: connection_id.to_string().replace("::", "-"),
+                        service_name: connection_id.to_string().replace("::", "-"),
+                        namespace: namespace.to_string(),
                     };
 
                     let value = serde_json::to_value(secret).map_err(|e| {

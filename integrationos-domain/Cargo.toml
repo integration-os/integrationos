@@ -45,6 +45,7 @@ http.workspace = true
 indexmap = "2.1.0"
 js-sandbox-ios.workspace = true
 jsonpath_lib.workspace = true
+kube.workspace = true
 mongodb.workspace = true
 napi = { version = "2.14.2", default-features = false, features = ["napi4"] }
 napi-derive = "2.14.6"
@@ -64,7 +65,7 @@ sha1 = "0.10.6"
 sha2.workspace = true
 sha3 = "0.10.8"
 strum = { workspace = true, features = ["derive"] }
-thiserror = "1.0.56"
+thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 tracing-bunyan-formatter = "0.3.9"
 tracing-log = "0.2.0"

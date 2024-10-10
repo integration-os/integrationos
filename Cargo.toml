@@ -42,6 +42,7 @@ http-serde-ext = "1.0.2"
 js-sandbox-ios = "0.1.1"
 jsonpath_lib = "0.3.0"
 jsonwebtoken = "8.3.0"
+kube = "0.95.0"
 mockito = "1.2.0"
 moka = { version = "0.12.4", features = ["future"] }
 mongodb = "2.8.0"
@@ -55,9 +56,11 @@ reqwest = { version = "0.12.7", features = [
 semver = { version = "1.0.20", features = ["serde"] }
 serde = { version = "1.0.189", features = ["derive", "rc"] }
 serde_json = "1.0.107"
+schemars = "0.8.16"
 sha2 = "0.10.6"
 strum = { version = "0.25", features = ["derive"] }
 testcontainers-modules = "0.3"
+thiserror = "1.0.56"
 tokio = { version = "1.33.0", features = [
     "macros",
     "rt-multi-thread",

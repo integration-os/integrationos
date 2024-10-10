@@ -18,29 +18,33 @@ http-serde-ext.workspace = true
 http.workspace = true
 hyper = "0.14.27"
 indexmap = "2.1.0"
-integrationos-unified = { path = "../integrationos-unified" }
 integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain" }
+integrationos-unified = { path = "../integrationos-unified" }
 jsonwebtoken.workspace = true
+k8s-openapi = { version = "0.23.0", features = ["latest"] }
+kube = { workspace = true, features = ["runtime", "derive", "client"] }
 mongodb.workspace = true
 num_cpus = "1"
 openapiv3.workspace = true
 rand.workspace = true
 redis.workspace = true
 reqwest.workspace = true
+schemars.workspace = true
 segment = "0.2.3"
 semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+serde_yaml = "0.9.34"
 strum.workspace = true
-tokio.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 tower = { version = "0.4.13", features = ["filter"] }
 tower-http.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
-validator.workspace = true
-serde_yaml = "0.9.34"
 uuid.workspace = true
+validator.workspace = true
 
 [dev-dependencies]
 testcontainers-modules = { workspace = true, features = ["mongo", "redis"] }

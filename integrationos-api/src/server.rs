@@ -1,5 +1,6 @@
 use crate::{
-    domain::{ConnectionsConfig, Metric},
+    domain::{ConnectionsConfig, K8sMode, Metric},
+    helper::{K8sDriver, K8sDriverImpl, K8sDriverLogger},
     logic::{connection_oauth_definition::FrontendOauthConnectionDefinition, openapi::OpenAPIData},
     router,
 };
@@ -37,45 +38,46 @@ use tracing::{error, info, trace, warn};
 
 #[derive(Clone)]
 pub struct AppStores {
-    pub db: Database,
-    pub model_config: MongoStore<ConnectionModelDefinition>,
-    pub oauth_config: MongoStore<ConnectionOAuthDefinition>,
-    pub frontend_oauth_config: MongoStore<FrontendOauthConnectionDefinition>,
-    pub model_schema: MongoStore<ConnectionModelSchema>,
-    pub public_model_schema: MongoStore<PublicConnectionModelSchema>,
-    pub common_model: MongoStore<CommonModel>,
+    pub clients: MongoStore<UserClient>,
     pub common_enum: MongoStore<CommonEnum>,
+    pub common_model: MongoStore<CommonModel>,
     pub connection: MongoStore<Connection>,
-    pub public_connection: MongoStore<PublicConnection>,
-    pub public_connection_details: MongoStore<PublicConnectionDetails>,
+    pub connection_config: MongoStore<ConnectionDefinition>,
+    pub cursors: MongoStore<Cursor>,
+    pub db: Database,
+    pub event: MongoStore<Event>,
+    pub event_access: MongoStore<EventAccess>,
+    pub frontend_oauth_config: MongoStore<FrontendOauthConnectionDefinition>,
+    pub model_config: MongoStore<ConnectionModelDefinition>,
+    pub model_schema: MongoStore<ConnectionModelSchema>,
+    pub oauth_config: MongoStore<ConnectionOAuthDefinition>,
+    pub pipeline: MongoStore<Pipeline>,
     pub platform: MongoStore<PlatformData>,
     pub platform_page: MongoStore<PlatformPage>,
-    pub settings: MongoStore<Settings>,
-    pub connection_config: MongoStore<ConnectionDefinition>,
-    pub pipeline: MongoStore<Pipeline>,
-    pub event_access: MongoStore<EventAccess>,
-    pub event: MongoStore<Event>,
+    pub public_connection: MongoStore<PublicConnection>,
+    pub public_connection_details: MongoStore<PublicConnectionDetails>,
+    pub public_model_schema: MongoStore<PublicConnectionModelSchema>,
     pub secrets: MongoStore<Secret>,
-    pub transactions: MongoStore<Transaction>,
-    pub cursors: MongoStore<Cursor>,
+    pub settings: MongoStore<Settings>,
     pub stages: MongoStore<Stage>,
-    pub clients: MongoStore<UserClient>,
+    pub transactions: MongoStore<Transaction>,
 }
 
 #[derive(Clone)]
 pub struct AppState {
     pub app_stores: AppStores,
     pub config: ConnectionsConfig,
-    pub openapi_data: OpenAPIData,
-    pub http_client: reqwest::Client,
-    pub event_access_cache: EventAccessCache,
-    pub connections_cache: ConnectionCacheArcStrHeaderKey,
     pub connection_definitions_cache: ConnectionDefinitionCache,
     pub connection_oauth_definitions_cache: ConnectionOAuthDefinitionCache,
-    pub secrets_client: Arc<dyn SecretExt + Sync + Send>,
-    pub extractor_caller: UnifiedDestination,
+    pub connections_cache: ConnectionCacheArcStrHeaderKey,
+    pub event_access_cache: EventAccessCache,
     pub event_tx: Sender<Event>,
+    pub extractor_caller: UnifiedDestination,
+    pub http_client: reqwest::Client,
+    pub k8s_client: Arc<dyn K8sDriver>,
     pub metric_tx: Sender<Metric>,
+    pub openapi_data: OpenAPIData,
+    pub secrets_client: Arc<dyn SecretExt + Sync + Send>,
     pub template: DefaultTemplate,
 }
 
@@ -191,6 +193,11 @@ impl Server {
             app_stores.common_enum.clone(),
         );
 
+        let k8s_client: Arc<dyn K8sDriver> = match config.k8s_mode {
+            K8sMode::Real => Arc::new(K8sDriverImpl::new().await?),
+            K8sMode::Logger => Arc::new(K8sDriverLogger),
+        };
+
         // Create Event buffer in separate thread and batch saves
         let events = db.collection::<Event>(&Store::Events.to_string());
         let (event_tx, mut receiver) =
@@ -301,16 +308,17 @@ impl Server {
             state: Arc::new(AppState {
                 app_stores,
                 config,
-                event_access_cache,
-                http_client,
-                connections_cache,
                 connection_definitions_cache,
                 connection_oauth_definitions_cache,
+                connections_cache,
+                event_access_cache,
+                event_tx,
+                extractor_caller,
+                http_client,
+                k8s_client,
+                metric_tx,
                 openapi_data,
                 secrets_client,
-                extractor_caller,
-                event_tx,
-                metric_tx,
                 template,
             }),
         })
