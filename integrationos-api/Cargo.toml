@@ -22,7 +22,7 @@ integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain" }
 integrationos-unified = { path = "../integrationos-unified" }
 jsonwebtoken.workspace = true
-k8s-openapi = { version = "0.23.0", features = ["latest"] }
+k8s-openapi = { workspace = true, features = ["latest"] }
 kube = { workspace = true, features = ["runtime", "derive", "client"] }
 mongodb.workspace = true
 num_cpus = "1"

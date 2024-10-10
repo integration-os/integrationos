@@ -43,6 +43,7 @@ js-sandbox-ios = "0.1.1"
 jsonpath_lib = "0.3.0"
 jsonwebtoken = "8.3.0"
 kube = "0.95.0"
+k8s-openapi = "0.23.0"
 mockito = "1.2.0"
 moka = { version = "0.12.4", features = ["future"] }
 mongodb = "2.8.0"

@@ -2186,6 +2186,7 @@ dependencies = [
  "indexmap 2.5.0",
  "js-sandbox-ios",
  "jsonpath_lib",
+ "k8s-openapi",
  "kube",
  "mockito",
  "mongodb",

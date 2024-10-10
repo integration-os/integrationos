@@ -46,6 +46,7 @@ indexmap = "2.1.0"
 js-sandbox-ios.workspace = true
 jsonpath_lib.workspace = true
 kube.workspace = true
+k8s-openapi = { workspace = true, features = ["latest"] }
 mongodb.workspace = true
 napi = { version = "2.14.2", default-features = false, features = ["napi4"] }
 napi-derive = "2.14.6"
