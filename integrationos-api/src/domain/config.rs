@@ -1,6 +1,7 @@
 use envconfig::Envconfig;
 use integrationos_domain::{cache::CacheConfig, environment::Environment};
 use integrationos_domain::{database::DatabaseConfig, secrets::SecretsConfig};
+use strum::{AsRefStr, EnumString};
 use std::{
     fmt::{Display, Formatter, Result},
     net::SocketAddr,
@@ -82,6 +83,16 @@ pub struct ConnectionsConfig {
     pub rate_limit_enabled: bool,
     #[envconfig(from = "ENVIRONMENT", default = "development")]
     pub environment: Environment,
+    #[envconfig(
+        from = "DATABASE_CONNECTION_DOCKER_IMAGE",
+        default = "integrationos-database"
+    )]
+    pub database_connection_docker_image: String,
+    #[envconfig(
+        from = "K8S_MODE",
+        default = "logger"
+    )]
+    pub k8s_mode: K8sMode,
 }
 
 impl Display for ConnectionsConfig {
@@ -221,4 +232,11 @@ impl Display for Headers {
         )?;
         writeln!(f, "HEADER_RATE_LIMIT_RESET: {}", self.rate_limit_reset)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, AsRefStr)]
+#[strum(serialize_all = "kebab-case")]
+pub enum K8sMode {
+    Real,
+    Logger,
 }

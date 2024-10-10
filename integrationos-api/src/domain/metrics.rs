@@ -81,8 +81,8 @@ impl Metric {
     fn platform(&self) -> &str {
         use MetricType::*;
         match &self.metric_type {
-            Passthrough(c) => &c.platform,
-            Unified(c) => &c.platform,
+            Passthrough(c) => c.platform.as_ref(),
+            Unified(c) => c.platform.as_ref(),
             RateLimited(e, _) => &e.platform,
         }
     }

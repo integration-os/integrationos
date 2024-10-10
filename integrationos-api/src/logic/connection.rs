@@ -17,7 +17,9 @@ use http::HeaderMap;
 use integrationos_domain::{
     algebra::MongoStore,
     connection_definition::ConnectionDefinition,
+    database::DatabaseConnectionConfig,
     domain::connection::SanitizedConnection,
+    environment::Environment,
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
@@ -52,6 +54,15 @@ pub struct CreateConnectionPayload {
     pub identity_type: Option<ConnectionIdentityType>,
     pub group: Option<String>,
     pub name: Option<String>,
+}
+
+#[derive(Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub struct DatabaseConnectionSecret {
+    #[serde(flatten)]
+    pub value: DatabaseConnectionConfig,
+    pub namespace: String,
+    pub service_name: String,
 }
 
 async fn test_connection(
@@ -193,6 +204,16 @@ pub async fn create_connection(
         }
     };
 
+    // TODO: Should be an enum instead, temporary
+    if connection_config.to_connection_type().as_ref() == "database_sql"
+        && connection_config.platform != "postgresql"
+    {
+        return Err(ApplicationError::bad_request(
+            "Unsupported platform for SQL connection",
+            None,
+        ));
+    }
+  
     let uuid = Uuid::new_v4().to_string().replace('-', "");
     let group = payload.group.unwrap_or_else(|| uuid.clone());
     let identity = payload.identity.unwrap_or_else(|| group.clone());
@@ -240,14 +261,13 @@ pub async fn create_connection(
             e
         })?;
 
-    let auth_form_data_value =
-        serde_json::to_value(payload.auth_form_data.clone()).map_err(|e| {
-            error!("Error serializing auth form data for connection: {:?}", e);
+    let auth_form_data = serde_json::to_value(payload.auth_form_data.clone()).map_err(|e| {
+        error!("Error serializing auth form data for connection: {:?}", e);
 
-            ApplicationError::bad_request(&format!("Invalid auth form data: {:?}", e), None)
-        })?;
+        ApplicationError::bad_request(&format!("Invalid auth form data: {:?}", e), None)
+    })?;
 
-    test_connection(&state, &connection_config, &auth_form_data_value)
+    test_connection(&state, &connection_config, &auth_form_data)
         .await
         .map_err(|e| {
             error!(
@@ -257,19 +277,67 @@ pub async fn create_connection(
 
             ApplicationError::bad_request("Invalid connection credentials: {:?}", None)
         })?;
+    let connection_id = Id::new(IdPrefix::Connection, Utc::now());
 
-    let secret_result = state
-        .secrets_client
-        .create(&auth_form_data_value, &access.ownership.id)
-        .await
-        .map_err(|e| {
-            error!("Error creating secret for connection: {:?}", e);
+    let secret_result = match connection_config.to_connection_type() {
+        integrationos_domain::ConnectionType::DatabaseSql {} => {
+            match connection_config.platform.as_ref() {
+                "postgresql" => {
+                    // Override for security reasons
+                    let auth_form_data: HashMap<String, String> = payload
+                        .auth_form_data
+                        .into_iter()
+                        .chain(vec![
+                            ("WORKER_THREADS".into(), "1".into()),
+                            ("INTERNAL_SERVER_ADDRESS".into(), "0.0.0.0:5005".into()),
+                        ])
+                        .collect();
 
-            e
-        })?;
+                    let database_connection_config =
+                        DatabaseConnectionConfig::default().merge_unknown(auth_form_data)?;
+
+                    let namespace = match state.config.environment {
+                        Environment::Test | Environment::Development => "development-db-conns",
+                        Environment::Live | Environment::Production => "production-db-conns",
+                    };
+
+                    let secret = DatabaseConnectionSecret {
+                        value: database_connection_config,
+                        service_name: connection_id.to_string().replace("::", "-"),
+                        namespace: namespace.to_string(),
+                    };
+
+                    let value = serde_json::to_value(secret).map_err(|e| {
+                        error!("Error serializing secret for connection: {:?}", e);
+                        InternalError::serialize_error("Could not serialize secret", None)
+                    })?;
+
+                    state
+                        .secrets_client
+                        .create(&value, &access.ownership.id)
+                        .await?
+                }
+                platform => {
+                    return Err(ApplicationError::bad_request(
+                        format!("Unsupported platform for SQL connection: {platform}").as_ref(),
+                        None,
+                    ))
+                }
+            }
+        }
+        _ => state
+            .secrets_client
+            .create(&auth_form_data, &access.ownership.id)
+            .await
+            .inspect_err(|e| {
+                error!("Error creating secret for connection: {:?}", e);
+            })?,
+    };
+
+    // TODO: if this is a database type then we need to create a k8s pod
 
     let connection = Connection {
-        id: Id::new(IdPrefix::Connection, Utc::now()),
+        id: connection_id,
         platform_version: connection_config.clone().platform_version,
         connection_definition_id: payload.connection_definition_id,
         r#type: connection_config.to_connection_type(),

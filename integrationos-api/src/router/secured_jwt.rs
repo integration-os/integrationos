@@ -12,10 +12,9 @@ use axum::{
     routing::post,
     Router,
 };
+use integrationos_domain::telemetry::log_request_middleware;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
-
-use super::log_request_middleware;
 
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let routes = Router::new()
