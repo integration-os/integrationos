@@ -1417,9 +1417,9 @@ checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
 
 [[package]]
 name = "google-cloud-auth"
-version = "0.16.0"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1112c453c2e155b3e683204ffff52bcc6d6495d04b68d9e90cd24161270c5058"
+checksum = "357160f51a60ec3e32169ad687f4abe0ee1e90c73b449aa5d11256c4f1cf2ff6"
 dependencies = [
  "async-trait",
  "base64 0.21.7",
@@ -1439,15 +1439,15 @@ dependencies = [
 
 [[package]]
 name = "google-cloud-gax"
-version = "0.19.0"
+version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c3eaaad103912825594d674a4b1e556ccbb05a13a6cac17dcfd871997fb760a"
+checksum = "c929076122a1839455cfe6c030278f10a400dd4dacc11d2ca46c20c47dc05996"
 dependencies = [
  "google-cloud-token",
  "http 1.1.0",
  "thiserror",
  "tokio",
- "tokio-retry",
+ "tokio-retry2",
  "tonic",
  "tower",
  "tracing",
@@ -1466,9 +1466,9 @@ dependencies = [
 
 [[package]]
 name = "google-cloud-kms"
-version = "0.4.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65cf74f589152d40619f70da94a052230dd69a7ca1eeb14fe5bd9f939d7946da"
+checksum = "3ed3ae94026ce6ee13f22ad0005cf19ea0de543b78b06583f267e23cb7839d1b"
 dependencies = [
  "async-trait",
  "google-cloud-auth",
@@ -1496,9 +1496,9 @@ dependencies = [
 
 [[package]]
 name = "google-cloud-storage"
-version = "0.20.0"
+version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc0c5b7469142d91bd77959e69375bede324a5def07c7f29aa0d582586cba305"
+checksum = "c7347a3d65cd64db51e5b4aebf0c68c484042948c6d53f856f58269bc9816360"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -2158,7 +2158,7 @@ dependencies = [
 
 [[package]]
 name = "integrationos-domain"
-version = "7.0.0"
+version = "8.0.0"
 dependencies = [
  "aes",
  "anyhow",
@@ -5264,6 +5264,16 @@ checksum = "7f57eb36ecbe0fc510036adff84824dd3c24bb781e21bfa67b69d556aa85214f"
 dependencies = [
  "pin-project",
  "rand",
+ "tokio",
+]
+
+[[package]]
+name = "tokio-retry2"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c093bc28674bb8824c31e3c4dd87512d0b9427ce8ec45f0a38a3bf57c426b636"
+dependencies = [
+ "pin-project",
  "tokio",
 ]
 

@@ -156,4 +156,19 @@ mod tests {
             "ReallyComplicatedAndLongString"
         );
     }
+
+    #[test]
+    fn test_to_kebab_case() {
+        assert_eq!("".kebab_case(), "");
+        assert_eq!("a".kebab_case(), "a");
+        assert_eq!("A".kebab_case(), "a");
+        assert_eq!("hello".kebab_case(), "hello");
+        assert_eq!("Hello".kebab_case(), "hello");
+        assert_eq!("hello_world".kebab_case(), "hello-world");
+        assert_eq!("hello_world_again".kebab_case(), "hello-world-again");
+        assert_eq!(
+            "really_complicated_and_long_string".kebab_case(),
+            "really-complicated-and-long-string"
+        );
+    }
 }

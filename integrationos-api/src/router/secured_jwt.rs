@@ -1,6 +1,6 @@
 use crate::{
     logic::{
-        common_model, connection_definition,
+        common_enum, common_model, connection_definition,
         connection_model_definition::{self},
         connection_model_schema, connection_oauth_definition, openapi, platform, platform_page,
     },
@@ -37,7 +37,8 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         )
         .nest("/platforms", platform::get_router())
         .nest("/platform-pages", platform_page::get_router())
-        .nest("/common-models", common_model::get_router());
+        .nest("/common-models", common_model::get_router())
+        .nest("/common-enums", common_enum::get_router());
 
     routes
         .layer(from_fn_with_state(

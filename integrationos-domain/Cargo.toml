@@ -2,7 +2,7 @@
 name = "integrationos-domain"
 description = "Shared library for IntegrationOS"
 license = "GPL-3.0"
-version = "7.0.0"
+version = "8.0.0"
 edition = "2021"
 repository = "https://github.com/integration-os/integrationos-domain"
 
@@ -33,7 +33,7 @@ fake = { workspace = true, features = [
     "semver",
 ], optional = true }
 futures.workspace = true
-google-cloud-kms = { version = "0.4.0", features = [
+google-cloud-kms = { version = "0.5.1", features = [
     "async-trait",
     "k256",
     "trace",
@@ -54,10 +54,7 @@ percent-encoding = "2.3.1"
 pin-project = "1.1.4"
 prost = "0.12.3"
 rand.workspace = true
-reqwest = { workspace = true, features = [
-    "json",
-    "rustls-tls",
-] }
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 semver = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive", "rc"] }
 serde_json.workspace = true

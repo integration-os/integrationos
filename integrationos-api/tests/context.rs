@@ -459,6 +459,8 @@ impl TestServer {
             active: true,
             identity: None,
             identity_type: None,
+            group: None,
+            name: None,
         };
 
         let res = self
