@@ -56,6 +56,9 @@ pub fn get_router() -> Router<Arc<AppState>> {
 const DEVELOPMENT_NAMESPACE: &str = "default"; //"development-db-conns";
 const PRODUCTION_NAMESPACE: &str = "default"; //"production-db-conns";
 
+const APP_LABEL: &str = "app";
+const DATABASE_TYPE_LABEL: &str = "database-type";
+
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateConnectionPayload {
@@ -387,11 +390,6 @@ async fn generate_k8s_specs_and_secret(
                         ])
                         .collect();
 
-                    // let regex = regex::Regex::new(r"[^a-zA-Z0-9]+").map_err(|e| {
-                    //     error!("Failed to create regex for connection id: {}", e);
-                    //     InternalError::invalid_argument("Invalid connection id", None)
-                    // })?;
-
                     let service_name = generate_service_name(&connection_id)?;
 
                     let namespace = match state.config.environment {
@@ -400,8 +398,8 @@ async fn generate_k8s_specs_and_secret(
                     };
 
                     let mut labels: BTreeMap<String, String> = BTreeMap::new();
-                    labels.insert("app".to_owned(), service_name.clone());
-                    labels.insert("database-type".to_owned(), "postgres".to_owned());
+                    labels.insert(APP_LABEL.to_owned(), service_name.clone());
+                    labels.insert(DATABASE_TYPE_LABEL.to_owned(), "postgres".to_owned());
 
                     let database_connection_config =
                         DatabaseConnectionConfig::default().merge_unknown(auth_form)?;
@@ -416,7 +414,8 @@ async fn generate_k8s_specs_and_secret(
                         ports: vec![ServicePort {
                             name: Some("http".to_owned()),
                             port: 80,
-                            target_port: Some(IntOrString::Int(8080)),
+                            target_port: Some(IntOrString::Int(5005)), // Must match with  the
+                            // container port and the one given in the INTERNAL_SERVER_ADDRESS
                             ..Default::default()
                         }],
                         r#type: "ClusterIP".into(),
