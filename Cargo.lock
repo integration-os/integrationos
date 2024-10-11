@@ -2057,6 +2057,7 @@ dependencies = [
  "openapiv3",
  "rand",
  "redis",
+ "regex",
  "reqwest",
  "schemars",
  "segment",

@@ -163,35 +163,35 @@ impl DatabaseConnectionConfig {
         map.insert("ENVIRONMENT".to_string(), self.environment.to_string());
         map.insert(
             "POSTGRES_USERNAME".to_string(),
-            self.postgres_config.username.clone(),
+            self.postgres_config.postgres_username.clone(),
         );
         map.insert(
             "POSTGRES_PASSWORD".to_string(),
-            self.postgres_config.password.clone(),
+            self.postgres_config.postgres_password.clone(),
         );
         map.insert(
             "POSTGRES_PORT".to_string(),
-            self.postgres_config.port.to_string(),
+            self.postgres_config.postgres_port.to_string(),
         );
         map.insert(
             "POSTGRES_NAME".to_string(),
-            self.postgres_config.name.clone(),
+            self.postgres_config.postgres_name.clone(),
         );
         map.insert(
             "POSTGRES_HOST".to_string(),
-            self.postgres_config.host.clone(),
+            self.postgres_config.postgres_host.clone(),
         );
         map.insert(
             "POSTGRES_SSL".to_string(),
-            self.postgres_config.ssl.to_string(),
+            self.postgres_config.postgres_ssl.to_string(),
         );
         map.insert(
             "POSTGRES_WAIT_TIMEOUT_IN_MILLIS".to_string(),
-            self.postgres_config.timeout.to_string(),
+            self.postgres_config.postgres_timeout.to_string(),
         );
         map.insert(
             "POSTGRES_POOL_SIZE".to_string(),
-            self.postgres_config.pool_size.to_string(),
+            self.postgres_config.postgres_pool_size.to_string(),
         );
         map.insert(
             "DATABASE_CONNECTION_TYPE".to_string(),
@@ -234,21 +234,21 @@ pub enum DatabaseConnectionType {
 #[derive(Debug, Clone, Envconfig, Default, Serialize, Deserialize, PartialEq)]
 pub struct PostgresConfig {
     #[envconfig(env = "POSTGRES_USERNAME")]
-    pub username: String,
+    pub postgres_username: String,
     #[envconfig(env = "POSTGRES_PASSWORD")]
-    pub password: String,
+    pub postgres_password: String,
     #[envconfig(env = "POSTGRES_PORT")]
-    pub port: u16,
+    pub postgres_port: u16,
     #[envconfig(env = "POSTGRES_NAME")]
-    pub name: String,
+    pub postgres_name: String,
     #[envconfig(env = "POSTGRES_HOST")]
-    pub host: String,
+    pub postgres_host: String,
     #[envconfig(env = "POSTGRES_SSL", default = "false")]
-    pub ssl: bool,
+    pub postgres_ssl: bool,
     #[envconfig(env = "POSTGRES_WAIT_TIMEOUT_IN_MILLIS", default = "1000")]
-    pub timeout: u64,
+    pub postgres_timeout: u64,
     #[envconfig(env = "POSTGRES_POOL_SIZE", default = "10")]
-    pub pool_size: u32,
+    pub postgres_pool_size: u32,
 }
 
 impl Display for PostgresConfig {
@@ -257,10 +257,10 @@ impl Display for PostgresConfig {
         writeln!(f, "POSTGRES_PASSWORD: ****")?;
         writeln!(f, "POSTGRES_PORT: ****")?;
         writeln!(f, "POSTGRES_HOST: ****")?;
-        writeln!(f, "POSTGRES_NAME: {}", self.name)?;
-        writeln!(f, "POSTGRES_SSL: {}", self.ssl)?;
-        writeln!(f, "POSTGRES_WAIT_TIMEOUT_IN_MILLIS: {}", self.timeout)?;
-        writeln!(f, "POSTGRES_POOL_SIZE: {}", self.pool_size)
+        writeln!(f, "POSTGRES_NAME: {}", self.postgres_name)?;
+        writeln!(f, "POSTGRES_SSL: {}", self.postgres_ssl)?;
+        writeln!(f, "POSTGRES_WAIT_TIMEOUT_IN_MILLIS: {}", self.postgres_timeout)?;
+        writeln!(f, "POSTGRES_POOL_SIZE: {}", self.postgres_pool_size)
     }
 }
 

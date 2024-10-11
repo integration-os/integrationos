@@ -53,8 +53,8 @@ pub fn get_router() -> Router<Arc<AppState>> {
         .route("/:id", axum_delete(delete_connection))
 }
 
-const DEVELOPMENT_NAMESPACE: &str = "development-db-conns";
-const PRODUCTION_NAMESPACE: &str = "production-db-conns";
+const DEVELOPMENT_NAMESPACE: &str = "default"; //"development-db-conns";
+const PRODUCTION_NAMESPACE: &str = "default"; //"production-db-conns";
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
 #[serde(rename_all = "camelCase")]
@@ -387,7 +387,12 @@ async fn generate_k8s_specs_and_secret(
                         ])
                         .collect();
 
-                    let service_name = connection_id.to_string().replace("::", "-");
+                    // let regex = regex::Regex::new(r"[^a-zA-Z0-9]+").map_err(|e| {
+                    //     error!("Failed to create regex for connection id: {}", e);
+                    //     InternalError::invalid_argument("Invalid connection id", None)
+                    // })?;
+
+                    let service_name = generate_service_name(&connection_id)?;
 
                     let namespace = match state.config.environment {
                         Environment::Test | Environment::Development => DEVELOPMENT_NAMESPACE,
@@ -476,6 +481,34 @@ async fn generate_k8s_specs_and_secret(
             None,
         ),
     })
+}
+
+pub fn generate_service_name(connection_id: &str) -> Result<String, IntegrationOSError> {
+    // Create regex to match non-alphanumeric characters
+    let regex = regex::Regex::new(r"[^a-zA-Z0-9]+").map_err(|e| {
+        error!("Failed to create regex for connection id: {}", e);
+        InternalError::invalid_argument("Invalid connection id", None)
+    })?;
+
+    // Convert connection_id to lowercase and replace special characters with '-'
+    let mut service_name = regex
+        .replace_all(&connection_id.to_lowercase(), "-")
+        .to_string();
+
+    // Trim leading/trailing '-' and ensure it starts with a letter
+    service_name = service_name.trim_matches('-').to_string();
+
+    // Ensure it starts with a letter
+    if !service_name.chars().next().unwrap_or(' ').is_alphabetic() {
+        service_name.insert(0, 'a'); // Prepend 'a' if it doesn't start with a letter
+    }
+
+    // Truncate to meet Kubernetes' max DNS-1035 label length (63 characters)
+    if service_name.len() > 63 {
+        service_name = service_name[..63].to_string();
+    }
+
+    Ok(service_name)
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]

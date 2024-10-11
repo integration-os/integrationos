@@ -212,7 +212,6 @@ async fn create_deployment_impl(
     client: Client,
     params: DeploymentSpecParams,
 ) -> Result<Deployment, IntegrationOSError> {
-
     // Definition of the deployment. Alternatively, a YAML representation could be used as well.
     let deployment: Deployment = Deployment {
         metadata: ObjectMeta {

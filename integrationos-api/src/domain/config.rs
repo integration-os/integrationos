@@ -1,11 +1,11 @@
 use envconfig::Envconfig;
 use integrationos_domain::{cache::CacheConfig, environment::Environment};
 use integrationos_domain::{database::DatabaseConfig, secrets::SecretsConfig};
-use strum::{AsRefStr, EnumString};
 use std::{
     fmt::{Display, Formatter, Result},
     net::SocketAddr,
 };
+use strum::{AsRefStr, EnumString};
 
 #[derive(Envconfig, Clone)]
 pub struct ConnectionsConfig {
@@ -90,10 +90,7 @@ pub struct ConnectionsConfig {
         default = "integrationos-database"
     )]
     pub database_connection_docker_image: String,
-    #[envconfig(
-        from = "K8S_MODE",
-        default = "logger"
-    )]
+    #[envconfig(from = "K8S_MODE", default = "logger")]
     pub k8s_mode: K8sMode,
 }
 

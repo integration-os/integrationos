@@ -21,20 +21,20 @@ pub struct PostgresDatabaseConnection {
 impl PostgresDatabaseConnection {
     pub async fn new(configuration: &DatabaseConnectionConfig) -> Result<Self> {
         let options = PgConnectOptions::new()
-            .username(&configuration.postgres_config.username)
-            .password(&configuration.postgres_config.password)
-            .host(&configuration.postgres_config.host)
-            .ssl_mode(if configuration.postgres_config.ssl {
+            .username(&configuration.postgres_config.postgres_username)
+            .password(&configuration.postgres_config.postgres_password)
+            .host(&configuration.postgres_config.postgres_host)
+            .ssl_mode(if configuration.postgres_config.postgres_ssl {
                 PgSslMode::Require
             } else {
                 PgSslMode::Disable
             })
-            .port(configuration.postgres_config.port);
+            .port(configuration.postgres_config.postgres_port);
 
         let pool = PgPoolOptions::new()
-            .max_connections(configuration.postgres_config.pool_size)
-            .acquire_timeout(Duration::from_millis(configuration.postgres_config.timeout))
-            .connect_with(options.database(&configuration.postgres_config.name))
+            .max_connections(configuration.postgres_config.postgres_pool_size)
+            .acquire_timeout(Duration::from_millis(configuration.postgres_config.postgres_timeout))
+            .connect_with(options.database(&configuration.postgres_config.postgres_name))
             .await?;
 
         Ok(Self { pool })
