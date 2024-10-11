@@ -154,8 +154,6 @@ impl K8sDriver for K8sDriverLogger {
 pub struct ServiceSpecParams {
     /// Ports to expose
     pub ports: Vec<ServicePort>,
-    /// Selector to match against
-    pub selector: BTreeMap<String, String>,
     /// Type of service: ClusterIP, NodePort, LoadBalance, ExternalName
     pub r#type: String,
     /// Labels to apply to the service
@@ -169,13 +167,7 @@ pub struct ServiceSpecParams {
 async fn create_service_impl(
     client: Client,
     params: ServiceSpecParams,
-    // name: &str,
-    // namespace: &str,
 ) -> Result<Service, IntegrationOSError> {
-    // let mut labels: BTreeMap<String, String> = BTreeMap::new();
-    // labels.insert("app".to_owned(), params.name);
-    // labels.insert("database-type".to_owned(), "postgres".to_owned());
-
     let service: Service = Service {
         metadata: ObjectMeta {
             name: Some(params.name),
@@ -184,12 +176,6 @@ async fn create_service_impl(
             ..Default::default()
         },
         spec: Some(ServiceSpec {
-            // ServicePort {
-            // name: Some("http".to_owned()),
-            // port: 80,
-            // target_port: Some(IntOrString::Int(8080)),
-            // ..Default::default()
-            // }
             ports: Some(params.ports),
             selector: Some(params.labels),
             type_: Some(params.r#type),
@@ -208,8 +194,6 @@ async fn create_service_impl(
 pub struct DeploymentSpecParams {
     /// Number of replicas to create
     pub replicas: i32,
-    /// Selector to match against
-    pub selector: BTreeMap<String, String>,
     /// Labels to apply to the deployment
     pub labels: BTreeMap<String, String>,
     /// Namespace the deployment should reside in
@@ -228,9 +212,6 @@ async fn create_deployment_impl(
     client: Client,
     params: DeploymentSpecParams,
 ) -> Result<Deployment, IntegrationOSError> {
-    // let mut labels: BTreeMap<String, String> = BTreeMap::new();
-    // labels.insert("app".to_owned(), name.to_owned());
-    // labels.insert("database-type".to_owned(), "postgres".to_owned());
 
     // Definition of the deployment. Alternatively, a YAML representation could be used as well.
     let deployment: Deployment = Deployment {

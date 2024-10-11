@@ -61,6 +61,8 @@ pub struct ConnectionsConfig {
         from = "JWT_SECRET",
         default = "2thZ2UiOnsibmFtZSI6IlN0YXJ0dXBsa3NoamRma3NqZGhma3NqZGhma3NqZG5jhYtggfaP9ubmVjdGlvbnMiOjUwMDAwMCwibW9kdWxlcyI6NSwiZW5kcG9pbnRzIjo3b4e05e2-f050-401f-9822-44f43f71753c"
     )]
+    /// This is the admin secret for the API. Be sure this value is not the one use to generate
+    /// tokens for the users as it gives access to sensitive admin endpoints.
     pub jwt_secret: String,
     #[envconfig(from = "BURST_RATE_LIMIT", default = "1")]
     pub burst_rate_limit: u64,

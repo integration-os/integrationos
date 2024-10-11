@@ -147,7 +147,58 @@ impl DatabaseConnectionConfig {
         }
 
         Ok(self)
+    }
 
+    pub fn as_hashmap(&self) -> HashMap<String, String> {
+        let mut map = HashMap::new();
+
+        map.insert(
+            "WORKER_THREADS".to_string(),
+            self.worker_threads.unwrap_or(1).to_string(),
+        );
+        map.insert(
+            "INTERNAL_SERVER_ADDRESS".to_string(),
+            self.address.to_string(),
+        );
+        map.insert("ENVIRONMENT".to_string(), self.environment.to_string());
+        map.insert(
+            "POSTGRES_USERNAME".to_string(),
+            self.postgres_config.username.clone(),
+        );
+        map.insert(
+            "POSTGRES_PASSWORD".to_string(),
+            self.postgres_config.password.clone(),
+        );
+        map.insert(
+            "POSTGRES_PORT".to_string(),
+            self.postgres_config.port.to_string(),
+        );
+        map.insert(
+            "POSTGRES_NAME".to_string(),
+            self.postgres_config.name.clone(),
+        );
+        map.insert(
+            "POSTGRES_HOST".to_string(),
+            self.postgres_config.host.clone(),
+        );
+        map.insert(
+            "POSTGRES_SSL".to_string(),
+            self.postgres_config.ssl.to_string(),
+        );
+        map.insert(
+            "POSTGRES_WAIT_TIMEOUT_IN_MILLIS".to_string(),
+            self.postgres_config.timeout.to_string(),
+        );
+        map.insert(
+            "POSTGRES_POOL_SIZE".to_string(),
+            self.postgres_config.pool_size.to_string(),
+        );
+        map.insert(
+            "DATABASE_CONNECTION_TYPE".to_string(),
+            self.database_connection_type.as_ref().into(),
+        );
+
+        map
     }
 }
 
