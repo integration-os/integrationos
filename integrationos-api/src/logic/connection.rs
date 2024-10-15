@@ -1,7 +1,7 @@
 use super::{delete, event_access::DEFAULT_NAMESPACE, read, PublicExt, RequestExt};
 use crate::{
     helper::{
-        generate_service_name, DeploymentSpecParams, NamespaceScope, ServiceName, ServiceSpecParams,
+        generate_service_name, DeploymentSpecParams, NamespaceScope, ServiceSpecParams,
     },
     logic::event_access::{
         generate_event_access, get_client_throughput, CreateEventAccessPayloadWithOwnership,
@@ -75,8 +75,8 @@ pub struct CreateConnectionPayload {
 pub struct DatabaseConnectionSecret {
     #[serde(flatten)]
     pub value: DatabaseConnectionConfig,
-    pub namespace: NamespaceScope,
-    pub service_name: ServiceName,
+    pub namespace: String,
+    pub service_name: String,
 }
 
 async fn test_connection(
@@ -405,8 +405,8 @@ async fn generate_k8s_specs_and_secret(
 
                     let secret = DatabaseConnectionSecret {
                         value: database_connection_config,
-                        service_name: service_name.clone(),
-                        namespace: namespace.clone(),
+                        service_name: service_name.to_string(),
+                        namespace: namespace.to_string(),
                     };
 
                     let service = ServiceSpecParams {
