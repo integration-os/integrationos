@@ -259,7 +259,11 @@ impl Display for PostgresConfig {
         writeln!(f, "POSTGRES_HOST: ****")?;
         writeln!(f, "POSTGRES_NAME: {}", self.postgres_name)?;
         writeln!(f, "POSTGRES_SSL: {}", self.postgres_ssl)?;
-        writeln!(f, "POSTGRES_WAIT_TIMEOUT_IN_MILLIS: {}", self.postgres_timeout)?;
+        writeln!(
+            f,
+            "POSTGRES_WAIT_TIMEOUT_IN_MILLIS: {}",
+            self.postgres_timeout
+        )?;
         writeln!(f, "POSTGRES_POOL_SIZE: {}", self.postgres_pool_size)
     }
 }

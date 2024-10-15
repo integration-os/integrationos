@@ -33,7 +33,9 @@ impl PostgresDatabaseConnection {
 
         let pool = PgPoolOptions::new()
             .max_connections(configuration.postgres_config.postgres_pool_size)
-            .acquire_timeout(Duration::from_millis(configuration.postgres_config.postgres_timeout))
+            .acquire_timeout(Duration::from_millis(
+                configuration.postgres_config.postgres_timeout,
+            ))
             .connect_with(options.database(&configuration.postgres_config.postgres_name))
             .await?;
 
