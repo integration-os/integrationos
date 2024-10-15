@@ -1,5 +1,5 @@
 use axum::async_trait;
-use integrationos_domain::{IntegrationOSError, InternalError, Unit};
+use integrationos_domain::{Id, IntegrationOSError, InternalError, Unit};
 use k8s_openapi::{
     api::{
         apps::v1::{Deployment, DeploymentSpec},
@@ -15,9 +15,31 @@ use kube::{
     api::{DeleteParams, ObjectMeta, PostParams},
     Api, Client, Resource,
 };
-use serde::de::DeserializeOwned;
-use std::collections::BTreeMap;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fmt::Debug;
+use std::{collections::BTreeMap, fmt::Display};
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum NamespaceScope {
+    Development,
+    Production,
+}
+
+impl AsRef<str> for NamespaceScope {
+    fn as_ref(&self) -> &str {
+        match self {
+            NamespaceScope::Development => "development-db-conns",
+            NamespaceScope::Production => "production-db-conns",
+        }
+    }
+}
+
+impl Display for NamespaceScope {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_ref())
+    }
+}
 
 #[async_trait]
 pub trait K8sDriver: Send + Sync {
@@ -29,7 +51,11 @@ pub trait K8sDriver: Send + Sync {
         &self,
         params: DeploymentSpecParams,
     ) -> Result<Deployment, IntegrationOSError>;
-    async fn delete_all(&self, namespace: &str, name: &str) -> Result<Unit, IntegrationOSError>;
+    async fn delete_all(
+        &self,
+        namespace: NamespaceScope,
+        name: ServiceName,
+    ) -> Result<Unit, IntegrationOSError>;
     async fn coordinator(
         &self,
         service: ServiceSpecParams,
@@ -67,7 +93,11 @@ impl K8sDriver for K8sDriverImpl {
         create_deployment_impl(self.client.clone(), params).await
     }
 
-    async fn delete_all(&self, namespace: &str, name: &str) -> Result<Unit, IntegrationOSError> {
+    async fn delete_all(
+        &self,
+        namespace: NamespaceScope,
+        name: ServiceName,
+    ) -> Result<Unit, IntegrationOSError> {
         delete_all_impl(self.client.clone(), namespace, name).await
     }
 
@@ -122,8 +152,16 @@ impl K8sDriver for K8sDriverLogger {
     /// # Arguments:
     /// - `name` - Name of the deployment to delete
     /// - `namespace` - Namespace the existing deployment resides in
-    async fn delete_all(&self, namespace: &str, name: &str) -> Result<Unit, IntegrationOSError> {
-        tracing::info!("Deleting k8s resource {} in namespace {}", name, namespace);
+    async fn delete_all(
+        &self,
+        namespace: NamespaceScope,
+        name: ServiceName,
+    ) -> Result<Unit, IntegrationOSError> {
+        tracing::info!(
+            "Deleting k8s resource {} in namespace {}",
+            name.as_ref(),
+            namespace.as_ref()
+        );
         Ok(())
     }
 
@@ -159,9 +197,9 @@ pub struct ServiceSpecParams {
     /// Labels to apply to the service
     pub labels: BTreeMap<String, String>,
     /// Annotations to apply to the service. Has to match with the deployment metadata
-    pub name: String,
+    pub name: ServiceName,
     /// Namespace the service should reside in
-    pub namespace: String,
+    pub namespace: NamespaceScope,
 }
 
 async fn create_service_impl(
@@ -170,9 +208,9 @@ async fn create_service_impl(
 ) -> Result<Service, IntegrationOSError> {
     let service: Service = Service {
         metadata: ObjectMeta {
-            name: Some(params.name),
+            name: Some(params.name.as_ref().to_string()),
             labels: Some(params.labels.clone()),
-            namespace: Some(params.namespace.to_owned()),
+            namespace: Some(params.namespace.as_ref().to_owned()),
             ..Default::default()
         },
         spec: Some(ServiceSpec {
@@ -184,7 +222,7 @@ async fn create_service_impl(
         ..Default::default()
     };
 
-    let service_api: Api<Service> = Api::namespaced(client, &params.namespace);
+    let service_api: Api<Service> = Api::namespaced(client, params.namespace.as_ref());
     service_api
         .create(&PostParams::default(), &service)
         .await
@@ -197,7 +235,7 @@ pub struct DeploymentSpecParams {
     /// Labels to apply to the deployment
     pub labels: BTreeMap<String, String>,
     /// Namespace the deployment should reside in
-    pub namespace: String,
+    pub namespace: NamespaceScope,
     /// Image to use for the deployment
     pub image: String,
     /// Environment variables to apply
@@ -205,7 +243,7 @@ pub struct DeploymentSpecParams {
     /// Ports to expose
     pub ports: Vec<ContainerPort>,
     /// Name of the deployment to create
-    pub name: String,
+    pub name: ServiceName,
 }
 
 async fn create_deployment_impl(
@@ -215,8 +253,8 @@ async fn create_deployment_impl(
     // Definition of the deployment. Alternatively, a YAML representation could be used as well.
     let deployment: Deployment = Deployment {
         metadata: ObjectMeta {
-            name: Some(params.name.clone()),
-            namespace: Some(params.namespace.clone()),
+            name: Some(params.name.as_ref().to_string()),
+            namespace: Some(params.namespace.as_ref().to_owned()),
             labels: Some(params.labels.clone()),
             ..ObjectMeta::default()
         },
@@ -229,18 +267,9 @@ async fn create_deployment_impl(
             template: PodTemplateSpec {
                 spec: Some(PodSpec {
                     containers: vec![Container {
-                        name: params.name,
+                        name: params.name.as_ref().to_string(),
                         image: Some(params.image),
-                        // vec![ContainerPort {
-                        //  container_port: 5005,
-                        //  ..ContainerPort::default()
-                        // }]
                         ports: Some(params.ports),
-                        // vec![EnvVar {
-                        //     name: "PORT".to_owned(),
-                        //     value: Some("8080".to_owned()),
-                        //     ..EnvVar::default()
-                        // }]
                         env: Some(params.env),
                         ..Container::default()
                     }],
@@ -256,7 +285,7 @@ async fn create_deployment_impl(
         ..Deployment::default()
     };
 
-    let deployment_api: Api<Deployment> = Api::namespaced(client, &params.namespace);
+    let deployment_api: Api<Deployment> = Api::namespaced(client, params.namespace.as_ref());
     deployment_api
         .create(&PostParams::default(), &deployment)
         .await
@@ -281,11 +310,11 @@ where
 
 pub async fn delete_all_impl(
     client: Client,
-    namespace: &str,
-    name: &str,
+    namespace: NamespaceScope,
+    name: ServiceName,
 ) -> Result<Unit, IntegrationOSError> {
-    delete_resource_impl::<Service>(client.clone(), name, namespace).await?;
-    delete_resource_impl::<Deployment>(client.clone(), name, namespace).await?;
+    delete_resource_impl::<Service>(client.clone(), name.as_ref(), namespace.as_ref()).await?;
+    delete_resource_impl::<Deployment>(client.clone(), name.as_ref(), namespace.as_ref()).await?;
 
     Ok(())
 }
@@ -315,7 +344,12 @@ pub async fn coordinator_impl(
                 }
                 Err(e) => {
                     tracing::error!("Error creating deployment. Cleaning up service {name} in namespace {namespace}: {e}");
-                    delete_resource_impl::<Service>(client.clone(), &name, &namespace).await?;
+                    delete_resource_impl::<Service>(
+                        client.clone(),
+                        name.as_ref(),
+                        namespace.as_ref(),
+                    )
+                    .await?;
                     Err(e)
                 }
             }
@@ -325,4 +359,48 @@ pub async fn coordinator_impl(
             Err(e)
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ServiceName(String);
+
+impl AsRef<str> for ServiceName {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Display for ServiceName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_ref())
+    }
+}
+
+pub fn generate_service_name(connection_id: &Id) -> Result<ServiceName, IntegrationOSError> {
+    let connection_id = connection_id.to_string();
+    // Create regex to match non-alphanumeric characters
+    let regex = regex::Regex::new(r"[^a-zA-Z0-9]+").map_err(|e| {
+        tracing::error!("Failed to create regex for connection id: {}", e);
+        InternalError::invalid_argument("Invalid connection id", None)
+    })?;
+
+    // Convert connection_id to lowercase and replace special characters with '-'
+    let mut service_name = regex
+        .replace_all(&connection_id.to_lowercase(), "-")
+        .to_string();
+
+    // Trim leading/trailing '-' and ensure it starts with a letter
+    service_name = service_name.trim_matches('-').to_string();
+
+    // Ensure it starts with a letter
+    if !service_name.chars().next().unwrap_or(' ').is_alphabetic() {
+        service_name.insert(0, 'a'); // Prepend 'a' if it doesn't start with a letter
+    }
+
+    // Truncate to meet Kubernetes' max DNS-1035 label length (63 characters)
+    if service_name.len() > 63 {
+        service_name = service_name[..63].to_string();
+    }
+
+    Ok(ServiceName(service_name))
 }

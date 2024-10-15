@@ -1,6 +1,8 @@
 use super::{delete, event_access::DEFAULT_NAMESPACE, read, PublicExt, RequestExt};
 use crate::{
-    helper::{DeploymentSpecParams, ServiceSpecParams},
+    helper::{
+        generate_service_name, DeploymentSpecParams, NamespaceScope, ServiceName, ServiceSpecParams,
+    },
     logic::event_access::{
         generate_event_access, get_client_throughput, CreateEventAccessPayloadWithOwnership,
     },
@@ -26,8 +28,8 @@ use integrationos_domain::{
     ownership::Ownership,
     record_metadata::RecordMetadata,
     settings::Settings,
-    ApplicationError, Connection, ConnectionIdentityType, IntegrationOSError, InternalError,
-    Secret, Throughput,
+    ApplicationError, Connection, ConnectionIdentityType, ConnectionType, IntegrationOSError,
+    InternalError, Secret, Throughput,
 };
 use k8s_openapi::{
     api::core::v1::{ContainerPort, EnvVar, ServicePort},
@@ -53,9 +55,6 @@ pub fn get_router() -> Router<Arc<AppState>> {
         .route("/:id", axum_delete(delete_connection))
 }
 
-const DEVELOPMENT_NAMESPACE: &str = "default"; //"development-db-conns";
-const PRODUCTION_NAMESPACE: &str = "default"; //"production-db-conns";
-
 const APP_LABEL: &str = "app";
 const DATABASE_TYPE_LABEL: &str = "database-type";
 
@@ -76,8 +75,8 @@ pub struct CreateConnectionPayload {
 pub struct DatabaseConnectionSecret {
     #[serde(flatten)]
     pub value: DatabaseConnectionConfig,
-    pub namespace: String,
-    pub service_name: String,
+    pub namespace: NamespaceScope,
+    pub service_name: ServiceName,
 }
 
 async fn test_connection(
@@ -290,7 +289,7 @@ pub async fn create_connection(
     let connection_id = Id::new(IdPrefix::Connection, Utc::now());
 
     let (secret_result, service, deployment) = generate_k8s_specs_and_secret(
-        connection_id.to_string(),
+        &connection_id,
         &state,
         &connection_config,
         &payload,
@@ -361,7 +360,7 @@ pub async fn create_connection(
 }
 
 async fn generate_k8s_specs_and_secret(
-    connection_id: String,
+    connection_id: &Id,
     state: &AppState,
     connection_config: &ConnectionDefinition,
     payload: &CreateConnectionPayload,
@@ -390,15 +389,15 @@ async fn generate_k8s_specs_and_secret(
                         ])
                         .collect();
 
-                    let service_name = generate_service_name(&connection_id)?;
+                    let service_name = generate_service_name(connection_id)?;
 
                     let namespace = match state.config.environment {
-                        Environment::Test | Environment::Development => DEVELOPMENT_NAMESPACE,
-                        Environment::Live | Environment::Production => PRODUCTION_NAMESPACE,
+                        Environment::Test | Environment::Development => NamespaceScope::Development,
+                        Environment::Live | Environment::Production => NamespaceScope::Production,
                     };
 
                     let mut labels: BTreeMap<String, String> = BTreeMap::new();
-                    labels.insert(APP_LABEL.to_owned(), service_name.clone());
+                    labels.insert(APP_LABEL.to_owned(), service_name.as_ref().to_string());
                     labels.insert(DATABASE_TYPE_LABEL.to_owned(), "postgres".to_owned());
 
                     let database_connection_config =
@@ -407,7 +406,7 @@ async fn generate_k8s_specs_and_secret(
                     let secret = DatabaseConnectionSecret {
                         value: database_connection_config,
                         service_name: service_name.clone(),
-                        namespace: namespace.to_string(),
+                        namespace: namespace.clone(),
                     };
 
                     let service = ServiceSpecParams {
@@ -421,13 +420,13 @@ async fn generate_k8s_specs_and_secret(
                         r#type: "ClusterIP".into(),
                         labels: labels.clone(),
                         name: service_name.clone(),
-                        namespace: namespace.to_string(),
+                        namespace: namespace.clone(),
                     };
 
                     let deployment = DeploymentSpecParams {
                         replicas: 1,
                         labels,
-                        namespace: namespace.to_string(),
+                        namespace,
                         image: state.config.database_connection_docker_image.clone(),
                         env: {
                             secret.value.as_hashmap().iter().fold(
@@ -480,34 +479,6 @@ async fn generate_k8s_specs_and_secret(
             None,
         ),
     })
-}
-
-pub fn generate_service_name(connection_id: &str) -> Result<String, IntegrationOSError> {
-    // Create regex to match non-alphanumeric characters
-    let regex = regex::Regex::new(r"[^a-zA-Z0-9]+").map_err(|e| {
-        error!("Failed to create regex for connection id: {}", e);
-        InternalError::invalid_argument("Invalid connection id", None)
-    })?;
-
-    // Convert connection_id to lowercase and replace special characters with '-'
-    let mut service_name = regex
-        .replace_all(&connection_id.to_lowercase(), "-")
-        .to_string();
-
-    // Trim leading/trailing '-' and ensure it starts with a letter
-    service_name = service_name.trim_matches('-').to_string();
-
-    // Ensure it starts with a letter
-    if !service_name.chars().next().unwrap_or(' ').is_alphabetic() {
-        service_name.insert(0, 'a'); // Prepend 'a' if it doesn't start with a letter
-    }
-
-    // Truncate to meet Kubernetes' max DNS-1035 label length (63 characters)
-    if service_name.len() > 63 {
-        service_name = service_name[..63].to_string();
-    }
-
-    Ok(service_name)
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
@@ -602,6 +573,15 @@ pub async fn update_connection(
             }
         };
 
+        if connection_config.r#type == ConnectionDefinitionType::DatabaseSql
+            && connection_config.platform != "postgresql"
+        {
+            return Err(ApplicationError::bad_request(
+                "Unsupported platform for SQL connection",
+                None,
+            ));
+        }
+
         test_connection(&state, &connection_config, &auth_form_data_value)
             .await
             .map_err(|e| {
@@ -676,6 +656,17 @@ pub async fn delete_connection(
         State(state.clone()),
     )
     .await?;
+
+    if let ConnectionType::DatabaseSql {} = connection.args.r#type {
+        if connection.args.platform.as_ref() != "postgresql" {
+            let namespace = match state.config.environment {
+                Environment::Test | Environment::Development => NamespaceScope::Development,
+                Environment::Live | Environment::Production => NamespaceScope::Production,
+            };
+            let service_name = generate_service_name(&connection.args.id)?;
+            state.k8s_client.delete_all(namespace, service_name).await?;
+        }
+    };
 
     let partial_cursor_key = format!("{}::{}::{}", access.ownership.id, id, connection.args.key);
 
