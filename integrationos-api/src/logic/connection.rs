@@ -656,7 +656,7 @@ pub async fn delete_connection(
     .await?;
 
     if let ConnectionType::DatabaseSql {} = connection.args.r#type {
-        if connection.args.platform.as_ref() != "postgresql" {
+        if connection.args.platform.as_ref() == "postgresql" {
             let namespace = match state.config.environment {
                 Environment::Test | Environment::Development => NamespaceScope::Development,
                 Environment::Live | Environment::Production => NamespaceScope::Production,

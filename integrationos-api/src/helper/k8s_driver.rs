@@ -304,7 +304,8 @@ where
     let api: Api<T> = Api::namespaced(client, namespace);
     api.delete(name, &DeleteParams::default())
         .await
-        .map_err(|e| InternalError::io_err(&format!("Could not delete deployment: {e}"), None))?;
+        .map_err(|e| InternalError::io_err(&format!("Could not delete deployment: {e}"), None))?
+        .map_right(|_| tracing::info!("Deleted deployment {name} in namespace {namespace}"));
     Ok(())
 }
 
