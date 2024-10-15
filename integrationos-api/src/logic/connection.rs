@@ -1,8 +1,6 @@
 use super::{delete, event_access::DEFAULT_NAMESPACE, read, PublicExt, RequestExt};
 use crate::{
-    helper::{
-        generate_service_name, DeploymentSpecParams, NamespaceScope, ServiceSpecParams,
-    },
+    helper::{generate_service_name, DeploymentSpecParams, NamespaceScope, ServiceSpecParams},
     logic::event_access::{
         generate_event_access, get_client_throughput, CreateEventAccessPayloadWithOwnership,
     },
