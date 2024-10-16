@@ -105,6 +105,7 @@ where
     let v: Result<i32, _> = Decode::<Postgres>::decode(value);
     match v {
         Ok(val) => s.serialize_i32(val),
+
         Err(e) => Err(Error::custom(format!("Failed to decode INT4: {}", e))),
     }
 }

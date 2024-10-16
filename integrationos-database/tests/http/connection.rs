@@ -1,32 +1,78 @@
-// use super::*;
-//     use crate::domain::config::StorageConfig;
-//     use envconfig::Envconfig;
-//     use integrationos_domain::IntegrationOSError;
-//     use serde_json::Number;
-//     use std::sync::OnceLock;
-//     use testcontainers_modules::{
-//         postgres::Postgres,
-//         testcontainers::{clients::Cli as Docker, Container},
-//     };
-//     static DOCKER: OnceLock<Docker> = OnceLock::new();
-//     static POSTGRES: OnceLock<Container<'static, Postgres>> = OnceLock::new();
-//     #[tokio::test]
-//     async fn test_execute_raw() -> Result<(), IntegrationOSError> {
-//         let docker = DOCKER.get_or_init(Default::default);
-//         let postgres = POSTGRES.get_or_init(|| docker.run(Postgres::default()));
-//         let port = postgres.get_host_port_ipv4(5432);
-//         println!("Connecting to postgres at port {port}");
-//         let storage = StorageConfig::init_from_hashmap(&HashMap::from([
-//             ("DATABASE_PORT".to_string(), port.to_string()),
-//             ("STORAGE_CONFIG_TYPE".to_string(), "postgres".to_string()),
-//         ]))
-//         .expect("Failed to initialize storage config");
-//         let postgres = PostgresStorage::new(&storage).await?;
-//         let query = "SELECT 1".to_string();
-//         let result = postgres.execute_raw(&query).await?;
-//         let value = result.first().expect("Failed to get row");
-//         println!("{value:?}");
-//         assert_eq!(result.len(), 1);
-//         assert_eq!(value.get("1"), Some(&Value::Number(Number::from(1))));
-//         Ok(())
-//     }
+use crate::context::TestServer;
+use http::{Method, StatusCode};
+use integrationos_domain::IntegrationOSError;
+use serde_json::Value;
+
+#[tokio::test]
+async fn test_execute_probe() -> Result<(), IntegrationOSError> {
+    let server = TestServer::new().await?;
+    let result = server
+        .send_request::<Value, Value>("storage/probe", Method::GET, None)
+        .await?;
+
+    assert_eq!(result.code, StatusCode::OK);
+
+    let data = result.data.to_string();
+    assert!(data.contains("[{\"?column?\":1}]"));
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_execute_raw() -> Result<(), IntegrationOSError> {
+    let server = TestServer::new().await?;
+
+    let create_query =
+        "CREATE TABLE IF NOT EXISTS users (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL);";
+    let insert_query = "INSERT INTO users (id, name) VALUES (1, 'John');";
+    let select_query = "SELECT * FROM users;";
+    let drop_query = "DROP TABLE users;";
+
+    let path = format!("storage?query={}", create_query);
+    let create_result = server
+        .send_request::<Value, Value>(&path, Method::POST, None)
+        .await?;
+    assert_eq!(create_result.code, StatusCode::OK);
+
+    let path = format!("storage?query={}", insert_query);
+    let insert_result = server
+        .send_request::<Value, Value>(&path, Method::POST, None)
+        .await?;
+    assert_eq!(insert_result.code, StatusCode::OK);
+
+    let path = format!("storage?query={}", select_query);
+    let select_result = server
+        .send_request::<Value, Value>(&path, Method::POST, None)
+        .await?;
+    assert_eq!(select_result.code, StatusCode::OK);
+    let data = select_result
+        .data
+        .as_array()
+        .expect("Failed to get array")
+        .first()
+        .expect("Failed to get first element");
+
+    let name = data.as_object().expect("Failed to get object")["name"]
+        .as_str()
+        .expect("Failed to get name");
+    assert_eq!(name, "John");
+
+    let id = data.as_object().expect("Failed to get object")["id"]
+        .as_i64()
+        .expect("Failed to get id");
+    assert_eq!(id, 1);
+
+    let path = format!("storage?query={}", drop_query);
+    let drop_result = server
+        .send_request::<Value, Value>(&path, Method::POST, None)
+        .await?;
+    assert_eq!(drop_result.code, StatusCode::OK);
+
+    // Test that the table is dropped
+    let path = format!("storage?query={}", select_query);
+    let select_result = server
+        .send_request::<Value, Value>(&path, Method::POST, None)
+        .await?;
+    assert_eq!(select_result.code, StatusCode::BAD_REQUEST);
+
+    Ok(())
+}
