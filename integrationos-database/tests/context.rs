@@ -58,7 +58,7 @@ impl TestServer {
             ),
             (
                 "DATABASE_CONNECTION_TYPE".to_string(),
-                "postgres".to_string(),
+                "postgresql".to_string(),
             ),
             ("POSTGRES_USERNAME".to_string(), "postgres".to_string()),
             ("POSTGRES_PASSWORD".to_string(), "postgres".to_string()),

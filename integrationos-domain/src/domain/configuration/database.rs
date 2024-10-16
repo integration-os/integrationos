@@ -127,7 +127,7 @@ impl DatabaseConnectionConfig {
 
         // if connection type is postgres, get all the fields for postgres config
         match self.database_connection_type {
-            DatabaseConnectionType::Postgres => {
+            DatabaseConnectionType::PostgreSql => {
                 // get all the fields for postgres config
                 let mut postgres_config: HashMap<String, String> = HashMap::new();
                 for (key, value) in other {
@@ -209,7 +209,7 @@ impl Default for DatabaseConnectionConfig {
             address: SocketAddr::new("0.0.0.0".parse().expect("Invalid address"), 5005),
             environment: Environment::Development,
             postgres_config: PostgresConfig::default(),
-            database_connection_type: DatabaseConnectionType::Postgres,
+            database_connection_type: DatabaseConnectionType::PostgreSql,
         }
     }
 }
@@ -220,15 +220,16 @@ impl Display for DatabaseConnectionConfig {
         writeln!(f, "INTERNAL_SERVER_ADDRESS: {}", self.address)?;
         writeln!(f, "{}", self.environment)?;
         match self.database_connection_type {
-            DatabaseConnectionType::Postgres => writeln!(f, "{}", self.postgres_config),
+            DatabaseConnectionType::PostgreSql => writeln!(f, "{}", self.postgres_config),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, EnumString, AsRefStr, Serialize, Deserialize)]
-#[strum(serialize_all = "kebab-case")]
+#[strum(serialize_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum DatabaseConnectionType {
-    Postgres,
+    PostgreSql,
 }
 
 #[derive(Debug, Clone, Envconfig, Default, Serialize, Deserialize, PartialEq)]

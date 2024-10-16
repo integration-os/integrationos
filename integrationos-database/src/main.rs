@@ -25,7 +25,7 @@ fn main() -> Result<()> {
         .build()?
         .block_on(async move {
             match config.database_connection_type {
-                DatabaseConnectionType::Postgres => {
+                DatabaseConnectionType::PostgreSql => {
                     PostgresDatabaseConnection::init(&config).await?.run().await
                 }
             }

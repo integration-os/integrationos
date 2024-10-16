@@ -373,6 +373,10 @@ async fn generate_k8s_specs_and_secret(
                 .chain(vec![
                     ("WORKER_THREADS".into(), "1".into()),
                     ("INTERNAL_SERVER_ADDRESS".into(), "0.0.0.0:5005".into()),
+                    (
+                        "DATABASE_CONNECTION_TYPE".into(),
+                        connection_config.platform.clone(),
+                    ),
                 ])
                 .collect();
 
@@ -385,7 +389,10 @@ async fn generate_k8s_specs_and_secret(
 
             let mut labels: BTreeMap<String, String> = BTreeMap::new();
             labels.insert(APP_LABEL.to_owned(), service_name.as_ref().to_string());
-            labels.insert(DATABASE_TYPE_LABEL.to_owned(), "postgres".to_string());
+            labels.insert(
+                DATABASE_TYPE_LABEL.to_owned(),
+                connection_config.platform.clone(),
+            );
 
             let database_connection_config =
                 DatabaseConnectionConfig::default().merge_unknown(auth_form)?;
