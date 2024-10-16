@@ -46,7 +46,7 @@ moka = { version = "0.12.4", features = ["future"] }
 mongodb = "2.8.0"
 openapiv3 = { version = "2.0.0", features = ["skip_serializing_defaults"] }
 rand = "0.8.5"
-redis = { version = "0.25", features = ["connection-manager", "tokio-comp"] }
+redis = { version = "0.27", features = ["connection-manager", "tokio-comp"] }
 reqwest = { version = "0.12.7", features = [
     "json",
     "rustls-tls",
