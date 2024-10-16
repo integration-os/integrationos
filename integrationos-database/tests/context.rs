@@ -78,14 +78,6 @@ impl TestServer {
 
         let client = reqwest::Client::new();
 
-        // Server::
-        // let postgres = PostgresStorage::new(&storage).await?;
-        // let query = "SELECT 1".to_string();
-        // let result = postgres.execute_raw(&query).await?;
-        // let value = result.first().expect("Failed to get row");
-        // println!("{value:?}");
-        // assert_eq!(result.len(), 1);
-        // assert_eq!(value.get("1"), Some(&Value::Number(Number::from(1))));
         Ok(Self {
             port: server_port,
             client,
