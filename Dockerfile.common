@@ -1,4 +1,4 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.77.0 AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.77.2 AS chef
 ARG EXECUTABLE
 RUN : "${EXECUTABLE:?Build argument needs to be set and non-empty.}"
 WORKDIR /app/${EXECUTABLE}
