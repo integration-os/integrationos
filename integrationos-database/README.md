@@ -22,69 +22,56 @@ To add support for a new database, follow these steps:
 
 1. **Add the database type to the supported list:**
 
-   ```rust
-   #[derive(Debug, Clone, PartialEq, Eq, EnumString, AsRefStr)]
-   #[strum(serialize_all = "kebab-case")]
-   pub enum StorageConfigType {
-       Postgres,
-       // Add new storage types here
-   }
-   ```
+```rust
+#[derive(Debug, Clone, PartialEq, Eq, EnumString, AsRefStr)]
+#[strum(serialize_all = "lowercase")]
+pub enum DatabaseConnectionType {
+    PostgreSql,
+}
+```
 
 2. **Create the necessary configuration and add it to the configuration loader:**
 
-   ```rust
-   #[derive(Envconfig, Clone)]
-   pub struct StorageConfig {
-       #[envconfig(from = "WORKER_THREADS")]
-       pub worker_threads: Option<usize>,
-       #[envconfig(from = "INTERNAL_SERVER_ADDRESS", default = "0.0.0.0:5005")]
-       pub address: SocketAddr,
-       #[envconfig(from = "CACHE_SIZE", default = "100")]
-       pub cache_size: u64,
-       #[envconfig(nested = true)]
-       pub cache: CacheConfig,
-       #[envconfig(from = "ENVIRONMENT", default = "development")]
-       pub environment: Environment,
-       #[envconfig(nested = true)]
-       pub postgres_config: PostgresConfig,
-       #[envconfig(from = "STORAGE_CONFIG_TYPE", default = "postgres")]
-       pub storage_config_type: StorageConfigType,
-   }
-   ```
+```rust
+#[derive(Envconfig, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DatabaseConnectionConfig {
+    #[envconfig(from = "WORKER_THREADS")]
+    pub worker_threads: Option<usize>,
+    #[envconfig(from = "INTERNAL_SERVER_ADDRESS", default = "0.0.0.0:5005")]
+    pub address: SocketAddr,
+    #[envconfig(from = "ENVIRONMENT", default = "development")]
+    pub environment: Environment,
+    #[envconfig(nested = true)]
+    pub postgres_config: PostgresConfig,
+    #[envconfig(from = "DATABASE_CONNECTION_TYPE", default = "postgres")]
+    pub database_connection_type: DatabaseConnectionType,
+}
+```
 
 3. **Implement the `Storage` trait:**
 
-   ```rust
-   #[async_trait]
-   pub trait Storage: Send + Sync {
-       async fn execute_raw(
-           &self,
-           query: &str,
-       ) -> Result<Vec<HashMap<String, Value>>, IntegrationOSError>;
-   }
-   ```
+```rust
+#[async_trait]
+pub trait Storage: Send + Sync {
+    async fn execute_raw(
+        &self,
+        query: &str,
+    ) -> Result<Vec<HashMap<String, Value>>, IntegrationOSError>;
 
-   Be mindful that implementing this trait usually requires creating serializers for your specific storage type.
+    async fn probe(&self) -> Result<bool, IntegrationOSError>;
+}
+```
+
+Be mindful that implementing this trait usually requires creating serializers for your specific storage type.
 
 4. **Implement the `Initializer` trait:**
 
-   ```rust
-   #[async_trait]
-   impl Initializer for PostgresStorage {
-       async fn init(configuration: &StorageConfig) -> Result<Server, anyhow::Error> {
-           let postgres: PostgresStorage = PostgresStorage::new(configuration).await?;
-           let storage: Arc<dyn Storage> = Arc::new(postgres);
-
-           Ok(Server {
-               state: Arc::new(AppState {
-                   config: configuration.clone(),
-                   storage,
-               }),
-           })
-       }
-   }
-   ```
+```rust
+#[async_trait]
+pub trait Initializer {
+    async fn init(config: &DatabaseConnectionConfig) -> Result<Server, anyhow::Error>;
+}
+```
 
 After completing these steps, the compiler will guide you through the necessary changes to ensure the code compiles correctly. Remember to add the new
 tests to verify the functionality of the new storage type.
