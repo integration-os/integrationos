@@ -7,7 +7,7 @@ use tower_http::cors::CorsLayer;
 
 pub async fn get_router() -> Router<Arc<AppState>> {
     Router::new()
-        .nest("/storage", connection::get_router())
+        .nest("/database", connection::get_router())
         .route("/", get(get_root))
         .fallback(not_found_handler)
         .layer(CorsLayer::permissive())

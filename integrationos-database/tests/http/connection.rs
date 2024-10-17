@@ -7,7 +7,7 @@ use serde_json::Value;
 async fn test_execute_probe() -> Result<(), IntegrationOSError> {
     let server = TestServer::new().await?;
     let result = server
-        .send_request::<Value, Value>("storage/probe", Method::GET, None)
+        .send_request::<Value, Value>("database/probe", Method::GET, None)
         .await?;
 
     assert_eq!(result.code, StatusCode::OK);
@@ -27,19 +27,19 @@ async fn test_execute_raw() -> Result<(), IntegrationOSError> {
     let select_query = "SELECT * FROM users;";
     let drop_query = "DROP TABLE users;";
 
-    let path = format!("storage?query={}", create_query);
+    let path = format!("database?query={}", create_query);
     let create_result = server
         .send_request::<Value, Value>(&path, Method::POST, None)
         .await?;
     assert_eq!(create_result.code, StatusCode::OK);
 
-    let path = format!("storage?query={}", insert_query);
+    let path = format!("database?query={}", insert_query);
     let insert_result = server
         .send_request::<Value, Value>(&path, Method::POST, None)
         .await?;
     assert_eq!(insert_result.code, StatusCode::OK);
 
-    let path = format!("storage?query={}", select_query);
+    let path = format!("database?query={}", select_query);
     let select_result = server
         .send_request::<Value, Value>(&path, Method::POST, None)
         .await?;
@@ -61,14 +61,14 @@ async fn test_execute_raw() -> Result<(), IntegrationOSError> {
         .expect("Failed to get id");
     assert_eq!(id, 1);
 
-    let path = format!("storage?query={}", drop_query);
+    let path = format!("database?query={}", drop_query);
     let drop_result = server
         .send_request::<Value, Value>(&path, Method::POST, None)
         .await?;
     assert_eq!(drop_result.code, StatusCode::OK);
 
     // Test that the table is dropped
-    let path = format!("storage?query={}", select_query);
+    let path = format!("database?query={}", select_query);
     let select_result = server
         .send_request::<Value, Value>(&path, Method::POST, None)
         .await?;
