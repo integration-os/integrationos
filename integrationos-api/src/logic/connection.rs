@@ -1,5 +1,6 @@
 use super::{delete, event_access::DEFAULT_NAMESPACE, read, PublicExt, RequestExt};
 use crate::{
+    helper::{generate_service_name, DeploymentSpecParams, NamespaceScope, ServiceSpecParams},
     logic::event_access::{
         generate_event_access, get_client_throughput, CreateEventAccessPayloadWithOwnership,
     },
@@ -16,20 +17,30 @@ use chrono::Utc;
 use http::HeaderMap;
 use integrationos_domain::{
     algebra::MongoStore,
-    connection_definition::ConnectionDefinition,
+    connection_definition::{ConnectionDefinition, ConnectionDefinitionType},
+    database::DatabaseConnectionConfig,
     domain::connection::SanitizedConnection,
+    environment::Environment,
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
+    ownership::Ownership,
     record_metadata::RecordMetadata,
     settings::Settings,
-    ApplicationError, Connection, ConnectionIdentityType, IntegrationOSError, InternalError,
-    Throughput,
+    ApplicationError, Connection, ConnectionIdentityType, ConnectionType, IntegrationOSError,
+    InternalError, Secret, Throughput,
+};
+use k8s_openapi::{
+    api::core::v1::{ContainerPort, EnvVar, ServicePort},
+    apimachinery::pkg::util::intstr::IntOrString,
 };
 use mongodb::bson::doc;
 use mongodb::bson::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 use tracing::error;
 use uuid::Uuid;
 use validator::Validate;
@@ -42,6 +53,9 @@ pub fn get_router() -> Router<Arc<AppState>> {
         .route("/:id", axum_delete(delete_connection))
 }
 
+const APP_LABEL: &str = "app";
+const DATABASE_TYPE_LABEL: &str = "database-type";
+
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateConnectionPayload {
@@ -52,6 +66,15 @@ pub struct CreateConnectionPayload {
     pub identity_type: Option<ConnectionIdentityType>,
     pub group: Option<String>,
     pub name: Option<String>,
+}
+
+#[derive(Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub struct DatabaseConnectionSecret {
+    #[serde(flatten)]
+    pub value: DatabaseConnectionConfig,
+    pub namespace: String,
+    pub service_name: String,
 }
 
 async fn test_connection(
@@ -194,8 +217,8 @@ pub async fn create_connection(
     };
 
     let uuid = Uuid::new_v4().to_string().replace('-', "");
-    let group = payload.group.unwrap_or_else(|| uuid.clone());
-    let identity = payload.identity.unwrap_or_else(|| group.clone());
+    let group = payload.group.clone().unwrap_or_else(|| uuid.clone());
+    let identity = payload.identity.clone().unwrap_or_else(|| group.clone());
 
     let key_suffix = if identity == uuid {
         uuid.clone()
@@ -223,10 +246,8 @@ pub async fn create_connection(
             throughput: Some(throughput),
         },
     )
-    .map_err(|e| {
+    .inspect_err(|e| {
         error!("Error creating event access for connection: {:?}", e);
-
-        e
     })?;
 
     state
@@ -234,20 +255,17 @@ pub async fn create_connection(
         .event_access
         .create_one(&event_access)
         .await
-        .map_err(|e| {
+        .inspect_err(|e| {
             error!("Error saving event access for connection: {:?}", e);
-
-            e
         })?;
 
-    let auth_form_data_value =
-        serde_json::to_value(payload.auth_form_data.clone()).map_err(|e| {
-            error!("Error serializing auth form data for connection: {:?}", e);
+    let auth_form_data = serde_json::to_value(payload.auth_form_data.clone()).map_err(|e| {
+        error!("Error serializing auth form data for connection: {:?}", e);
 
-            ApplicationError::bad_request(&format!("Invalid auth form data: {:?}", e), None)
-        })?;
+        ApplicationError::bad_request(&format!("Invalid auth form data: {:?}", e), None)
+    })?;
 
-    test_connection(&state, &connection_config, &auth_form_data_value)
+    test_connection(&state, &connection_config, &auth_form_data)
         .await
         .map_err(|e| {
             error!(
@@ -257,25 +275,26 @@ pub async fn create_connection(
 
             ApplicationError::bad_request("Invalid connection credentials: {:?}", None)
         })?;
+    let connection_id = Id::new(IdPrefix::Connection, Utc::now());
 
-    let secret_result = state
-        .secrets_client
-        .create(&auth_form_data_value, &access.ownership.id)
-        .await
-        .map_err(|e| {
-            error!("Error creating secret for connection: {:?}", e);
-
-            e
-        })?;
+    let (secret_result, service, deployment) = generate_k8s_specs_and_secret(
+        &connection_id,
+        &state,
+        &connection_config,
+        &payload,
+        &access.ownership,
+        &auth_form_data,
+    )
+    .await?;
 
     let connection = Connection {
-        id: Id::new(IdPrefix::Connection, Utc::now()),
+        id: connection_id,
         platform_version: connection_config.clone().platform_version,
         connection_definition_id: payload.connection_definition_id,
         r#type: connection_config.to_connection_type(),
         key: key.clone().into(),
         group,
-        identity: Some(identity),
+        identity: Some(identity.to_owned()),
         name: payload.name,
         identity_type: payload.identity_type,
         platform: connection_config.platform.into(),
@@ -298,11 +317,14 @@ pub async fn create_connection(
         .connection
         .create_one(&connection)
         .await
-        .map_err(|e| {
+        .inspect_err(|e| {
             error!("Error creating connection: {:?}", e);
-
-            e
         })?;
+
+    // We try to create the pod for database connections only after the connection is created
+    if let (Some(service), Some(deployment)) = (service, deployment) {
+        state.k8s_client.coordinator(service, deployment).await?;
+    }
 
     Ok(Json(SanitizedConnection {
         id: connection.id,
@@ -324,6 +346,126 @@ pub async fn create_connection(
         oauth: connection.oauth,
         record_metadata: connection.record_metadata,
     }))
+}
+
+async fn generate_k8s_specs_and_secret(
+    connection_id: &Id,
+    state: &AppState,
+    connection_config: &ConnectionDefinition,
+    payload: &CreateConnectionPayload,
+    ownership: &Ownership,
+    auth_form_data: &Value,
+) -> Result<
+    (
+        Secret,
+        Option<ServiceSpecParams>,
+        Option<DeploymentSpecParams>,
+    ),
+    IntegrationOSError,
+> {
+    Ok(match connection_config.to_connection_type() {
+        integrationos_domain::ConnectionType::DatabaseSql {} => {
+            // Override for security reasons
+            let auth_form: HashMap<String, String> = payload
+                .auth_form_data
+                .clone()
+                .into_iter()
+                .chain(vec![
+                    ("WORKER_THREADS".into(), "1".into()),
+                    ("INTERNAL_SERVER_ADDRESS".into(), "0.0.0.0:5005".into()),
+                    (
+                        "DATABASE_CONNECTION_TYPE".into(),
+                        connection_config.platform.clone(),
+                    ),
+                ])
+                .collect();
+
+            let service_name = generate_service_name(connection_id)?;
+
+            let namespace = match state.config.environment {
+                Environment::Test | Environment::Development => NamespaceScope::Development,
+                Environment::Live | Environment::Production => NamespaceScope::Production,
+            };
+
+            let mut labels: BTreeMap<String, String> = BTreeMap::new();
+            labels.insert(APP_LABEL.to_owned(), service_name.as_ref().to_string());
+            labels.insert(
+                DATABASE_TYPE_LABEL.to_owned(),
+                connection_config.platform.clone(),
+            );
+
+            let database_connection_config =
+                DatabaseConnectionConfig::default().merge_unknown(auth_form)?;
+
+            let secret = DatabaseConnectionSecret {
+                value: database_connection_config,
+                service_name: service_name.to_string(),
+                namespace: namespace.to_string(),
+            };
+
+            let service = ServiceSpecParams {
+                ports: vec![ServicePort {
+                    name: Some("http".to_owned()),
+                    port: 80,
+                    target_port: Some(IntOrString::Int(5005)), // Must match with  the
+                    // container port and the one given in the INTERNAL_SERVER_ADDRESS
+                    ..Default::default()
+                }],
+                r#type: "ClusterIP".into(),
+                labels: labels.clone(),
+                name: service_name.clone(),
+                namespace: namespace.clone(),
+            };
+
+            let deployment = DeploymentSpecParams {
+                replicas: 1,
+                labels,
+                namespace,
+                image: state.config.database_connection_docker_image.clone(),
+                env: {
+                    secret
+                        .value
+                        .as_hashmap()
+                        .iter()
+                        .fold(vec![], |mut env, (key, value)| {
+                            env.push(EnvVar {
+                                name: key.to_string(),
+                                value: Some(value.to_string()),
+                                ..Default::default()
+                            });
+                            env
+                        })
+                },
+                ports: vec![ContainerPort {
+                    container_port: 5005,
+                    ..ContainerPort::default()
+                }],
+                name: service_name,
+            };
+
+            let value = serde_json::to_value(secret).map_err(|e| {
+                error!("Error serializing secret for connection: {:?}", e);
+                InternalError::serialize_error("Could not serialize secret", None)
+            })?;
+
+            (
+                state.secrets_client.create(&value, &ownership.id).await?,
+                Some(service),
+                Some(deployment),
+            )
+        }
+        _ => (
+            state
+                .secrets_client
+                .create(auth_form_data, &ownership.id)
+                .await
+                .inspect_err(|e| {
+                    error!("Error creating secret for connection: {:?}", e);
+                })?,
+            None,
+            None,
+        ),
+    })
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
@@ -418,6 +560,13 @@ pub async fn update_connection(
             }
         };
 
+        if connection_config.r#type == ConnectionDefinitionType::DatabaseSql {
+            return Err(ApplicationError::bad_request(
+                "Unsupported platform for SQL connection",
+                None,
+            ));
+        }
+
         test_connection(&state, &connection_config, &auth_form_data_value)
             .await
             .map_err(|e| {
@@ -492,6 +641,15 @@ pub async fn delete_connection(
         State(state.clone()),
     )
     .await?;
+
+    if let ConnectionType::DatabaseSql { .. } = connection.args.r#type {
+        let namespace = match state.config.environment {
+            Environment::Test | Environment::Development => NamespaceScope::Development,
+            Environment::Live | Environment::Production => NamespaceScope::Production,
+        };
+        let service_name = generate_service_name(&connection.args.id)?;
+        state.k8s_client.delete_all(namespace, service_name).await?;
+    };
 
     let partial_cursor_key = format!("{}::{}::{}", access.ownership.id, id, connection.args.key);
 

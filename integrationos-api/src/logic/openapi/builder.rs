@@ -597,7 +597,9 @@ fn properties(
                 reference_schema(common_model.name.as_str()),
             );
         }
-        CrudAction::Custom => unimplemented!("Not implemented yet"),
+        CrudAction::Custom => {
+            properties.insert(UNIFIED.to_owned(), object_schema(IndexMap::new(), None));
+        }
     }
 
     properties.insert(

@@ -5,6 +5,7 @@ use std::{
     fmt::{Display, Formatter, Result},
     net::SocketAddr,
 };
+use strum::{AsRefStr, EnumString};
 
 #[derive(Envconfig, Clone)]
 pub struct ConnectionsConfig {
@@ -60,6 +61,8 @@ pub struct ConnectionsConfig {
         from = "JWT_SECRET",
         default = "2thZ2UiOnsibmFtZSI6IlN0YXJ0dXBsa3NoamRma3NqZGhma3NqZGhma3NqZG5jhYtggfaP9ubmVjdGlvbnMiOjUwMDAwMCwibW9kdWxlcyI6NSwiZW5kcG9pbnRzIjo3b4e05e2-f050-401f-9822-44f43f71753c"
     )]
+    /// This is the admin secret for the API. Be sure this value is not the one use to generate
+    /// tokens for the users as it gives access to sensitive admin endpoints.
     pub jwt_secret: String,
     #[envconfig(from = "BURST_RATE_LIMIT", default = "1")]
     pub burst_rate_limit: u64,
@@ -82,6 +85,13 @@ pub struct ConnectionsConfig {
     pub rate_limit_enabled: bool,
     #[envconfig(from = "ENVIRONMENT", default = "development")]
     pub environment: Environment,
+    #[envconfig(
+        from = "DATABASE_CONNECTION_DOCKER_IMAGE",
+        default = "integrationos-database"
+    )]
+    pub database_connection_docker_image: String,
+    #[envconfig(from = "K8S_MODE", default = "logger")]
+    pub k8s_mode: K8sMode,
 }
 
 impl Display for ConnectionsConfig {
@@ -221,4 +231,11 @@ impl Display for Headers {
         )?;
         writeln!(f, "HEADER_RATE_LIMIT_RESET: {}", self.rate_limit_reset)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, AsRefStr)]
+#[strum(serialize_all = "kebab-case")]
+pub enum K8sMode {
+    Real,
+    Logger,
 }

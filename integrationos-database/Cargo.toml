@@ -1,54 +1,36 @@
 [package]
-name = "integrationos-api"
+name = "integrationos-database"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+async-trait.workspace = true
 anyhow.workspace = true
 axum.workspace = true
-bson.workspace = true
 chrono.workspace = true
-convert_case.workspace = true
 dotenvy.workspace = true
 envconfig.workspace = true
-fake.workspace = true
 futures-util.workspace = true
 futures.workspace = true
 http-serde-ext.workspace = true
 http.workspace = true
 hyper = "0.14.27"
-indexmap = "2.1.0"
 integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain" }
 integrationos-unified = { path = "../integrationos-unified" }
-jsonwebtoken.workspace = true
-k8s-openapi = { workspace = true, features = ["latest"] }
-kube = { workspace = true, features = ["runtime", "derive", "client"] }
 mongodb.workspace = true
 num_cpus = "1"
-openapiv3.workspace = true
 rand.workspace = true
-redis.workspace = true
 reqwest.workspace = true
-regex = "1"
-schemars.workspace = true
-segment = "0.2.3"
-semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-serde_yaml = "0.9.34"
 strum.workspace = true
-thiserror.workspace = true
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-native-tls", "postgres", "json", "macros", "chrono", "uuid", "rust_decimal", "ipnetwork"] }
+tokio.workspace = true
 tower = { version = "0.4.13", features = ["filter"] }
 tower-http.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
-uuid.workspace = true
-validator.workspace = true
 
 [dev-dependencies]
-testcontainers-modules = { workspace = true, features = ["mongo", "redis"] }
-integrationos-event = { path = "../integrationos-event" }
-integrationos-gateway = { path = "../integrationos-gateway" }
-mockito.workspace = true
+testcontainers-modules = { workspace = true, features = ["postgres"] }
