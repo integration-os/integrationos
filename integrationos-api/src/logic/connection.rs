@@ -287,6 +287,10 @@ pub async fn create_connection(
     )
     .await?;
 
+    if let (Some(service), Some(deployment)) = (service, deployment) {
+        state.k8s_client.coordinator(service, deployment).await?;
+    }
+
     let connection = Connection {
         id: connection_id,
         platform_version: connection_config.clone().platform_version,
@@ -320,11 +324,6 @@ pub async fn create_connection(
         .inspect_err(|e| {
             error!("Error creating connection: {:?}", e);
         })?;
-
-    // We try to create the pod for database connections only after the connection is created
-    if let (Some(service), Some(deployment)) = (service, deployment) {
-        state.k8s_client.coordinator(service, deployment).await?;
-    }
 
     Ok(Json(SanitizedConnection {
         id: connection.id,
