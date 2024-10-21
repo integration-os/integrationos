@@ -42,7 +42,6 @@ fn main() -> Result<()> {
         let server: Server = Server::init(config).await?;
 
         server.run().await
-
     })?;
 
     Ok(())
