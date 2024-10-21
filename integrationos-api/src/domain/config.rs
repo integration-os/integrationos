@@ -92,6 +92,8 @@ pub struct ConnectionsConfig {
     pub database_connection_docker_image: String,
     #[envconfig(from = "K8S_MODE", default = "logger")]
     pub k8s_mode: K8sMode,
+    #[envconfig(from = "OTLP_ENDPOINT")]
+    pub otlp_endpoint: Option<String>,
 }
 
 impl Display for ConnectionsConfig {
@@ -142,6 +144,7 @@ impl Display for ConnectionsConfig {
             "METRIC_SAVE_CHANNEL_SIZE: {}",
             self.metric_save_channel_size
         )?;
+        writeln!(f, "OTLP_ENDPOINT: ***")?;
         writeln!(f, "METRIC_SYSTEM_ID: {}", self.metric_system_id)?;
         writeln!(f, "SEGMENT_WRITE_KEY: ***")?;
         writeln!(f, "EMIT_URL: {}", self.emit_url)?;

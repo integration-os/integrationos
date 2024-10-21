@@ -2,15 +2,31 @@ use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_api::{domain::config::ConnectionsConfig, server::Server};
-use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
+use integrationos_domain::telemetry::{get_subscriber, get_subscriber_with_trace, init_subscriber};
 use tracing::info;
 
 fn main() -> Result<()> {
     dotenv().ok();
     let config = ConnectionsConfig::init_from_env()?;
 
-    let subscriber = get_subscriber("connections-api".into(), "info".into(), std::io::stdout);
-    init_subscriber(subscriber);
+    match config.otlp_endpoint {
+        Some(ref otlp_url) => {
+            let subscriber = get_subscriber_with_trace(
+                "connections-api".into(),
+                "info".into(),
+                std::io::stdout,
+                otlp_url.into(),
+            );
+
+            init_subscriber(subscriber);
+        }
+        None => {
+            let subscriber =
+                get_subscriber("connections-api".into(), "info".into(), std::io::stdout);
+
+            init_subscriber(subscriber);
+        }
+    };
 
     info!("Starting API with config:\n{config}");
 
