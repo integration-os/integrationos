@@ -40,7 +40,7 @@ impl Hash for CommonModel {
         self.id.hash(state);
     }
 }
-
+#[derive(Debug)]
 pub enum TypeGenerationStrategy<'a> {
     /// Generates the type in a cumulative way, meaning that it will only generate the types for the
     /// models and enums that have not been generated before keeping track of the already generated

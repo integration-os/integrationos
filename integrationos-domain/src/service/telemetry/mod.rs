@@ -1,3 +1,4 @@
+use crate::TimedExt;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::middleware::Next;
@@ -13,8 +14,6 @@ use tracing_log::LogTracer;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::fmt::MakeWriter;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
-
-use crate::TimedExt;
 
 pub struct Telemetry<T>
 where
@@ -37,7 +36,7 @@ where
 
     let exporter = opentelemetry_otlp::new_exporter()
         .tonic()
-        .with_endpoint(otlp_url);
+        .with_endpoint(otlp_url.clone());
 
     let provider = opentelemetry_otlp::new_pipeline()
         .tracing()
@@ -124,4 +123,18 @@ pub async fn log_request_middleware(
         .await;
 
     Ok(res)
+}
+
+#[derive(Debug)]
+pub struct OtelGuard {
+    pub otlp_url: Option<String>,
+}
+
+impl Drop for OtelGuard {
+    fn drop(&mut self) {
+        if self.otlp_url.is_some() {
+            tracing::info!("Shutting down OpenTelemetry");
+            opentelemetry::global::shutdown_tracer_provider();
+        }
+    }
 }

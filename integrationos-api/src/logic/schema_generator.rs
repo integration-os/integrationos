@@ -165,6 +165,7 @@ async fn generate_all_types(
     Ok(output_types)
 }
 
+#[tracing::instrument(skip(state))]
 pub async fn get_common_models_projections(
     state: State<Arc<AppState>>,
 ) -> Result<Json<ReadResponse<Document>>, IntegrationOSError> {
