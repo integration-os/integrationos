@@ -68,12 +68,16 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 tracing-bunyan-formatter = "0.3.9"
 tracing-log = "0.2.0"
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
-tracing.workspace = true
+tracing = { workspace = true, features = ["attributes"] }
 uuid = { workspace = true, features = ["v4"] }
 crc32fast = "1.4.2"
 secrecy = { version = "0.8.0", features = ["serde"] }
 chacha20poly1305 = "0.10.1"
 hex = { version = "0.4.3", features = ["serde"] }
+opentelemetry = { version = "0.26", features = ["trace"] }
+opentelemetry-otlp = "0.26"
+tracing-opentelemetry = "0.27"
+opentelemetry_sdk = { version = "0.26", features = ["rt-tokio", "trace"] }
 
 [dev-dependencies]
 once_cell = "1.19.0"
