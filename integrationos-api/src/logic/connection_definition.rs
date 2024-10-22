@@ -65,6 +65,8 @@ pub struct CreateRequest {
     pub paths: Paths,
     pub test_connection: Option<Id>,
     pub active: bool,
+    #[serde(default)]
+    pub markdown: Option<String>,
 }
 
 impl HookExt<ConnectionDefinition> for CreateRequest {}
@@ -341,6 +343,7 @@ impl RequestExt for CreateRequest {
                     image: self.image.clone(),
                     tags: self.tags.clone(),
                     helper_link: self.helper_link.clone(),
+                    markdown: self.markdown.clone(),
                 },
                 connection_form,
             },

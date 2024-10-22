@@ -93,6 +93,7 @@ impl ConnectionDefinition {
                     image,
                     tags,
                     helper_link: None,
+                    markdown: None,
                 },
                 connection_form: ConnectionForm {
                     name,
@@ -176,6 +177,8 @@ pub struct Spec {
     pub tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub helper_link: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub markdown: Option<String>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
