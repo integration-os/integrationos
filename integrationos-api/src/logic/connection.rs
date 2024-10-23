@@ -293,7 +293,7 @@ pub async fn create_connection(
             }
 
             Err(ApplicationError::bad_request(
-                "Invalid connection credentials: {:?}",
+                &format!("Invalid connection credentials: {:?}", e),
                 None,
             ))
         }
