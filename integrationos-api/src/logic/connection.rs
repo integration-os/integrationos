@@ -23,11 +23,10 @@ use integrationos_domain::{
     environment::Environment,
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
-    ownership::Ownership,
     record_metadata::RecordMetadata,
     settings::Settings,
     ApplicationError, Connection, ConnectionIdentityType, ConnectionType, IntegrationOSError,
-    InternalError, Secret, Throughput,
+    InternalError, Throughput,
 };
 use k8s_openapi::{
     api::core::v1::{ContainerPort, EnvVar, ServicePort},
@@ -40,6 +39,7 @@ use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
+    time::Duration,
 };
 use tracing::error;
 use uuid::Uuid;
@@ -112,6 +112,9 @@ async fn test_connection(
                 })
             })
             .transpose()?;
+
+        // Wait 3 seconds to allow the resource to be created
+        tokio::time::sleep(Duration::from_secs(3)).await;
 
         let res = state
             .extractor_caller
@@ -250,46 +253,56 @@ pub async fn create_connection(
         error!("Error creating event access for connection: {:?}", e);
     })?;
 
-    state
-        .app_stores
-        .event_access
-        .create_one(&event_access)
-        .await
-        .inspect_err(|e| {
-            error!("Error saving event access for connection: {:?}", e);
-        })?;
-
     let auth_form_data = serde_json::to_value(payload.auth_form_data.clone()).map_err(|e| {
         error!("Error serializing auth form data for connection: {:?}", e);
 
         ApplicationError::bad_request(&format!("Invalid auth form data: {:?}", e), None)
     })?;
 
-    test_connection(&state, &connection_config, &auth_form_data)
-        .await
-        .map_err(|e| {
+    let connection_id = Id::new(IdPrefix::Connection, Utc::now());
+
+    let (secret_value, service, deployment) = generate_k8s_specs_and_secret(
+        &connection_id,
+        &state,
+        &connection_config,
+        &payload,
+        &auth_form_data,
+    )
+    .await?;
+
+    if let (Some(service), Some(deployment)) = (service.clone(), deployment.clone()) {
+        state.k8s_client.coordinator(service, deployment).await?;
+    }
+
+    match test_connection(&state, &connection_config, &auth_form_data).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
             error!(
             "Error executing model definition in connections create for connection testing: {:?}",
             e
         );
 
-            ApplicationError::bad_request("Invalid connection credentials: {:?}", None)
+            if let (Some(service), Some(deployment)) = (service.as_ref(), deployment.as_ref()) {
+                state
+                    .k8s_client
+                    .delete_all(deployment.namespace.clone(), service.name.clone())
+                    .await?;
+            }
+
+            Err(ApplicationError::bad_request(
+                "Invalid connection credentials: {:?}",
+                None,
+            ))
+        }
+    }?;
+
+    let secret_result = state
+        .secrets_client
+        .create(&secret_value, &access.ownership.id)
+        .await
+        .inspect_err(|e| {
+            error!("Error creating secret for connection: {:?}", e);
         })?;
-    let connection_id = Id::new(IdPrefix::Connection, Utc::now());
-
-    let (secret_result, service, deployment) = generate_k8s_specs_and_secret(
-        &connection_id,
-        &state,
-        &connection_config,
-        &payload,
-        &access.ownership,
-        &auth_form_data,
-    )
-    .await?;
-
-    if let (Some(service), Some(deployment)) = (service, deployment) {
-        state.k8s_client.coordinator(service, deployment).await?;
-    }
 
     let connection = Connection {
         id: connection_id,
@@ -352,11 +365,10 @@ async fn generate_k8s_specs_and_secret(
     state: &AppState,
     connection_config: &ConnectionDefinition,
     payload: &CreateConnectionPayload,
-    ownership: &Ownership,
     auth_form_data: &Value,
 ) -> Result<
     (
-        Secret,
+        Value,
         Option<ServiceSpecParams>,
         Option<DeploymentSpecParams>,
     ),
@@ -447,23 +459,9 @@ async fn generate_k8s_specs_and_secret(
                 InternalError::serialize_error("Could not serialize secret", None)
             })?;
 
-            (
-                state.secrets_client.create(&value, &ownership.id).await?,
-                Some(service),
-                Some(deployment),
-            )
+            (value, Some(service), Some(deployment))
         }
-        _ => (
-            state
-                .secrets_client
-                .create(auth_form_data, &ownership.id)
-                .await
-                .inspect_err(|e| {
-                    error!("Error creating secret for connection: {:?}", e);
-                })?,
-            None,
-            None,
-        ),
+        _ => (auth_form_data.clone(), None, None),
     })
 }
 
