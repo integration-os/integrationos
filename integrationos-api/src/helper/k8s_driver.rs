@@ -189,6 +189,7 @@ impl K8sDriver for K8sDriverLogger {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ServiceSpecParams {
     /// Ports to expose
     pub ports: Vec<ServicePort>,
@@ -229,6 +230,7 @@ async fn create_service_impl(
         .map_err(|e| InternalError::io_err(&format!("Could not create service: {e}"), None))
 }
 
+#[derive(Debug, Clone)]
 pub struct DeploymentSpecParams {
     /// Number of replicas to create
     pub replicas: i32,
