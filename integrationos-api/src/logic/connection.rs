@@ -274,7 +274,7 @@ pub async fn create_connection(
         state.k8s_client.coordinator(service, deployment).await?;
     }
 
-    match test_connection(&state, &connection_config, &auth_form_data).await {
+    match test_connection(&state, &connection_config, &secret_value).await {
         Ok(result) => Ok(result),
         Err(e) => {
             error!(
