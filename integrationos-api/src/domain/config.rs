@@ -90,6 +90,8 @@ pub struct ConnectionsConfig {
         default = "integrationos-database"
     )]
     pub database_connection_docker_image: String,
+    #[envconfig(from = "DATABASE_CONNECTION_PROBE_TIMEOUT_SECS", default = "10")]
+    pub database_connection_probe_timeout_secs: u64,
     #[envconfig(from = "K8S_MODE", default = "logger")]
     pub k8s_mode: K8sMode,
     #[envconfig(from = "OTLP_ENDPOINT")]
