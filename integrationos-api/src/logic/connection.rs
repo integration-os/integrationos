@@ -113,8 +113,11 @@ async fn test_connection(
             })
             .transpose()?;
 
-        // Wait 3 seconds to allow the resource to be created
-        tokio::time::sleep(Duration::from_secs(3)).await;
+        // Wait up to 10 seconds to allow the resource to be created
+        tokio::time::sleep(Duration::from_secs(
+            state.config.database_connection_probe_timeout_secs,
+        ))
+        .await;
 
         let res = state
             .extractor_caller
