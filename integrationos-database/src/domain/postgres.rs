@@ -52,26 +52,27 @@ where
     }
     let value = value.clone();
     let info = value.type_info();
+
     let name = info.name();
-    match name {
-        "BOOL" => serialize_bool(value, s),
-        "INT2" => serialize_i16(value, s),
-        "INT4" => serialize_i32(value, s),
-        "INT8" => serialize_i64(value, s),
-        "FLOAT4" => serialize_f32(value, s),
-        "FLOAT8" => serialize_f64(value, s),
-        "NUMERIC" => serialize_numeric(value, s),
-        "CHAR" | "VARCHAR" | "TEXT" | "\"CHAR\"" => serialize_string(value, s),
-        "BYTEA" => serialize_bytea(value, s),
-        "JSON" | "JSONB" => serialize_json(value, s),
-        "TIMESTAMP" => serialize_timestamp(value, s),
-        "TIMESTAMPTZ" => serialize_timestamptz(value, s),
-        "DATE" => serialize_date(value, s),
-        "TIME" => serialize_time(value, s),
-        "UUID" => serialize_uuid(value, s),
+    match name.to_lowercase().as_str() {
+        "bool" => serialize_bool(value, s),
+        "int2" => serialize_i16(value, s),
+        "int4" => serialize_i32(value, s),
+        "int8" => serialize_i64(value, s),
+        "float4" => serialize_f32(value, s),
+        "float8" => serialize_f64(value, s),
+        "numeric" => serialize_numeric(value, s),
+        "char" | "varchar" | "text" | "\"char\"" | "name" => serialize_string(value, s),
+        "bytea" => serialize_bytea(value, s),
+        "json" | "jsonb" => serialize_json(value, s),
+        "timestamp" => serialize_timestamp(value, s),
+        "timestamptz" => serialize_timestamptz(value, s),
+        "date" => serialize_date(value, s),
+        "time" => serialize_time(value, s),
+        "uuid" => serialize_uuid(value, s),
         _ => Err(Error::custom(format!(
             "This type is not supported, please contact platform: {}",
-            name
+            name.to_lowercase().as_str()
         ))),
     }
 }
