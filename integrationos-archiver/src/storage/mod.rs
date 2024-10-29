@@ -1,6 +1,6 @@
 pub mod google_cloud;
 
-use crate::config::ArchiverConfig;
+use crate::domain::config::ArchiverConfig;
 use anyhow::Result;
 use std::{future::Future, ops::Deref, path::Path};
 use strum::{AsRefStr, EnumString};

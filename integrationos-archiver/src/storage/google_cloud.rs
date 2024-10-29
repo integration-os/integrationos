@@ -1,5 +1,5 @@
 use super::Storage;
-use crate::config::ArchiverConfig;
+use crate::domain::config::ArchiverConfig;
 use crate::storage::Chunk;
 use crate::Extension;
 use anyhow::{Context, Result};

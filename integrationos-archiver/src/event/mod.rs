@@ -21,10 +21,16 @@ pub trait EventMetadata {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum Event {
+    /// Archive process started event. Emitted when the archive process is started.
     Started(Started),
+    /// Archive process dumped event. Emitted when mongodump finishes dumping the database.
     Dumped(Dumped),
+    /// Archive process failed event. Emitted when the archive process fails in some way.
     Failed(Failed),
+    /// Archive process uploaded event. Emitted after the selected storage provider uploads any file (by default, the archive file and metadata file).
     Uploaded(Uploaded),
+    /// Archive process completed event. Emitted when all dumped files are uploaded.
     Completed(Completed),
+    /// Archive process finished event. Emitted when the archive process is finished.
     Finished(Finished),
 }

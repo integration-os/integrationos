@@ -16,7 +16,7 @@ pub enum Mode {
 pub struct ArchiverConfig {
     #[envconfig(nested = true)]
     pub db_config: DatabaseConfig,
-    #[envconfig(from = "EVENT_COLLECTION_NAME", default = "clients")]
+    #[envconfig(from = "EVENT_COLLECTION_NAME", default = "external-events")]
     pub event_collection_name: String,
     #[envconfig(from = "GS_STORAGE_BUCKET", default = "integrationos-zsk")]
     pub gs_storage_bucket: String,
@@ -32,7 +32,7 @@ pub struct ArchiverConfig {
     pub processing_chunk_timeout_secs: u64,
     #[envconfig(from = "MIN_DATE_DAYS", default = "30")]
     pub min_date_days: i64,
-    #[envconfig(from = "CHUNK_SIZE_MINUTES", default = "20")]
+    #[envconfig(from = "CHUNK_SIZE_MINUTES", default = "5")]
     pub chunk_size_minutes: i64,
     #[envconfig(from = "CONCURRENT_CHUNKS", default = "10")]
     pub concurrent_chunks: usize,

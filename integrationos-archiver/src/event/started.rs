@@ -24,6 +24,10 @@ impl Started {
         })
     }
 
+    pub fn started_at(&self) -> DateTime<Utc> {
+        self.started_at
+    }
+
     pub fn collection(&self) -> &Store {
         &self.collection
     }
