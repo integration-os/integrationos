@@ -235,6 +235,7 @@ async fn save(
         return Ok(0);
     }
 
+    // Run this only on debug mode
     if cfg!(debug_assertions) {
         let events = target_store.collection.find(filter.clone(), None).await?;
 
