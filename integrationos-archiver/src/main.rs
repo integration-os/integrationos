@@ -8,6 +8,7 @@ use anyhow::{anyhow, Result};
 use bson::{doc, Document};
 use chrono::offset::LocalResult;
 use chrono::{DateTime, Duration as CDuration, TimeZone, Utc};
+use dotenvy::dotenv;
 use envconfig::Envconfig;
 use event::completed::Completed;
 use event::dumped::Dumped;
@@ -30,6 +31,7 @@ use tempfile::TempDir;
 
 #[tokio::main]
 async fn main() -> Result<Unit> {
+    dotenv().ok();
     let config = Arc::new(ArchiverConfig::init_from_env()?);
     let storage = Arc::new(match config.storage_provider {
         StorageProvider::GoogleCloud => GoogleCloudStorage::new(&config).await?,
@@ -53,16 +55,27 @@ async fn main() -> Result<Unit> {
         .await?;
 
     loop {
-        let _ = match config.mode {
+        let res = match config.mode {
             Mode::Dump => dump(&config, &archives, &started, &storage, &target_store, false).await,
             Mode::DumpDelete => {
                 dump(&config, &archives, &started, &storage, &target_store, true).await
             }
             Mode::NoOp => Ok(()),
         }
-        .map_err(|e| {
+        .inspect_err(|e| {
             tracing::error!("Error in archiver: {e}");
         });
+
+        if let Err(e) = res {
+            archives
+                .create_one(&Event::Failed(Failed::new(
+                    e.to_string(),
+                    started.reference(),
+                    started.started_at(),
+                    Utc::now(),
+                )))
+                .await?;
+        }
 
         tracing::info!("Sleeping for {} seconds", config.sleep_after_finish);
         tokio::time::sleep(Duration::from_secs(config.sleep_after_finish)).await;
@@ -100,7 +113,18 @@ async fn dump(
         Some(document) => document
             .get_i64("createdAt")
             .map_err(|e| anyhow!("Failed to get createdAt from document: {e}"))?,
-        None => return Err(anyhow!("No events found in collection")),
+        None => {
+            tracing::info!(
+                "No events found in collection {}",
+                target_store.collection.name()
+            );
+            // create event Finished
+            archives
+                .create_one(&Event::Finished(Finished::new(started.reference())))
+                .await?;
+
+            return Ok(());
+        }
     };
 
     let start = match Utc.timestamp_millis_opt(start) {
@@ -145,15 +169,6 @@ async fn dump(
                 tracing::info!("Archive saved successfully, saved {} events", count);
             }
             Err(e) => {
-                archives
-                    .create_one(&Event::Failed(Failed::new(
-                        e.to_string(),
-                        started.reference(),
-                        start_time,
-                        end_time,
-                    )))
-                    .await?;
-
                 tracing::error!("Failed to save archive: {e}");
 
                 return Err(e);
@@ -195,7 +210,7 @@ async fn dump(
     }
 
     archives
-        .create_one(&Event::Finished(Finished::new(started.reference())?))
+        .create_one(&Event::Finished(Finished::new(started.reference())))
         .await?;
 
     Ok(())

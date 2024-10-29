@@ -7,6 +7,7 @@ edition = "2021"
 anyhow.workspace = true
 bson.workspace = true
 chrono.workspace = true
+dotenvy.workspace = true
 envconfig.workspace = true
 futures.workspace = true
 google-cloud-storage = "0.22.1"
