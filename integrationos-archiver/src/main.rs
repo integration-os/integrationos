@@ -1,13 +1,13 @@
-mod config;
+mod domain;
 mod event;
 mod storage;
 
+use crate::domain::config::{ArchiverConfig, Mode};
 use crate::event::finished::Finished;
 use anyhow::{anyhow, Result};
 use bson::{doc, Document};
 use chrono::offset::LocalResult;
 use chrono::{DateTime, Duration as CDuration, TimeZone, Utc};
-use config::{ArchiverConfig, Mode};
 use envconfig::Envconfig;
 use event::completed::Completed;
 use event::dumped::Dumped;
@@ -17,7 +17,7 @@ use event::uploaded::Uploaded;
 use event::{Event, EventMetadata};
 use futures::future::ready;
 use futures::stream::{self, Stream};
-use futures::StreamExt;
+use futures::{StreamExt, TryStreamExt};
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use integrationos_domain::{MongoStore, Store, Unit};
 use mongodb::Client;
@@ -233,6 +233,17 @@ async fn save(
 
     if count == 0 {
         return Ok(0);
+    }
+
+    if cfg!(debug_assertions) {
+        let events = target_store.collection.find(filter.clone(), None).await?;
+
+        let events = events.try_collect::<Vec<_>>().await?;
+
+        let mem_size = std::mem::size_of::<Vec<Document>>()
+            + events.capacity() * std::mem::size_of::<Document>();
+
+        tracing::info!("Total size of all the events is {}", mem_size);
     }
 
     let command = Command::new("mongodump")
