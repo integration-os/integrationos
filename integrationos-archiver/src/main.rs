@@ -71,16 +71,23 @@ async fn main() -> Result<Unit> {
             tracing::error!("Error in archiver: {e}");
         });
 
-        if let Err(e) = res {
-            archives
-                .create_one(&Event::Failed(Failed::new(
-                    e.to_string(),
-                    started.reference(),
-                    started.started_at(),
-                    Utc::now(),
-                )))
-                .await?;
-        }
+        match res {
+            Ok(_) => {
+                archives
+                    .create_one(&Event::Finished(Finished::new(started.reference())))
+                    .await?;
+            }
+            Err(e) => {
+                archives
+                    .create_one(&Event::Failed(Failed::new(
+                        e.to_string(),
+                        started.reference(),
+                        started.started_at(),
+                        Utc::now(),
+                    )))
+                    .await?;
+            }
+        };
 
         tracing::info!("Sleeping for {} seconds", config.sleep_after_finish);
         tokio::time::sleep(Duration::from_secs(config.sleep_after_finish)).await;
@@ -124,10 +131,6 @@ async fn dump(
                 "No events found in collection {}",
                 target_store.collection.name()
             );
-            // create event Finished
-            archives
-                .create_one(&Event::Finished(Finished::new(started.reference())))
-                .await?;
 
             return Ok(());
         }
@@ -213,6 +216,7 @@ async fn dump(
                 end_time,
                 end_time.timestamp_millis()
             );
+
             let saved = save(
                 config,
                 archives,
@@ -269,13 +273,11 @@ async fn dump(
         for error in &errors {
             tracing::error!("Error: {:?}", error);
         }
+        // If we return an error it'll prevent from moving forward in the loop
+        // return Err(anyhow!("Encountered {} errors during processing", errors.len()));
     } else {
         tracing::info!("All chunks processed successfully.");
     }
-
-    archives
-        .create_one(&Event::Finished(Finished::new(started.reference())))
-        .await?;
 
     Ok(())
 }
