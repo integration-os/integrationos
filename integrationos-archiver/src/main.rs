@@ -10,6 +10,7 @@ use chrono::offset::LocalResult;
 use chrono::{DateTime, Duration as CDuration, TimeZone, Utc};
 use dotenvy::dotenv;
 use envconfig::Envconfig;
+use event::chosen::DateChosen;
 use event::completed::Completed;
 use event::dumped::Dumped;
 use event::failed::Failed;
@@ -21,8 +22,10 @@ use futures::stream::{self, Stream};
 use futures::{StreamExt, TryStreamExt};
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use integrationos_domain::{MongoStore, Store, Unit};
+use mongodb::options::FindOneOptions;
 use mongodb::Client;
 use std::process::Command;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use storage::google_cloud::GoogleCloudStorage;
@@ -47,14 +50,16 @@ async fn main() -> Result<Unit> {
     let archives: Arc<MongoStore<Event>> =
         Arc::new(MongoStore::new(&database, &Store::Archives).await?);
 
-    let started = Started::new(config.event_collection_name.clone())?;
+    let store = Store::from_str(&config.event_collection_name).map_err(|e| anyhow::anyhow!(e))?;
     let target_store: Arc<MongoStore<Document>> =
-        Arc::new(MongoStore::new(&database, started.collection()).await?);
-    archives
-        .create_one(&Event::Started(started.clone()))
-        .await?;
+        Arc::new(MongoStore::new(&database, &store).await?);
 
     loop {
+        let started = Started::new(config.event_collection_name.clone());
+        archives
+            .create_one(&Event::Started(started.clone()))
+            .await?;
+
         let res = match config.mode {
             Mode::Dump => dump(&config, &archives, &started, &storage, &target_store, false).await,
             Mode::DumpDelete => {
@@ -95,28 +100,6 @@ async fn dump(
         started.collection()
     );
 
-    let last_finished_event = archives
-        .get_one(doc! {
-            "type": "Finished"
-        })
-        .await?
-        .map(|e| e.reference());
-
-    let started_at = match last_finished_event {
-        Some(id) => {
-            let started = archives.get_one_by_id(&id.to_string()).await?;
-
-            match started {
-                Some(e) => match e {
-                    Event::Started(e) => Some(e.started_at().timestamp_millis()),
-                    _ => return Err(anyhow!("Invalid event type")),
-                },
-                None => None,
-            }
-        }
-        _ => None,
-    };
-
     let document = target_store
         .collection
         .find_one(
@@ -135,6 +118,7 @@ async fn dump(
         Some(document) => document
             .get_i64("createdAt")
             .map_err(|e| anyhow!("Failed to get createdAt from document: {e}"))?,
+
         None => {
             tracing::info!(
                 "No events found in collection {}",
@@ -149,14 +133,65 @@ async fn dump(
         }
     };
 
-    // If the started_at is not set, use the start time, if it is set, use the max of the two
-    let start = started_at.map_or(start, |started_at| started_at.max(start));
+    let last_chosen_date_event = archives
+        .collection
+        .find_one(
+            doc! {
+                "type": "DateChosen"
+            },
+            FindOneOptions::builder()
+                .sort(doc! { "endsAt": -1 })
+                .build(),
+        )
+        .await?;
 
-    let start = match Utc.timestamp_millis_opt(start) {
+    tracing::info!("Last chosen date event: {:?}", last_chosen_date_event);
+
+    let started_at = match last_chosen_date_event {
+        Some(event) => match event {
+            Event::DateChosen(e) => {
+                let finished = archives
+                    .collection
+                    .find_one(
+                        doc! {
+                            "type": "Finished",
+                            "reference": e.reference().to_string()
+                        },
+                        None,
+                    )
+                    .await?
+                    .map(|e| e.is_finished())
+                    .unwrap_or(false);
+
+                tracing::info!("Date chosen event is finished: {}", finished);
+
+                if finished {
+                    e.event_date()
+                } else {
+                    0
+                }
+            }
+            _ => return Err(anyhow!("Invalid event type, DateChosen expected")),
+        },
+        _ => 0,
+    };
+
+    let start = match Utc.timestamp_millis_opt(start.max(started_at)) {
         LocalResult::Single(date) => date,
         _ => return Err(anyhow!("Invalid timestamp")),
     };
-    let end = Utc::now() - CDuration::days(config.min_date_days); // 30 days ago by default
+
+    // End date should be a chunk of size config.chunk_to_process_in_days and not bigger than 30 days ago
+    let max_end = Utc::now() - CDuration::days(config.min_date_days);
+    let end = (start + CDuration::days(config.chunk_to_process_in_days)).min(max_end);
+
+    archives
+        .create_one(&Event::DateChosen(DateChosen::new(
+            started.reference(),
+            start.timestamp_millis(),
+            end.timestamp_millis(),
+        )))
+        .await?;
 
     if start.timestamp_millis() >= end.timestamp_millis() {
         // If the very first event is after the end time, exit
@@ -164,56 +199,60 @@ async fn dump(
         return Ok(());
     }
 
+    tracing::info!("Start date: {}, End date: {}", start, end);
+
     let chunks = start.divide_by_stream(CDuration::minutes(config.chunk_size_minutes), end); // Chunk size is 20 minutes by default
 
-    let stream = chunks.map(|(start_time, end_time)| async move {
-        tracing::info!(
-            "Processing events between {} - ({}) and {} - ({})",
-            start_time,
-            start_time.timestamp_millis(),
-            end_time,
-            end_time.timestamp_millis()
-        );
-        let saved = save(
-            config,
-            archives,
-            storage,
-            target_store,
-            started,
-            &start_time,
-            &end_time,
-        )
-        .await;
+    let stream = chunks
+        .enumerate()
+        .map(|(index, (start_time, end_time))| async move {
+            tracing::info!(
+                "Processing events between {} - ({}) and {} - ({})",
+                start_time,
+                start_time.timestamp_millis(),
+                end_time,
+                end_time.timestamp_millis()
+            );
+            let saved = save(
+                config,
+                archives,
+                storage,
+                target_store,
+                started,
+                (&start_time, &end_time),
+                index,
+            )
+            .await;
 
-        match saved {
-            Ok(0) => {
-                tracing::warn!("No events found between {} and {}", start_time, end_time);
-                return Ok(());
-            }
-            Ok(count) => {
-                tracing::info!("Archive saved successfully, saved {} events", count);
-            }
-            Err(e) => {
-                tracing::error!("Failed to save archive: {e}");
+            match saved {
+                Ok(0) => {
+                    tracing::warn!("No events found between {} and {}", start_time, end_time);
+                    return Ok(());
+                }
+                Ok(count) => {
+                    tracing::info!("Archive saved successfully, saved {} events", count);
+                }
+                Err(e) => {
+                    tracing::error!("Failed to save archive: {e}");
 
-                return Err(e);
-            }
-        };
-
-        if destructive {
-            tracing::warn!("Deleting old events as destructive mode is enabled");
-            let filter = doc! {
-                "createdAt": {
-                    "$gte": start_time.timestamp_millis(),
-                    "$lt": end_time.timestamp_millis()
+                    return Err(e);
                 }
             };
 
-            target_store.collection.delete_many(filter, None).await?;
-            tracing::warn!("Old events deleted successfully");
-        }
-        Ok::<_, anyhow::Error>(())
-    });
+            if destructive {
+                tracing::warn!("Deleting old events as destructive mode is enabled");
+                let filter = doc! {
+                    "createdAt": {
+                        "$gte": start_time.timestamp_millis(),
+                        "$lt": end_time.timestamp_millis()
+                    }
+                };
+
+                target_store.collection.delete_many(filter, None).await?;
+                tracing::warn!("Old events deleted successfully");
+            }
+            Ok::<_, anyhow::Error>(())
+        });
 
     let errors = stream
         .buffer_unordered(config.concurrent_chunks)
@@ -247,9 +286,10 @@ async fn save(
     storage: &Arc<impl Storage>,
     target_store: &MongoStore<Document>,
     started_event: &Started,
-    start_time: &DateTime<Utc>,
-    end_time: &DateTime<Utc>,
+    times: (&DateTime<Utc>, &DateTime<Utc>),
+    part: usize,
 ) -> Result<u64> {
+    let (start_time, end_time) = times;
     let tmp_dir = TempDir::new()?;
     let filter = doc! {
         "createdAt": {
@@ -318,11 +358,7 @@ async fn save(
         .join(&config.db_config.event_db_name)
         .join(&config.event_collection_name);
 
-    let suffix = format!(
-        "{}-{}",
-        start_time.timestamp_millis(),
-        end_time.timestamp_millis()
-    );
+    let suffix = format!("{}-part-{}", start_time.timestamp_millis(), part);
 
     if let Err(e) = storage
         .upload_file(&base_path, &Extension::Bson, config, suffix.clone())

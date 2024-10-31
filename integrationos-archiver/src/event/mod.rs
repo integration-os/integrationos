@@ -1,3 +1,4 @@
+pub mod chosen;
 pub mod completed;
 pub mod dumped;
 pub mod failed;
@@ -5,6 +6,7 @@ pub mod finished;
 pub mod started;
 pub mod uploaded;
 
+use chosen::DateChosen;
 use completed::Completed;
 use dumped::Dumped;
 use failed::Failed;
@@ -23,6 +25,8 @@ pub trait EventMetadata {
 pub enum Event {
     /// Archive process started event. Emitted when the archive process is started.
     Started(Started),
+    /// Archive process has chosen the date to dump. Emitted when the archive process has chosen the date to dump.
+    DateChosen(DateChosen),
     /// Archive process dumped event. Emitted when mongodump finishes dumping the database.
     Dumped(Dumped),
     /// Archive process failed event. Emitted when the archive process fails in some way.
@@ -35,10 +39,17 @@ pub enum Event {
     Finished(Finished),
 }
 
+impl Event {
+    pub fn is_finished(&self) -> bool {
+        matches!(self, Event::Finished(_))
+    }
+}
+
 impl EventMetadata for Event {
     fn reference(&self) -> Id {
         match self {
             Event::Started(event) => event.reference(),
+            Event::DateChosen(event) => event.reference(),
             Event::Dumped(event) => event.reference(),
             Event::Failed(event) => event.reference(),
             Event::Uploaded(event) => event.reference(),
