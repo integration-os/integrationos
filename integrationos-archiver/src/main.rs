@@ -37,7 +37,7 @@ async fn main() -> Result<Unit> {
         StorageProvider::GoogleCloud => GoogleCloudStorage::new(&config).await?,
     });
 
-    let subscriber = get_subscriber("archiver".into(), "info".into(), std::io::stdout);
+    let subscriber = get_subscriber("archiver".into(), "info".into(), std::io::stdout, None);
     init_subscriber(subscriber);
 
     tracing::info!("Starting archiver with config:\n{config}");

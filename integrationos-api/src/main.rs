@@ -2,9 +2,7 @@ use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_api::{domain::config::ConnectionsConfig, server::Server};
-use integrationos_domain::telemetry::{
-    get_subscriber, get_subscriber_with_trace, init_subscriber, OtelGuard,
-};
+use integrationos_domain::telemetry::{get_subscriber, init_subscriber, OtelGuard};
 use tracing::info;
 
 fn main() -> Result<()> {
@@ -20,22 +18,14 @@ fn main() -> Result<()> {
         .build()?;
 
     runtime.block_on(async move {
-        match config.otlp_endpoint {
-            Some(ref otlp_url) => {
-                let subscriber = get_subscriber_with_trace(
-                    "connections-api".into(),
-                    "info".into(),
-                    std::io::stdout,
-                    otlp_url.into(),
-                );
-                init_subscriber(subscriber)
-            }
-            None => {
-                let subscriber =
-                    get_subscriber("connections-api".into(), "info".into(), std::io::stdout);
-                init_subscriber(subscriber)
-            }
-        };
+        let subscriber = get_subscriber(
+            "connections-api".into(),
+            "info".into(),
+            std::io::stdout,
+            config.otlp_endpoint.clone(),
+        );
+
+        init_subscriber(subscriber);
 
         info!("Starting API with config:\n{config}");
 
