@@ -26,7 +26,12 @@ use tracing::{error, info, warn};
 async fn main() -> Result<()> {
     dotenv().ok();
 
-    let suscriber = get_subscriber("integrationos-event".into(), "info".into(), std::io::stdout);
+    let suscriber = get_subscriber(
+        "integrationos-event".into(),
+        "info".into(),
+        std::io::stdout,
+        None,
+    );
     init_subscriber(suscriber);
 
     let config = EventCoreConfig::init_from_env()?;

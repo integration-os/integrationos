@@ -14,7 +14,7 @@ fn main() -> Result<()> {
     dotenv().ok();
     let config = DatabaseConnectionConfig::init_from_env()?;
 
-    let subscriber = get_subscriber("storage".into(), "info".into(), std::io::stdout);
+    let subscriber = get_subscriber("storage".into(), "info".into(), std::io::stdout, None);
     init_subscriber(subscriber);
 
     info!("Starting Storage API with config:\n{config}");

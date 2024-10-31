@@ -22,53 +22,11 @@ where
     pub subscriber: T,
 }
 
-pub fn get_subscriber_with_trace<Sink>(
-    name: String,
-    env_filter: String,
-    sink: Sink,
-    otlp_url: String,
-) -> Telemetry<impl SubscriberExt + Send + Sync + 'static>
-where
-    Sink: for<'a> MakeWriter<'a> + Send + Sync + 'static,
-{
-    let formatting_layer: BunyanFormattingLayer<Sink> =
-        BunyanFormattingLayer::new(name.clone(), sink);
-
-    let exporter = opentelemetry_otlp::new_exporter()
-        .tonic()
-        .with_endpoint(otlp_url.clone());
-
-    let provider = opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_trace_config(
-            Config::default().with_resource(opentelemetry_sdk::Resource::new(vec![
-                opentelemetry::KeyValue::new("service.name", name),
-            ])),
-        )
-        .with_batch_config(BatchConfig::default())
-        .with_exporter(exporter)
-        .install_batch(Tokio)
-        .expect("Failed to install tracing pipeline");
-
-    global::set_tracer_provider(provider.clone());
-    let tracer = provider.tracer("tracing-otel-subscriber");
-
-    let filter_layer =
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(env_filter));
-
-    Telemetry {
-        subscriber: Registry::default()
-            .with(filter_layer)
-            .with(JsonStorageLayer)
-            .with(OpenTelemetryLayer::new(tracer))
-            .with(formatting_layer),
-    }
-}
-
 pub fn get_subscriber<Sink>(
     name: String,
     env_filter: String,
     sink: Sink,
+    otlp_url: Option<String>,
 ) -> Telemetry<impl SubscriberExt + Send + Sync + 'static>
 where
     Sink: for<'a> MakeWriter<'a> + Send + Sync + 'static,
@@ -79,11 +37,51 @@ where
     let filter_layer =
         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(env_filter));
 
-    Telemetry {
-        subscriber: Registry::default()
-            .with(filter_layer)
-            .with(JsonStorageLayer)
-            .with(formatting_layer),
+    match otlp_url {
+        Some(otlp_url) => {
+            let exporter = opentelemetry_otlp::new_exporter()
+                .tonic()
+                .with_endpoint(otlp_url.clone());
+
+            let provider = opentelemetry_otlp::new_pipeline()
+                .tracing()
+                .with_trace_config(Config::default().with_resource(
+                    opentelemetry_sdk::Resource::new(vec![opentelemetry::KeyValue::new(
+                        "service.name",
+                        name,
+                    )]),
+                ))
+                .with_batch_config(BatchConfig::default())
+                .with_exporter(exporter)
+                .install_batch(Tokio)
+                .expect("Failed to install tracing pipeline");
+
+            global::set_tracer_provider(provider.clone());
+            let tracer = provider.tracer("tracing-otel-subscriber");
+
+            let telemetry: Telemetry<Box<dyn SubscriberExt + Send + Sync>> = Telemetry {
+                subscriber: Box::new(
+                    Registry::default()
+                        .with(OpenTelemetryLayer::new(tracer))
+                        .with(filter_layer)
+                        .with(JsonStorageLayer)
+                        .with(formatting_layer),
+                ),
+            };
+
+            telemetry
+        }
+        None => {
+            let telemetry: Telemetry<Box<dyn SubscriberExt + Send + Sync>> = Telemetry {
+                subscriber: Box::new(
+                    Registry::default()
+                        .with(filter_layer)
+                        .with(JsonStorageLayer)
+                        .with(formatting_layer),
+                ),
+            };
+            telemetry
+        }
     }
 }
 

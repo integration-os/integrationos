@@ -17,7 +17,7 @@ use tracing::info;
 async fn main() -> Result<()> {
     dotenv().ok();
 
-    let suscriber = get_subscriber("watchdog".into(), "info".into(), std::io::stdout);
+    let suscriber = get_subscriber("watchdog".into(), "info".into(), std::io::stdout, None);
     init_subscriber(suscriber);
 
     let watchdog_config = WatchdogConfig::init_from_env().context("Could not load config")?;
