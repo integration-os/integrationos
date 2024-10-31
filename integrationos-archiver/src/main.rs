@@ -188,6 +188,12 @@ async fn dump(
     let max_end = Utc::now() - CDuration::days(config.min_date_days);
     let end = (start + CDuration::days(config.chunk_to_process_in_days)).min(max_end);
 
+    if start.timestamp_millis() >= end.timestamp_millis() {
+        // If the very first event is after the end time, exit
+        tracing::warn!("No events to process, exiting");
+        return Ok(());
+    }
+
     archives
         .create_one(&Event::DateChosen(DateChosen::new(
             started.reference(),
@@ -195,12 +201,6 @@ async fn dump(
             end.timestamp_millis(),
         )))
         .await?;
-
-    if start.timestamp_millis() >= end.timestamp_millis() {
-        // If the very first event is after the end time, exit
-        tracing::warn!("No events to process, exiting");
-        return Ok(());
-    }
 
     tracing::info!("Start date: {}, End date: {}", start, end);
 
