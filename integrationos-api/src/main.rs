@@ -2,9 +2,7 @@ use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_api::{domain::config::ConnectionsConfig, server::Server};
-use integrationos_domain::telemetry::{
-    get_subscriber, init_subscriber, OtelGuard,
-};
+use integrationos_domain::telemetry::{get_subscriber, init_subscriber, OtelGuard};
 use tracing::info;
 
 fn main() -> Result<()> {

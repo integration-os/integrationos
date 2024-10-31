@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
         "integrationos-gateway".into(),
         "info".into(),
         std::io::stdout,
-        None
+        None,
     );
     init_subscriber(suscriber);
 
