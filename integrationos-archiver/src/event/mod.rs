@@ -34,3 +34,16 @@ pub enum Event {
     /// Archive process finished event. Emitted when the archive process is finished.
     Finished(Finished),
 }
+
+impl EventMetadata for Event {
+    fn reference(&self) -> Id {
+        match self {
+            Event::Started(event) => event.reference(),
+            Event::Dumped(event) => event.reference(),
+            Event::Failed(event) => event.reference(),
+            Event::Uploaded(event) => event.reference(),
+            Event::Completed(event) => event.reference(),
+            Event::Finished(event) => event.reference(),
+        }
+    }
+}

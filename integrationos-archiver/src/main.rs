@@ -95,6 +95,28 @@ async fn dump(
         started.collection()
     );
 
+    let last_finished_event = archives
+        .get_one(doc! {
+            "type": "Finished"
+        })
+        .await?
+        .map(|e| e.reference());
+
+    let started_at = match last_finished_event {
+        Some(id) => {
+            let started = archives.get_one_by_id(&id.to_string()).await?;
+
+            match started {
+                Some(e) => match e {
+                    Event::Started(e) => Some(e.started_at().timestamp_millis()),
+                    _ => return Err(anyhow!("Invalid event type")),
+                },
+                None => None,
+            }
+        }
+        _ => None,
+    };
+
     let document = target_store
         .collection
         .find_one(
@@ -126,6 +148,9 @@ async fn dump(
             return Ok(());
         }
     };
+
+    // If the started_at is not set, use the start time, if it is set, use the max of the two
+    let start = started_at.map_or(start, |started_at| started_at.max(start));
 
     let start = match Utc.timestamp_millis_opt(start) {
         LocalResult::Single(date) => date,
