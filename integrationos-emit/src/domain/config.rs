@@ -20,8 +20,8 @@ pub struct EmitterConfig {
     pub environment: Environment,
     #[envconfig(from = "EVENT_TOPIC", default = "events")]
     pub event_topic: String,
-    #[envconfig(from = "FLUVIO_PORT", default = "3000")]
-    pub fluvio_port: u16,
+    #[envconfig(from = "FLUVIO_ADMIN_PORT", default = "9003")]
+    pub fluvio_admin_port: u16,
     #[envconfig(from = "FLUVIO_HOST", default = "localhost")]
     pub fluvio_host: String,
     #[envconfig(from = "FLUVIO_CONNECTION_TIMEOUT_IN_SECS", default = "30")]
@@ -39,7 +39,7 @@ impl Display for EmitterConfig {
         writeln!(f, "SECRET: ****")?;
         writeln!(f, "ENVIRONMENT: {}", self.environment)?;
         writeln!(f, "EVENT_TOPIC: {}", self.event_topic)?;
-        writeln!(f, "FLUVIO_PORT: {}", self.fluvio_port)?;
+        writeln!(f, "FLUVIO_PORT: {}", self.fluvio_admin_port)?;
         writeln!(f, "FLUVIO_HOST: {}", self.fluvio_host)?;
         writeln!(f, "{}", self.cache)?;
         writeln!(f, "{}", self.db)
