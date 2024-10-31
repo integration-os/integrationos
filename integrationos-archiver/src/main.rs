@@ -196,6 +196,9 @@ async fn dump(
     if start.timestamp_millis() >= end.timestamp_millis() {
         // If the very first event is after the end time, exit
         tracing::warn!("No events to process, exiting");
+        archives
+            .create_one(&Event::Finished(Finished::new(started.reference())))
+            .await?;
         return Ok(());
     }
 
@@ -213,6 +216,7 @@ async fn dump(
                 end_time,
                 end_time.timestamp_millis()
             );
+
             let saved = save(
                 config,
                 archives,
