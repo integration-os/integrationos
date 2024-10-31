@@ -9,7 +9,7 @@ use std::{
 };
 
 #[derive(Envconfig, Clone)] // Intentionally no Debug so secret is not printed
-pub struct Config {
+pub struct EmitterConfig {
     #[envconfig(from = "SERVER_ADDRESS", default = "0.0.0.0:3000")]
     pub address: SocketAddr,
     #[envconfig(from = "CACHE_SIZE", default = "10000")]
@@ -24,13 +24,13 @@ pub struct Config {
     pub db: DatabaseConfig,
 }
 
-impl Config {
+impl EmitterConfig {
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl Display for Config {
+impl Display for EmitterConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "SERVER_ADDRESS: {}", self.address)?;
         writeln!(f, "CACHE_SIZE: {}", self.cache_size)?;
@@ -41,7 +41,7 @@ impl Display for Config {
     }
 }
 
-impl Default for Config {
+impl Default for EmitterConfig {
     fn default() -> Self {
         Self {
             address: "0.0.0.0:3000".parse().unwrap(),
@@ -61,7 +61,7 @@ mod tests {
 
     #[test]
     fn test_config() {
-        let config = Config::new();
+        let config = EmitterConfig::new();
         assert_eq!(config.address, "0.0.0.0:3000".parse().unwrap());
         assert_eq!(config.cache_size, 10_000);
         assert_eq!(config.secret_key, "32KFFT_i4UpkJmyPwY2TGzgHpxfXs7zS");
@@ -80,7 +80,7 @@ mod tests {
 
     #[test]
     fn test_config_display() {
-        let config = Config::new();
+        let config = EmitterConfig::new();
         let mut display = r"SERVER_ADDRESS: 0.0.0.0:3000
 CACHE_SIZE: 10000
 SECRET: ****
