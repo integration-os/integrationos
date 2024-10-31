@@ -18,16 +18,18 @@ pub struct EmitterConfig {
     pub secret_key: String,
     #[envconfig(from = "ENVIRONMENT", default = "live")]
     pub environment: Environment,
+    #[envconfig(from = "EVENT_TOPIC", default = "events")]
+    pub event_topic: String,
+    #[envconfig(from = "FLUVIO_PORT", default = "3000")]
+    pub fluvio_port: u16,
+    #[envconfig(from = "FLUVIO_HOST", default = "localhost")]
+    pub fluvio_host: String,
+    #[envconfig(from = "FLUVIO_CONNECTION_TIMEOUT_IN_SECS", default = "30")]
+    pub fluvio_connection_timeout_in_secs: u64,
     #[envconfig(nested = true)]
     pub cache: CacheConfig,
     #[envconfig(nested = true)]
     pub db: DatabaseConfig,
-}
-
-impl EmitterConfig {
-    pub fn new() -> Self {
-        Self::default()
-    }
 }
 
 impl Display for EmitterConfig {
@@ -36,63 +38,10 @@ impl Display for EmitterConfig {
         writeln!(f, "CACHE_SIZE: {}", self.cache_size)?;
         writeln!(f, "SECRET: ****")?;
         writeln!(f, "ENVIRONMENT: {}", self.environment)?;
+        writeln!(f, "EVENT_TOPIC: {}", self.event_topic)?;
+        writeln!(f, "FLUVIO_PORT: {}", self.fluvio_port)?;
+        writeln!(f, "FLUVIO_HOST: {}", self.fluvio_host)?;
         writeln!(f, "{}", self.cache)?;
         writeln!(f, "{}", self.db)
-    }
-}
-
-impl Default for EmitterConfig {
-    fn default() -> Self {
-        Self {
-            address: "0.0.0.0:3000".parse().unwrap(),
-            cache_size: 10_000,
-            secret_key: "32KFFT_i4UpkJmyPwY2TGzgHpxfXs7zS".to_owned(),
-            environment: Environment::Test,
-            cache: CacheConfig::default(),
-            db: DatabaseConfig::default(),
-        }
-    }
-}
-
-#[cfg(test)]
-
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_config() {
-        let config = EmitterConfig::new();
-        assert_eq!(config.address, "0.0.0.0:3000".parse().unwrap());
-        assert_eq!(config.cache_size, 10_000);
-        assert_eq!(config.secret_key, "32KFFT_i4UpkJmyPwY2TGzgHpxfXs7zS");
-        assert_eq!(config.environment, Environment::Test);
-        assert_eq!(config.cache.url, "redis://localhost:6379");
-        assert_eq!(config.cache.queue_name, "events");
-        assert_eq!(config.cache.event_throughput_key, "event_throughput");
-        assert_eq!(config.db.event_db_url, "mongodb://localhost:27017");
-        assert_eq!(config.db.event_db_name, "database");
-        assert_eq!(config.db.control_db_url, "mongodb://localhost:27017");
-        assert_eq!(config.db.control_db_name, "database");
-        assert_eq!(config.db.context_db_url, "mongodb://localhost:27017");
-        assert_eq!(config.db.context_db_name, "database");
-        assert_eq!(config.db.context_collection_name, "event-transactions");
-    }
-
-    #[test]
-    fn test_config_display() {
-        let config = EmitterConfig::new();
-        let mut display = r"SERVER_ADDRESS: 0.0.0.0:3000
-CACHE_SIZE: 10000
-SECRET: ****
-ENVIRONMENT: test
-"
-        .to_string();
-
-        display += &config.cache.to_string();
-        display += "\n";
-        display += &config.db.to_string();
-        display += "\n";
-
-        assert_eq!(config.to_string(), display);
     }
 }
