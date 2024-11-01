@@ -48,6 +48,7 @@ k8s-openapi = "0.23.0"
 mockito = "1.2.0"
 moka = { version = "0.12.4", features = ["future"] }
 mongodb = "2.8.0"
+num_cpus = "1"
 openapiv3 = { version = "2.0.0", features = ["skip_serializing_defaults"] }
 rand = "0.8.5"
 redis = { version = "0.27", features = ["connection-manager", "tokio-comp"] }

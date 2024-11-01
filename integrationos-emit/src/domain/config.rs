@@ -10,6 +10,8 @@ use std::{
 
 #[derive(Envconfig, Clone)] // Intentionally no Debug so secret is not printed
 pub struct EmitterConfig {
+    #[envconfig(from = "WORKER_THREADS")]
+    pub worker_threads: Option<usize>,
     #[envconfig(from = "SERVER_ADDRESS", default = "0.0.0.0:3000")]
     pub address: SocketAddr,
     #[envconfig(from = "CACHE_SIZE", default = "10000")]

@@ -2906,9 +2906,12 @@ dependencies = [
  "http 1.1.0",
  "http-serde-ext",
  "integrationos-domain",
+ "num_cpus",
  "serde",
  "serde_json",
  "tokio",
+ "tower-http",
+ "tracing",
 ]
 
 [[package]]

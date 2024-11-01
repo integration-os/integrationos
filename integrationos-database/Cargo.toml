@@ -19,7 +19,7 @@ integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain" }
 integrationos-unified = { path = "../integrationos-unified" }
 mongodb.workspace = true
-num_cpus = "1"
+num_cpus.workspace = true
 rand.workspace = true
 reqwest.workspace = true
 serde.workspace = true
