@@ -18,9 +18,15 @@ pub struct ArchiverConfig {
     pub db_config: DatabaseConfig,
     #[envconfig(from = "EVENT_COLLECTION_NAME", default = "external-events")]
     pub event_collection_name: String,
-    #[envconfig(from = "GS_STORAGE_BUCKET", default = "integrationos-zsk")]
+    #[envconfig(
+        from = "GS_STORAGE_BUCKET",
+        default = "integrationos-event-archives-local"
+    )]
     pub gs_storage_bucket: String,
-    #[envconfig(from = "GS_STORAGE_URI", default = "gs://integrationos-zsk")]
+    #[envconfig(
+        from = "GS_STORAGE_URI",
+        default = "gs://integrationos-event-archives-local"
+    )]
     pub gs_storage_uri: String,
     #[envconfig(from = "STORAGE_PROVIDER", default = "google-cloud")]
     pub storage_provider: StorageProvider,
@@ -34,9 +40,11 @@ pub struct ArchiverConfig {
     pub min_date_days: i64,
     #[envconfig(from = "CHUNK_SIZE_MINUTES", default = "5")]
     pub chunk_size_minutes: i64,
+    #[envconfig(from = "CHUNK_TO_PROCESS_IN_DAYS", default = "1")]
+    pub chunk_to_process_in_days: i64,
     #[envconfig(from = "CONCURRENT_CHUNKS", default = "10")]
     pub concurrent_chunks: usize,
-    #[envconfig(from = "SLEEP_AFTER_FINISH_DUMP_SECS", default = "60")]
+    #[envconfig(from = "SLEEP_AFTER_FINISH_DUMP_SECS", default = "10")]
     pub sleep_after_finish: u64,
     #[envconfig(from = "MODE", default = "dump")]
     pub mode: Mode,
@@ -60,6 +68,11 @@ impl Display for ArchiverConfig {
         writeln!(f, "READ_BUFFER_SIZE_BYTES: {}", self.read_buffer_size)?;
         writeln!(f, "MIN_DATE_DAYS: {}", self.min_date_days)?;
         writeln!(f, "CHUNK_SIZE_MINUTES: {}", self.chunk_size_minutes)?;
+        writeln!(
+            f,
+            "CHUNK_TO_PROCESS_IN_DAYS: {}",
+            self.chunk_to_process_in_days
+        )?;
         writeln!(f, "EVENT_COLLECTION_NAME: {}", self.event_collection_name)?;
         writeln!(
             f,
