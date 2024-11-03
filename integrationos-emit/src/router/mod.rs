@@ -1,4 +1,4 @@
-use crate::server::AppState;
+use crate::{logic::emitter, server::AppState};
 use axum::{middleware::from_fn, response::IntoResponse, routing::get, Json, Router};
 use http::StatusCode;
 use integrationos_domain::telemetry::log_request_middleware;
@@ -6,8 +6,10 @@ use serde_json::json;
 use std::sync::Arc;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
-pub async fn get_router() -> Router<Arc<AppState>> {
+pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
+    let path = format!("/{}", state.config.api_version);
     Router::new()
+        .nest(&path, emitter::get_router())
         .route("/", get(get_root))
         .fallback(not_found_handler)
         .layer(CorsLayer::permissive())

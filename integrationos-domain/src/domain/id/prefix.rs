@@ -27,6 +27,7 @@ pub enum IdPrefix {
     Log,
     LogTracking,
     Pipeline,
+    PipelineEvent,
     Platform,
     PlatformPage,
     Queue,
@@ -61,6 +62,7 @@ impl Display for IdPrefix {
             IdPrefix::Log => write!(f, "log"),
             IdPrefix::LogTracking => write!(f, "log_trk"),
             IdPrefix::Pipeline => write!(f, "pipe"),
+            IdPrefix::PipelineEvent => write!(f, "pipe_evt"),
             IdPrefix::Platform => write!(f, "plf"),
             IdPrefix::PlatformPage => write!(f, "plf_pg"),
             IdPrefix::Queue => write!(f, "q"),
@@ -99,6 +101,7 @@ impl TryFrom<&str> for IdPrefix {
             "log" => Ok(IdPrefix::Log),
             "log_trk" => Ok(IdPrefix::LogTracking),
             "pipe" => Ok(IdPrefix::Pipeline),
+            "pipe_evt" => Ok(IdPrefix::PipelineEvent),
             "plf" => Ok(IdPrefix::Platform),
             "plf_pg" => Ok(IdPrefix::PlatformPage),
             "q" => Ok(IdPrefix::Queue),
@@ -139,6 +142,7 @@ impl From<IdPrefix> for String {
             IdPrefix::Log => "log".to_string(),
             IdPrefix::LogTracking => "log_trk".to_string(),
             IdPrefix::Pipeline => "pipe".to_string(),
+            IdPrefix::PipelineEvent => "pipe_evt".to_string(),
             IdPrefix::Platform => "plf".to_string(),
             IdPrefix::PlatformPage => "plf_pg".to_string(),
             IdPrefix::Queue => "q".to_string(),
@@ -207,6 +211,10 @@ mod test {
         assert_eq!(IdPrefix::try_from("ln_tk").unwrap(), IdPrefix::LinkToken);
         assert_eq!(IdPrefix::try_from("log").unwrap(), IdPrefix::Log);
         assert_eq!(IdPrefix::try_from("pipe").unwrap(), IdPrefix::Pipeline);
+        assert_eq!(
+            IdPrefix::try_from("pipe_evt").unwrap(),
+            IdPrefix::PipelineEvent
+        );
         assert_eq!(IdPrefix::try_from("plf").unwrap(), IdPrefix::Platform);
         assert_eq!(IdPrefix::try_from("q").unwrap(), IdPrefix::Queue);
         assert_eq!(IdPrefix::try_from("st").unwrap(), IdPrefix::Settings);
@@ -248,6 +256,7 @@ mod test {
         assert_eq!(format!("{}", IdPrefix::Log), "log");
         assert_eq!(format!("{}", IdPrefix::LogTracking), "log_trk");
         assert_eq!(format!("{}", IdPrefix::Pipeline), "pipe");
+        assert_eq!(format!("{}", IdPrefix::PipelineEvent), "pipe_evt");
         assert_eq!(format!("{}", IdPrefix::Platform), "plf");
         assert_eq!(format!("{}", IdPrefix::PlatformPage), "plf_pg");
         assert_eq!(format!("{}", IdPrefix::Queue), "q");

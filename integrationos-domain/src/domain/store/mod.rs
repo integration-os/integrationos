@@ -43,6 +43,8 @@ generate_stores!(
     "integrations",
     MicroServices,
     "microservices",
+    PipelineEvents,
+    "pipeline-events",
     Events,
     "external-events",
     EventAccess,
