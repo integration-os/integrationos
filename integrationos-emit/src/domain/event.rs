@@ -5,9 +5,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "PascalCase", tag = "type")]
 pub enum Event {
     #[serde(rename_all = "camelCase")]
-    DatabaseConnectionLost { 
-        connection_id: Id
-    },
+    DatabaseConnectionLost { connection_id: Id },
 }
 
 impl Event {
