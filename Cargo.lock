@@ -1688,7 +1688,6 @@ dependencies = [
  "fluvio-socket",
  "fluvio-stream-model",
  "paste",
- "serde",
  "static_assertions",
  "thiserror",
  "tracing",

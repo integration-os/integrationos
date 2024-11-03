@@ -10,7 +10,7 @@ async-trait.workspace = true
 chrono.workspace = true
 dotenvy.workspace = true
 envconfig.workspace = true
-fluvio = { version = "0.23.3", features = ["admin"] }
+fluvio = "0.23.3"
 futures-util.workspace = true
 futures.workspace = true
 http-serde-ext.workspace = true

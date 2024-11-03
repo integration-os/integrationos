@@ -1,11 +1,11 @@
 use super::EventStreamExt;
-use crate::domain::{config::EmitterConfig, event::Event};
+use crate::domain::{config::EmitterConfig, event::EventEntity};
 use async_trait::async_trait;
 use fluvio::{
     spu::SpuSocketPool, Compression, Fluvio, FluvioConfig, RetryPolicy, TopicProducer,
     TopicProducerConfigBuilder,
 };
-use integrationos_domain::{IntegrationOSError, InternalError, Unit};
+use integrationos_domain::{prefix::IdPrefix, Id, IntegrationOSError, InternalError};
 use std::time::Duration;
 
 pub struct FluvioDriverImpl {
@@ -50,7 +50,7 @@ impl FluvioDriverImpl {
 
 #[async_trait]
 impl EventStreamExt for FluvioDriverImpl {
-    async fn publish(&self, event: Event) -> Result<Unit, IntegrationOSError> {
+    async fn publish(&self, event: EventEntity) -> Result<Id, IntegrationOSError> {
         match &self.producer {
             Some(producer) => {
                 let payload = serde_json::to_vec(&event).map_err(|e| {
@@ -64,7 +64,7 @@ impl EventStreamExt for FluvioDriverImpl {
                         InternalError::io_err(&format!("Could not send event to fluvio: {e}"), None)
                     })?;
 
-                Ok(())
+                Ok(event.entity_id)
             }
             None => Err(InternalError::invalid_argument(
                 "Producer not initialized",
@@ -78,9 +78,9 @@ pub struct FluvioDriverLogger;
 
 #[async_trait]
 impl EventStreamExt for FluvioDriverLogger {
-    async fn publish(&self, event: Event) -> Result<Unit, IntegrationOSError> {
+    async fn publish(&self, event: EventEntity) -> Result<Id, IntegrationOSError> {
         tracing::info!("Received event: {:?}, using logger handler", event);
 
-        Ok(())
+        Ok(Id::now(IdPrefix::PipelineEvent))
     }
 }

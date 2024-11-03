@@ -1,6 +1,6 @@
 use crate::{domain::event::Event, server::AppState};
 use axum::{extract::State, routing::post, Json, Router};
-use integrationos_domain::{IntegrationOSError, Unit};
+use integrationos_domain::{Id, IntegrationOSError};
 use std::sync::Arc;
 
 pub fn get_router() -> Router<Arc<AppState>> {
@@ -10,10 +10,10 @@ pub fn get_router() -> Router<Arc<AppState>> {
 pub async fn emit(
     state: State<Arc<AppState>>,
     Json(payload): Json<Event>,
-) -> Result<Unit, IntegrationOSError> {
+) -> Result<Json<Id>, IntegrationOSError> {
     tracing::info!("Received event: {:?}", payload);
 
-    state.stream_client.publish(payload).await?;
+    let id = state.stream_client.publish(payload.as_entity()).await?;
 
-    Ok(())
+    Ok(Json(id))
 }

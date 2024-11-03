@@ -16,7 +16,7 @@ pub struct EmitterConfig {
     pub api_version: String,
     #[envconfig(from = "WORKER_THREADS")]
     pub worker_threads: Option<usize>,
-    #[envconfig(from = "SERVER_ADDRESS", default = "0.0.0.0:3000")]
+    #[envconfig(from = "SERVER_ADDRESS", default = "0.0.0.0:3001")]
     pub address: SocketAddr,
     #[envconfig(from = "CACHE_SIZE", default = "10000")]
     pub cache_size: u64,
@@ -54,13 +54,9 @@ pub struct StreamConfig {
     pub host: String,
     #[envconfig(from = "FLUVIO_PORT", default = "9003")]
     pub port: u16,
-    #[envconfig(from = "FLUVIO_ADMIN_PORT", default = "9103")]
-    pub admin_port: u16,
-    #[envconfig(from = "FLUVIO_CONNECTION_TIMEOUT_IN_SECS", default = "30")]
-    pub connection_timeout: u64,
     #[envconfig(from = "FLUVIO_PRODUCER_TOPIC")]
     pub producer_topic: Option<Topic>,
-    #[envconfig(from = "FLUVIO_CONSUMER_TOPICS")]
+    #[envconfig(from = "FLUVIO_CONSUMER_TOPIC")]
     pub consumer_topic: Option<Topic>,
     #[envconfig(from = "FLUVIO_DLQ_TOPIC", default = "dlq")]
     pub dlq_topic: Topic,
@@ -82,12 +78,6 @@ impl Display for StreamConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "FLUVIO_HOST: {}", self.host)?;
         writeln!(f, "FLUVIO_PORT: {}", self.port)?;
-        writeln!(f, "FLUVIO_ADMIN_PORT: {}", self.admin_port)?;
-        writeln!(
-            f,
-            "FLUVIO_CONNECTION_TIMEOUT_IN_SECS: {}",
-            self.connection_timeout
-        )?;
         writeln!(f, "FLUVIO_CONSUMER_TOPIC: {:?}", self.consumer_topic)?;
         writeln!(f, "FLUVIO_PRODUCER_TOPIC: {:?}", self.producer_topic)?;
         writeln!(f, "FLUVIO_DLQ_TOPIC: {:?}", self.dlq_topic)?;
