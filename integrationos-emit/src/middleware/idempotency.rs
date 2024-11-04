@@ -3,7 +3,7 @@ use axum::{body::Body, middleware::Next, response::Response};
 use http::Request;
 use integrationos_domain::{ApplicationError, IntegrationOSError};
 
-pub const IDEMPOTENCY_HEADER_STR: &str = "x-buildable-idempotency-key";
+pub const IDEMPOTENCY_HEADER_STR: &str = "x-integrationos-idempotency-key";
 const MAX_LENGTH: usize = 50;
 
 pub async fn header_idempotency(
