@@ -2916,9 +2916,12 @@ dependencies = [
  "serde",
  "serde_json",
  "strum",
+ "testcontainers-modules",
  "tokio",
  "tower-http",
  "tracing",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
