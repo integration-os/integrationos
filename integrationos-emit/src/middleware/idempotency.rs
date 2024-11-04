@@ -21,7 +21,7 @@ pub async fn header_idempotency(
         .to_str()
         .map_err(|_| ApplicationError::bad_request("Invalid idempotency key", None))?;
 
-    if !idempotency_key.is_empty() {
+    if idempotency_key.is_empty() {
         return Err(ApplicationError::bad_request(
             "Invalid idempotency key, cannot be empty",
             None,
