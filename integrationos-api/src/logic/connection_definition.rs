@@ -14,7 +14,7 @@ use integrationos_domain::{
     api_model_config::AuthMethod,
     connection_definition::{
         AuthSecret, ConnectionDefinition, ConnectionDefinitionType, ConnectionForm,
-        ConnectionStatus, FormDataItem, Frontend, Paths, PublicConnectionDetails, Spec,
+        ConnectionStatus, Filter, FormDataItem, Frontend, Paths, PublicConnectionDetails, Spec,
     },
     connection_model_definition::{ConnectionModelDefinition, CrudAction},
     id::{prefix::IdPrefix, Id},
@@ -96,6 +96,8 @@ pub struct PublicGetConnectionDetailsResponse {
     pub filtration: bool,
     pub sorting: bool,
     pub caveats: Vec<PublicConnectionDataCaveat>,
+    pub supported_filters: Option<Vec<Filter>>,
+    pub supported_sort_keys: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -286,9 +288,11 @@ pub async fn public_get_connection_details(
             },
             supported_actions,
             pagination: model_features.pagination,
-            filtration: model_features.filtration,
-            sorting: model_features.sorting,
+            filtration: model_features.filtration.supported,
+            sorting: model_features.sorting.supported,
             caveats,
+            supported_filters: model_features.filtration.filters.clone(),
+            supported_sort_keys: model_features.sorting.keys.clone(),
         },
     )))
 }

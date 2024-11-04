@@ -42,8 +42,8 @@ pub struct PublicConnectionDetails {
 pub struct ModelFeatures {
     pub name: String,
     pub pagination: bool,
-    pub filtration: bool,
-    pub sorting: bool,
+    pub filtration: ModelFilter,
+    pub sorting: ModelSorting,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
@@ -62,6 +62,24 @@ pub enum ConnectionStatus {
 pub struct Caveat {
     pub connection_model_definition_id: Option<String>,
     pub comments: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ModelFilter {
+    pub supported: bool,
+    pub filters: Option<Vec<Filter>>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Filter {
+    pub key: String,
+    pub operators: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ModelSorting {
+    pub supported: bool,
+    pub keys: Option<Vec<String>>,
 }
 
 impl ConnectionDefinition {
