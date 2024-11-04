@@ -25,8 +25,10 @@ impl Display for IdempotencyKey {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Idempotency {
+    /// We use the _id field to store the idempotency key because it is unique out of
+    /// the box and we can use it as a conflict generation key
     #[serde(rename = "_id")]
-    pub id: Id,
     pub key: IdempotencyKey,
+    pub indexable: Id,
     pub metadata: RecordMetadata,
 }

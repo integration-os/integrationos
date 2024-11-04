@@ -87,11 +87,18 @@ impl TestServer {
         path: &str,
         method: Method,
         payload: Option<&T>,
+        header: Option<&HashMap<String, String>>,
     ) -> Result<ApiResponse<U>, IntegrationOSError> {
         let uri = format!("http://localhost:{}/{path}", self.port);
         let mut req = self.client.request(method, uri);
         if let Some(payload) = payload {
             req = req.json(payload);
+        }
+
+        if let Some(header) = header {
+            for (key, value) in header {
+                req = req.header(key, value);
+            }
         }
 
         let res = req.send().await.map_err(|e| {

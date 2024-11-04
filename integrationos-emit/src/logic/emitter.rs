@@ -34,7 +34,7 @@ pub async fn emit(
         .app_stores
         .idempotency
         .get_one(doc! {
-            "key": idempotency_key.inner()
+            "_id": idempotency_key.inner()
         })
         .await
         .map(|idempotency| idempotency.is_some())
@@ -47,8 +47,8 @@ pub async fn emit(
         ))
     } else {
         let idempotency = Idempotency {
-            id: Id::now(IdPrefix::Idempotency),
             key: idempotency_key.clone(),
+            indexable: Id::now(IdPrefix::Idempotency),
             metadata: RecordMetadata::default(),
         };
 
