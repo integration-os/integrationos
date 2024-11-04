@@ -21,6 +21,7 @@ impl Event {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct EventEntity {
     pub entity: Event,
+    #[serde(rename = "_id")]
     pub entity_id: Id,
     pub metadata: RecordMetadata,
 }

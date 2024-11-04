@@ -45,6 +45,8 @@ generate_stores!(
     "microservices",
     PipelineEvents,
     "pipeline-events",
+    Idempotency,
+    "idempotency",
     Events,
     "external-events",
     EventAccess,

@@ -1,5 +1,5 @@
 use crate::{
-    domain::{config::EmitterConfig, event::Event},
+    domain::{config::EmitterConfig, event::Event, idempotency::Idempotency},
     router,
     stream::{
         fluvio_driver::{FluvioDriverImpl, FluvioDriverLogger},
@@ -19,6 +19,7 @@ use tokio::net::TcpListener;
 #[derive(Clone)]
 pub struct AppStores {
     pub events: MongoStore<Event>,
+    pub idempotency: MongoStore<Idempotency>,
 }
 
 #[derive(Clone)]
@@ -51,6 +52,7 @@ impl Server {
 
         let app_stores = AppStores {
             events: MongoStore::new(&database, &Store::PipelineEvents).await?,
+            idempotency: MongoStore::new(&database, &Store::Idempotency).await?,
         };
 
         let stream_client: Arc<dyn EventStreamExt + Sync + Send> =
