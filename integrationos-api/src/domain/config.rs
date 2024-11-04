@@ -11,8 +11,6 @@ use strum::{AsRefStr, EnumString};
 pub struct ConnectionsConfig {
     #[envconfig(from = "WORKER_THREADS")]
     pub worker_threads: Option<usize>,
-    #[envconfig(from = "DEBUG_MODE", default = "false")]
-    pub debug_mode: bool,
     #[envconfig(from = "INTERNAL_SERVER_ADDRESS", default = "0.0.0.0:3005")]
     pub address: SocketAddr,
     #[envconfig(from = "CACHE_SIZE", default = "100")]
@@ -52,9 +50,6 @@ pub struct ConnectionsConfig {
     pub metric_system_id: String,
     #[envconfig(from = "SEGMENT_WRITE_KEY")]
     pub segment_write_key: Option<String>,
-    // In the future, we will want to emit events for internal API actions
-    #[envconfig(from = "EMIT_URL", default = "http://127.0.0.1:3000/emit/")]
-    pub emit_url: String,
     #[envconfig(nested = true)]
     pub secrets_config: SecretsConfig,
     #[envconfig(
@@ -64,15 +59,9 @@ pub struct ConnectionsConfig {
     /// This is the admin secret for the API. Be sure this value is not the one use to generate
     /// tokens for the users as it gives access to sensitive admin endpoints.
     pub jwt_secret: String,
-    #[envconfig(from = "BURST_RATE_LIMIT", default = "1")]
-    pub burst_rate_limit: u64,
     /// Burst size limit
-    #[envconfig(from = "BURST_SIZE_LIMIT", default = "30")]
-    pub burst_size: u32,
     #[envconfig(from = "API_VERSION", default = "v1")]
     pub api_version: String,
-    #[envconfig(from = "MOCK_LLM", default = "false")]
-    pub mock_llm: bool,
     #[envconfig(from = "HTTP_CLIENT_TIMEOUT_SECS", default = "30")]
     pub http_client_timeout_secs: u64,
     #[envconfig(nested = true)]
@@ -101,7 +90,6 @@ pub struct ConnectionsConfig {
 impl Display for ConnectionsConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         writeln!(f, "WORKER_THREADS: {:?}", self.worker_threads)?;
-        writeln!(f, "DEBUG_MODE: {:?}", self.debug_mode)?;
         writeln!(f, "INTERNAL_SERVER_ADDRESS: {}", self.address)?;
         writeln!(f, "CACHE_SIZE: {}", self.cache_size)?;
         writeln!(
@@ -149,11 +137,9 @@ impl Display for ConnectionsConfig {
         writeln!(f, "OTLP_ENDPOINT: ***")?;
         writeln!(f, "METRIC_SYSTEM_ID: {}", self.metric_system_id)?;
         writeln!(f, "SEGMENT_WRITE_KEY: ***")?;
-        writeln!(f, "EMIT_URL: {}", self.emit_url)?;
         writeln!(f, "JWT_SECRET: ***")?;
         write!(f, "{}", self.secrets_config)?;
         writeln!(f, "API_VERSION: {}", self.api_version)?;
-        writeln!(f, "MOCK_LLM: {}", self.mock_llm)?;
         writeln!(f, "{}", self.headers)?;
         writeln!(f, "{}", self.db_config)?;
         writeln!(f, "{}", self.cache_config)?;
@@ -168,23 +154,11 @@ pub struct Headers {
     pub auth_header: String,
     #[envconfig(from = "HEADER_CONNECTION", default = "x-integrationos-connection-key")]
     pub connection_header: String,
-    #[envconfig(from = "HEADER_CUSTOM_MAP", default = "x-integrationos-custom-map")]
-    pub custom_map_header: String,
     #[envconfig(
         from = "HEADER_ENABLE_PASSTHROUGH",
         default = "x-integrationos-enable-passthrough"
     )]
     pub enable_passthrough_header: String,
-    #[envconfig(
-        from = "HEADER_INCLUDE_OVERFLOW",
-        default = "x-integrationos-include-overflow"
-    )]
-    pub include_overflow_header: String,
-    #[envconfig(
-        from = "HEADER_DYNAMIC_PLATFORM",
-        default = "x-integrationos-dynamic-platform"
-    )]
-    pub dynamic_platform_header: String,
     #[envconfig(
         from = "HEADER_RATE_LIMIT_LIMIT",
         default = "x-integrationos-rate-limit-limit"
@@ -212,21 +186,10 @@ impl Display for Headers {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         writeln!(f, "HEADER_AUTH: {}", self.auth_header)?;
         writeln!(f, "HEADER_CONNECTION: {}", self.connection_header)?;
-        writeln!(f, "HEADER_CUSTOM_MAP: {}", self.custom_map_header)?;
         writeln!(
             f,
             "HEADER_INCLUDE_PASSTHROUGH: {}",
             self.enable_passthrough_header
-        )?;
-        writeln!(
-            f,
-            "HEADER_INCLUDE_OVERFLOW: {}",
-            self.include_overflow_header
-        )?;
-        writeln!(
-            f,
-            "HEADER_DYNAMIC_PLATFORM: {}",
-            self.dynamic_platform_header
         )?;
         writeln!(f, "HEADER_RATE_LIMIT_LIMIT: {}", self.rate_limit_limit)?;
         writeln!(

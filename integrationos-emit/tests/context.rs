@@ -5,6 +5,7 @@ use integrationos_emit::domain::config::EmitterConfig;
 use integrationos_emit::server::Server;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
+use std::error::Error;
 use std::fmt::Debug;
 use std::{collections::HashMap, sync::OnceLock, time::Duration};
 use testcontainers_modules::{
@@ -44,10 +45,10 @@ impl TestServer {
         let mongo = MONGO.get_or_init(|| docker.run(Mongo));
         let port = mongo.get_host_port_ipv4(27017);
 
-        let db = format!("mongodb://127.0.0.1:{port}/?directConnection=true");
-        let db_name = Uuid::new_v4().to_string();
+        let database_uri = format!("mongodb://127.0.0.1:{port}/?directConnection=true");
+        let database_name = Uuid::new_v4().to_string();
 
-        let server_port = TcpListener::bind("127.0.0.1:0")
+        let port = TcpListener::bind("127.0.0.1:0")
             .await
             .expect("Failed to bind to port")
             .local_addr()
@@ -57,14 +58,14 @@ impl TestServer {
         let config = EmitterConfig::init_from_hashmap(&HashMap::from([
             (
                 "INTERNAL_SERVER_ADDRESS".to_string(),
-                format!("0.0.0.0:{server_port}"),
+                format!("0.0.0.0:{port}"),
             ),
-            ("CONTROL_DATABASE_URL".to_string(), db.clone()),
-            ("CONTROL_DATABASE_NAME".to_string(), db_name.clone()),
-            ("CONTEXT_DATABASE_URL".to_string(), db.clone()),
-            ("CONTEXT_DATABASE_NAME".to_string(), db_name.clone()),
-            ("EVENT_DATABASE_URL".to_string(), db.clone()),
-            ("EVENT_DATABASE_NAME".to_string(), db_name.clone()),
+            ("CONTROL_DATABASE_URL".to_string(), database_uri.clone()),
+            ("CONTROL_DATABASE_NAME".to_string(), database_name.clone()),
+            ("CONTEXT_DATABASE_URL".to_string(), database_uri.clone()),
+            ("CONTEXT_DATABASE_NAME".to_string(), database_name.clone()),
+            ("EVENT_DATABASE_URL".to_string(), database_uri.clone()),
+            ("EVENT_DATABASE_NAME".to_string(), database_name.clone()),
         ]))
         .expect("Failed to initialize storage config");
 
@@ -78,10 +79,7 @@ impl TestServer {
 
         let client = reqwest::Client::new();
 
-        Ok(Self {
-            port: server_port,
-            client,
-        })
+        Ok(Self { port, client })
     }
 
     pub async fn send_request<T: Serialize, U: DeserializeOwned + Debug>(
@@ -96,10 +94,9 @@ impl TestServer {
             req = req.json(payload);
         }
 
-        let res = req
-            .send()
-            .await
-            .map_err(|e| InternalError::io_err(&format!("Failed to send request: {}", e), None))?;
+        let res = req.send().await.map_err(|e| {
+            InternalError::io_err(&format!("Failed to send request: {:?}", e.source()), None)
+        })?;
 
         let status = res.status();
         let json = res.json().await;

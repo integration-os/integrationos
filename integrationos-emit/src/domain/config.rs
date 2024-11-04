@@ -16,7 +16,7 @@ pub struct EmitterConfig {
     pub api_version: String,
     #[envconfig(from = "WORKER_THREADS")]
     pub worker_threads: Option<usize>,
-    #[envconfig(from = "SERVER_ADDRESS", default = "0.0.0.0:3001")]
+    #[envconfig(from = "INTERNAL_SERVER_ADDRESS", default = "0.0.0.0:3001")]
     pub address: SocketAddr,
     #[envconfig(from = "CACHE_SIZE", default = "10000")]
     pub cache_size: u64,
