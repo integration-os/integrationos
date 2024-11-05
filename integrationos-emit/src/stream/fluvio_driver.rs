@@ -35,7 +35,8 @@ type DlqProducer = TopicProducer<SpuSocketPool>;
 
 pub struct FluvioDriverImpl {
     pub client: Fluvio,
-    pub consumer_conf: ConsumerConfig,
+    pub evt_consumer: ConsumerConfig,
+    pub dql_consumer: ConsumerConfig,
     pub evt_producer: EventProducer,
     pub dlq_producer: DlqProducer,
 }
@@ -87,7 +88,7 @@ impl FluvioDriverImpl {
                 .await?
         };
 
-        let consumer = match &config.fluvio.consumer_topic {
+        let evt_consumer = match &config.fluvio.consumer_topic {
             Some(consumer_topic) => {
                 let offset = match &config.fluvio.absolute_offset {
                     Some(absolute_offset) => Offset::absolute(*absolute_offset).map_err(|e| {
@@ -127,9 +128,35 @@ impl FluvioDriverImpl {
             }
         };
 
+        let dql_consumer = {
+            let topic = config.fluvio.dlq_topic.clone();
+            let consumer_id = config.fluvio.consumer_group.clone().ok_or_else(|| {
+                InternalError::invalid_argument(
+                    "When specifying a consumer topic, a consumer group must be specified",
+                    None,
+                )
+            })?;
+
+            let consumer_id = format!("{consumer_id}-dlq");
+
+            let ext = ConsumerConfigExtBuilder::default()
+                .topic(&topic)
+                .offset_start(Offset::beginning())
+                .offset_consumer(consumer_id)
+                .offset_strategy(OffsetManagementStrategy::Manual)
+                .build()
+                .map_err(|e| anyhow::anyhow!("Could not create consumer config: {e}"))?;
+
+            ConsumerConfig {
+                ext,
+                app: config.fluvio.clone(),
+            }
+        };
+
         Ok(Self {
             client: fluvio_client,
-            consumer_conf: consumer,
+            evt_consumer,
+            dql_consumer,
             evt_producer,
             dlq_producer,
         })
@@ -169,11 +196,11 @@ impl EventStreamExt for FluvioDriverImpl {
     ) -> Result<Unit, IntegrationOSError> {
         let mut stream = self
             .client
-            .consumer_with_config(self.consumer_conf.ext.clone())
+            .consumer_with_config(self.evt_consumer.ext.clone())
             .await?;
         let mut count = 0;
         let mut interval = tokio::time::interval(Duration::from_millis(
-            self.consumer_conf.app.consumer_linger_time,
+            self.evt_consumer.app.consumer_linger_time,
         ));
         interval.tick().await;
 
@@ -206,7 +233,7 @@ impl EventStreamExt for FluvioDriverImpl {
                         None => tracing::info!("Consumer stream closed")
                     }
 
-                    if count >= self.consumer_conf.app.consumer_batch_size || token.is_cancelled() {
+                    if count >= self.evt_consumer.app.consumer_batch_size || token.is_cancelled() {
                         count = 0;
                         stream.offset_commit().map_err(|err| anyhow::anyhow!(err))?;
                         stream.offset_flush().await.map_err(|err| anyhow::anyhow!(err))?;
