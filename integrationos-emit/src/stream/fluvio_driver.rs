@@ -230,7 +230,10 @@ impl EventStreamExt for FluvioDriverImpl {
                             self.process(ctx, &record).await?;
                         },
                         Some(Err(err)) => return Err(InternalError::io_err(&format!("Error consuming record: {err}"), None)),
-                        None => tracing::info!("Consumer stream closed")
+                        None => {
+                            tracing::info!("Consumer stream closed");
+                            return Ok(());
+                        }
                     }
 
                     if count >= self.evt_consumer.app.consumer_batch_size || token.is_cancelled() {
