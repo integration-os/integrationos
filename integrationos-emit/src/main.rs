@@ -1,9 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
 use integrationos_emit::{domain::config::EmitterConfig, server::Server};
-use tokio_util::sync::CancellationToken;
 use tracing::info;
 
 fn main() -> Result<()> {
@@ -20,7 +19,7 @@ fn main() -> Result<()> {
         .enable_all()
         .build()?
         .block_on(async move {
-            let server: Server = Server::init(config, CancellationToken::new()).await?;
+            let server: Server = Server::init(config).await?;
 
             server.run().await
         })

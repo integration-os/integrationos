@@ -64,7 +64,7 @@ pub struct StreamConfig {
     pub producer_linger_time: u64,
     #[envconfig(from = "FLUVIO_PRODUCER_BATCH_SIZE", default = "500")]
     pub producer_batch_size: usize,
-    #[envconfig(from = "FLUVIO_CONSUMER_LINGER_TIME_IN_MILLIS", default = "5000")]
+    #[envconfig(from = "FLUVIO_CONSUMER_LINGER_TIME_IN_MILLIS", default = "10000")]
     pub consumer_linger_time: u64,
     #[envconfig(from = "FLUVIO_CONSUMER_BATCH_SIZE", default = "500")]
     pub consumer_batch_size: usize,

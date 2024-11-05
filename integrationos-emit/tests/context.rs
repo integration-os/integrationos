@@ -5,7 +5,6 @@ use integrationos_emit::domain::config::EmitterConfig;
 use integrationos_emit::server::Server;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
-use tokio_util::sync::CancellationToken;
 use std::error::Error;
 use std::fmt::Debug;
 use std::{collections::HashMap, sync::OnceLock, time::Duration};
@@ -70,8 +69,7 @@ impl TestServer {
         ]))
         .expect("Failed to initialize storage config");
 
-        let token = CancellationToken::new();
-        let server = Server::init(config.clone(), token)
+        let server = Server::init(config.clone())
             .await
             .expect("Failed to initialize storage");
 

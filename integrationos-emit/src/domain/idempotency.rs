@@ -30,5 +30,6 @@ pub struct Idempotency {
     #[serde(rename = "_id")]
     pub key: IdempotencyKey,
     pub indexable: Id,
+    #[serde(flatten)]
     pub metadata: RecordMetadata,
 }

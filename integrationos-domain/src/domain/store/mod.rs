@@ -47,6 +47,8 @@ generate_stores!(
     "pipeline-events",
     Idempotency,
     "idempotency",
+    Deduplication,
+    "deduplication",
     Events,
     "external-events",
     EventAccess,

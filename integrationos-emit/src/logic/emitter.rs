@@ -58,7 +58,10 @@ pub async fn emit(
             .create_one(&idempotency)
             .await?;
 
-        let id = state.stream_client.publish(event.as_entity()).await?;
+        let id = state
+            .stream_client
+            .publish(event.as_entity(), false)
+            .await?;
 
         Ok(Json(id))
     }

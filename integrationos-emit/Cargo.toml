@@ -29,6 +29,9 @@ tokio = { workspace = true, features = ["full"] }
 tower-http.workspace = true
 tracing.workspace = true
 tokio-util = "0.7.12"
+log = "0.4.22"
+ctrlc = { version = "3.4.5", features = ["termination"] }
+axum-server = "0.7.1"
 
 [dev-dependencies]
 testcontainers-modules = { workspace = true, features = ["mongo"] }
