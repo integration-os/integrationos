@@ -6,15 +6,17 @@ use crate::{
         EventStreamExt, EventStreamProvider,
     },
 };
-use anyhow::Result as AnyhowResult;
+use anyhow::{Context, Result as AnyhowResult};
 use axum::Router;
+use futures::Future;
 use integrationos_domain::{MongoStore, Store};
-use mongodb::Client;
+use mongodb::{results::CollectionType, Client};
 use reqwest_middleware::{reqwest, ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use reqwest_tracing::TracingMiddleware;
 use std::{sync::Arc, time::Duration};
 use tokio::net::TcpListener;
+use tokio_util::sync::CancellationToken;
 
 #[derive(Clone)]
 pub struct AppStores {
@@ -33,10 +35,11 @@ pub struct AppState {
 #[derive(Clone)]
 pub struct Server {
     pub state: Arc<AppState>,
+    pub token: CancellationToken,
 }
 
 impl Server {
-    pub async fn init(config: EmitterConfig) -> AnyhowResult<Self> {
+    pub async fn init(config: EmitterConfig, token: CancellationToken) -> AnyhowResult<Self> {
         let client = Client::with_uri_str(&config.db_config.event_db_url).await?;
         let database = client.database(&config.db_config.event_db_name);
 
@@ -61,6 +64,18 @@ impl Server {
                 EventStreamProvider::Fluvio => Arc::new(FluvioDriverImpl::new(&config).await?),
             };
 
+        // start events consumer
+        let cloned_stream = Arc::clone(&stream_client);
+        let cloned_token = token.clone();
+        tokio::spawn(async move {
+            let res = cloned_stream.consume(cloned_token).await;
+
+            if let Err(ref e) = res {
+                tracing::info!("Consumer stopped: {:?}", e);
+                std::process::exit(1);
+            }
+        });
+
         Ok(Self {
             state: Arc::new(AppState {
                 config,
@@ -68,6 +83,7 @@ impl Server {
                 http_client,
                 stream_client,
             }),
+            token,
         })
     }
 
@@ -81,7 +97,38 @@ impl Server {
         let tcp_listener = TcpListener::bind(&self.state.config.address).await?;
 
         axum::serve(tcp_listener, app.into_make_service())
+            .with_graceful_shutdown(Server::shutdown(self.token.clone()))
             .await
             .map_err(|e| anyhow::anyhow!("Server error: {}", e))
+    }
+
+    pub async fn shutdown(token: CancellationToken) {
+        let ctrl_c = async {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("failed to install Ctrl+C handler");
+        };
+
+        #[cfg(unix)]
+        let terminate = async {
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                .expect("failed to install signal handler")
+                .recv()
+                .await;
+        };
+
+        #[cfg(not(unix))]
+        let terminate = std::future::pending::<()>();
+
+        tokio::select! {
+            _ = ctrl_c => {
+                tracing::info!("Ctrl+C received, shutting down");
+                token.cancel();
+            },
+            _ = terminate => {
+                tracing::info!("SIGTERM received, shutting down");
+                token.cancel();
+            },
+        }
     }
 }

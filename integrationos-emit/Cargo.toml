@@ -28,6 +28,7 @@ strum.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tower-http.workspace = true
 tracing.workspace = true
+tokio-util = "0.7.12"
 
 [dev-dependencies]
 testcontainers-modules = { workspace = true, features = ["mongo"] }

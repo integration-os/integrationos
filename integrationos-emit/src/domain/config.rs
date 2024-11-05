@@ -60,12 +60,18 @@ pub struct StreamConfig {
     pub consumer_topic: Option<Topic>,
     #[envconfig(from = "FLUVIO_DLQ_TOPIC", default = "dlq")]
     pub dlq_topic: Topic,
-    #[envconfig(from = "FLUVIO_LINGER_TIME_IN_MILLIS", default = "500")]
-    pub linger_time: u64,
-    #[envconfig(from = "FLUVIO_BATCH_SIZE", default = "500")]
-    pub batch_size: usize,
+    #[envconfig(from = "FLUVIO_PRODUCER_LINGER_TIME_IN_MILLIS", default = "500")]
+    pub producer_linger_time: u64,
+    #[envconfig(from = "FLUVIO_PRODUCER_BATCH_SIZE", default = "500")]
+    pub producer_batch_size: usize,
+    #[envconfig(from = "FLUVIO_CONSUMER_LINGER_TIME_IN_MILLIS", default = "5000")]
+    pub consumer_linger_time: u64,
+    #[envconfig(from = "FLUVIO_CONSUMER_BATCH_SIZE", default = "500")]
+    pub consumer_batch_size: usize,
+    #[envconfig(from = "FLUVIO_ABSOLUTE_OFFSET")]
+    pub absolute_offset: Option<i64>,
     #[envconfig(from = "FLUVIO_CONSUMER_GROUP")]
-    pub consumer_group: Option<String>, // Not needed until https://github.com/infinyon/fluvio/issues/760
+    pub consumer_group: Option<String>,
 }
 
 impl StreamConfig {
@@ -81,8 +87,27 @@ impl Display for StreamConfig {
         writeln!(f, "FLUVIO_CONSUMER_TOPIC: {:?}", self.consumer_topic)?;
         writeln!(f, "FLUVIO_PRODUCER_TOPIC: {:?}", self.producer_topic)?;
         writeln!(f, "FLUVIO_DLQ_TOPIC: {:?}", self.dlq_topic)?;
-        writeln!(f, "FLUVIO_LINGER_TIME_IN_MILLIS: {}", self.linger_time)?;
-        writeln!(f, "FLUVIO_BATCH_SIZE: {}", self.batch_size)?;
+        writeln!(
+            f,
+            "FLUVIO_PRODUCER_LINGER_TIME_IN_MILLIS: {}",
+            self.producer_linger_time
+        )?;
+        writeln!(
+            f,
+            "FLUVIO_PRODUCER_BATCH_SIZE: {}",
+            self.producer_batch_size
+        )?;
+        writeln!(
+            f,
+            "FLUVIO_CONSUMER_LINGER_TIME_IN_MILLIS: {}",
+            self.consumer_linger_time
+        )?;
+        writeln!(
+            f,
+            "FLUVIO_CONSUMER_BATCH_SIZE: {}",
+            self.consumer_batch_size
+        )?;
+        writeln!(f, "FLUVIO_ABSOLUTE_OFFSET: {:?}", self.absolute_offset)?;
         writeln!(f, "FLUVIO_CONSUMER_GROUP: {:?}", self.consumer_group)
     }
 }
