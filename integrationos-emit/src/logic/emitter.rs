@@ -24,7 +24,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
         )))
 }
 
-#[tracing::instrument(skip(state))]
+#[tracing::instrument(skip(state, event))]
 pub async fn emit(
     State(state): State<Arc<AppState>>,
     Extension(idempotency_key): Extension<IdempotencyKey>,

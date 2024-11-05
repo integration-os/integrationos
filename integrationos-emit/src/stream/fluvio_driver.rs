@@ -337,6 +337,22 @@ impl EventStreamExt for FluvioDriverImpl {
             return Ok(());
         }
 
+        let event = event.outcome(EventOutcome {
+            success: true,
+            retries: 0,
+            error: None,
+        });
+
+        let outcome = mongodb::bson::to_bson(&event).context("Could not serialize event")?;
+
+        ctx.app_stores
+            .events
+            .update_one(
+                &event.entity_id.to_string(),
+                doc! { "$set": { "outcome": outcome } },
+            )
+            .await?;
+
         Ok(())
     }
 }
