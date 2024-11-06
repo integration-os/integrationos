@@ -21,8 +21,6 @@ fn main() -> Result<()> {
         .block_on(async move {
             let server: Server = Server::init(config).await?;
 
-            info!("Server started");
-
             server.run().await
         })
 }

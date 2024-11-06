@@ -12,7 +12,7 @@ use crate::{
 use anyhow::Result as AnyhowResult;
 use axum::Router;
 use axum_server::Handle;
-use integrationos_domain::{MongoStore, Store};
+use integrationos_domain::{MongoStore, Store, Unit};
 use mongodb::Client;
 use reqwest_middleware::{reqwest, ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
@@ -115,7 +115,7 @@ impl Server {
     pub async fn run(&self) -> AnyhowResult<()> {
         let app = router::get_router(&self.state).await;
 
-        let app: Router<()> = app.with_state(self.state.clone());
+        let app: Router<Unit> = app.with_state(self.state.clone());
 
         tracing::info!("Emitter server listening on {}", self.state.config.address);
 
