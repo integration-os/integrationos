@@ -23,10 +23,10 @@ impl EventStreamExt for LoggerDriverImpl {
     async fn consume(
         &self,
         _token: CancellationToken,
-        _target: EventStreamTopic,
+        target: EventStreamTopic,
         _ctx: &AppState,
     ) -> Result<Unit, IntegrationOSError> {
-        tracing::info!("Consuming events using logger handler");
+        tracing::info!("Consuming records from {} using logger handler", target.as_ref());
 
         Ok(())
     }
@@ -34,10 +34,10 @@ impl EventStreamExt for LoggerDriverImpl {
     async fn process(
         &self,
         _ctx: &AppState,
-        _target: EventStreamTopic,
+        target: EventStreamTopic,
         _event: &Record,
     ) -> Result<Unit, IntegrationOSError> {
-        tracing::info!("Processing events using logger handler");
+        tracing::info!("Processing records from {} using logger handler", target.as_ref());
 
         Ok(())
     }

@@ -18,7 +18,7 @@ use reqwest_middleware::{reqwest, ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use reqwest_tracing::TracingMiddleware;
 use std::{sync::Arc, time::Duration};
-use tokio::net::TcpListener;
+use strum::IntoEnumIterator;
 use tokio_util::sync::CancellationToken;
 
 #[derive(Clone)]
@@ -69,43 +69,47 @@ impl Server {
             EventStreamProvider::Fluvio => Arc::new(FluvioDriverImpl::new(&config).await?),
         };
 
-        // start events consumer
-        let cloned_stream = Arc::clone(&event_stream);
         let token = CancellationToken::new();
-        let cloned_token = token.clone();
         let handle = Handle::new();
-
-        ctrlc::try_set_handler(move || {
-            tracing::info!("Received Ctrl+C, shutting down...");
-            token.cancel();
+        ctrlc::try_set_handler({
+            let token = token.clone();
+            move || {
+                tracing::info!("Received Ctrl+C, shutting down...");
+                token.cancel();
+            }
         })?;
-
-        let cloned_handle = handle.clone();
 
         let state = Arc::new(AppState {
             config: config.clone(),
             app_stores,
             http_client,
-            event_stream,
+            event_stream: Arc::clone(&event_stream),
         });
 
-        let cloned_state = Arc::clone(&state);
-        tokio::spawn(async move {
-            let res = cloned_stream
-                .consume(cloned_token, EventStreamTopic::Target, &state)
-                .await;
+        let is_logger = state.config.event_stream_provider == EventStreamProvider::Logger;
 
-            if let Err(ref e) = res {
-                tracing::info!("Consumer stopped: {:?}", e);
-            }
+        for topic in EventStreamTopic::iter() {
+            let cloned_stream = Arc::clone(&event_stream);
+            let cloned_state = Arc::clone(&state);
+            let cloned_token = token.clone();
+            let cloned_handle = handle.clone();
 
-            handle.shutdown();
-        });
+            tokio::spawn(async move {
+                let result = cloned_stream
+                    .consume(cloned_token, topic, &cloned_state)
+                    .await;
 
-        Ok(Self {
-            state: cloned_state,
-            handle: cloned_handle,
-        })
+                if let Err(ref e) = result {
+                    tracing::info!("{} consumer stopped: {:?}", topic.as_ref(), e);
+                }
+
+                if !is_logger {
+                    cloned_handle.shutdown();
+                }
+            });
+        }
+
+        Ok(Self { state, handle })
     }
 
     pub async fn run(&self) -> AnyhowResult<()> {
@@ -115,14 +119,12 @@ impl Server {
 
         tracing::info!("Emitter server listening on {}", self.state.config.address);
 
-        let addr = TcpListener::bind(&self.state.config.address)
-            .await?
-            .local_addr()?;
-
-        axum_server::bind(addr)
+        axum_server::bind(self.state.config.address)
             .handle(self.handle.clone())
             .serve(app.into_make_service())
             .await
-            .map_err(|e| anyhow::anyhow!("Server error: {}", e))
+            .map_err(|e| anyhow::anyhow!("Server error: {}", e))?;
+
+        Ok(())
     }
 }

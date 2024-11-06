@@ -5,7 +5,7 @@ use integrationos_domain::{
     {database::DatabaseConfig, environment::Environment},
 };
 use std::{
-    fmt::{write, Display, Formatter},
+    fmt::{Display, Formatter},
     net::SocketAddr,
     str::FromStr,
 };

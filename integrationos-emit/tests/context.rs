@@ -90,6 +90,7 @@ impl TestServer {
         header: Option<&HashMap<String, String>>,
     ) -> Result<ApiResponse<U>, IntegrationOSError> {
         let uri = format!("http://localhost:{}/{path}", self.port);
+        println!("Sending request to {uri}");
         let mut req = self.client.request(method, uri);
         if let Some(payload) = payload {
             req = req.json(payload);

@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-
 use crate::context::TestServer;
+use chrono::Utc;
 use futures::{stream, StreamExt};
 use http::{Method, StatusCode};
 use integrationos_domain::{IntegrationOSError, Unit};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 const PARALLEL_REQUESTS: usize = 10;
@@ -14,7 +14,8 @@ async fn test_concurrent_requests() -> Result<Unit, IntegrationOSError> {
     let server = TestServer::new().await?;
     let payload = json!({
         "type": "DatabaseConnectionLost",
-        "connectionId": "conn::GAL2svWJp9k::MtmXaau5Qf6R5n3Y-L9ejQ"
+        "connectionId": "conn::GAL2svWJp9k::MtmXaau5Qf6R5n3Y-L9ejQ",
+        "scheduleOn": Utc::now().to_rfc3339(),
     });
 
     let headers = HashMap::from_iter(vec![(
