@@ -5,7 +5,7 @@ use crate::{domain::event::EventEntity, server::AppState};
 use async_trait::async_trait;
 use fluvio::consumer::Record;
 use integrationos_domain::{Id, IntegrationOSError, Unit};
-use strum::{AsRefStr, EnumString};
+use strum::{AsRefStr, Display, EnumString};
 use tokio_util::sync::CancellationToken;
 
 #[async_trait]
@@ -29,7 +29,7 @@ pub trait EventStreamExt<T = Record> {
     ) -> Result<Unit, IntegrationOSError>;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, AsRefStr)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, AsRefStr, Display)]
 #[strum(serialize_all = "kebab-case")]
 pub enum EventStreamProvider {
     Fluvio,

@@ -1,7 +1,7 @@
 use super::{EventStreamExt, EventStreamTopic};
 use crate::{
     domain::{
-        config::{EmitterConfig, StreamConfig},
+        config::{EmitterConfig, EventStreamConfig},
         deduplication::Deduplication,
         event::{EventEntity, EventOutcome},
     },
@@ -27,7 +27,7 @@ use tokio_util::sync::CancellationToken;
 
 pub struct ConsumerConfig {
     ext: ConsumerConfigExt,
-    app: StreamConfig,
+    app: EventStreamConfig,
 }
 
 type TargetProducer = TopicProducer<SpuSocketPool>;

@@ -5,7 +5,7 @@ use integrationos_domain::{
     {database::DatabaseConfig, environment::Environment},
 };
 use std::{
-    fmt::{Display, Formatter},
+    fmt::{write, Display, Formatter},
     net::SocketAddr,
     str::FromStr,
 };
@@ -20,7 +20,7 @@ pub struct EmitterConfig {
     pub address: SocketAddr,
     #[envconfig(from = "CACHE_SIZE", default = "10000")]
     pub cache_size: u64,
-    #[envconfig(from = "ENVIRONMENT", default = "live")]
+    #[envconfig(from = "ENVIRONMENT", default = "development")]
     pub environment: Environment,
     #[envconfig(from = "HTTP_CLIENT_TIMEOUT_SECS", default = "30")]
     pub http_client_timeout_secs: u64,
@@ -31,7 +31,7 @@ pub struct EmitterConfig {
     #[envconfig(from = "EVENT_PROCESSING_MAX_RETRIES", default = "3")]
     pub event_processing_max_retries: u32,
     #[envconfig(nested = true)]
-    pub fluvio: StreamConfig,
+    pub fluvio: EventStreamConfig,
     #[envconfig(nested = true)]
     pub cache: CacheConfig,
     #[envconfig(nested = true)]
@@ -44,6 +44,22 @@ impl Display for EmitterConfig {
         writeln!(f, "CACHE_SIZE: {}", self.cache_size)?;
         writeln!(f, "SECRET: ****")?;
         writeln!(f, "ENVIRONMENT: {}", self.environment)?;
+        writeln!(
+            f,
+            "HTTP_CLIENT_TIMEOUT_SECS: {}",
+            self.http_client_timeout_secs
+        )?;
+        writeln!(
+            f,
+            "HTTP_CLIENT_MAX_RETRIES: {}",
+            self.http_client_max_retries
+        )?;
+        writeln!(f, "EVENT_STREAM_PROVIDER: {}", self.event_stream_provider)?;
+        writeln!(
+            f,
+            "EVENT_PROCESSING_MAX_RETRIES: {}",
+            self.event_processing_max_retries
+        )?;
         writeln!(f, "{}", self.fluvio)?;
         writeln!(f, "{}", self.cache)?;
         writeln!(f, "{}", self.db_config)
@@ -51,66 +67,73 @@ impl Display for EmitterConfig {
 }
 
 #[derive(Envconfig, Clone)]
-pub struct StreamConfig {
-    #[envconfig(from = "FLUVIO_HOST", default = "127.0.0.1")]
+pub struct EventStreamConfig {
+    #[envconfig(from = "EVENT_STREAM_HOST", default = "127.0.0.1")]
     pub host: String,
-    #[envconfig(from = "FLUVIO_PORT", default = "9003")]
+    #[envconfig(from = "EVENT_STREAM_PORT", default = "9003")]
     pub port: u16,
-    #[envconfig(from = "FLUVIO_PRODUCER_TOPIC")]
+    #[envconfig(from = "EVENT_STREAM_PRODUCER_TOPIC")]
     pub producer_topic: Option<Topic>,
-    #[envconfig(from = "FLUVIO_CONSUMER_TOPIC")]
+    #[envconfig(from = "EVENT_STREAM_CONSUMER_TOPIC")]
     pub consumer_topic: Option<Topic>,
-    #[envconfig(from = "FLUVIO_DLQ_TOPIC", default = "dlq")]
+    #[envconfig(from = "EVENT_STREAM_DLQ_TOPIC", default = "dlq")]
     pub dlq_topic: Topic,
-    #[envconfig(from = "FLUVIO_PRODUCER_LINGER_TIME_IN_MILLIS", default = "500")]
+    #[envconfig(from = "EVENT_STREAM_PRODUCER_LINGER_TIME_IN_MILLIS", default = "500")]
     pub producer_linger_time: u64,
-    #[envconfig(from = "FLUVIO_PRODUCER_BATCH_SIZE", default = "500")]
+    #[envconfig(from = "EVENT_STREAM_PRODUCER_BATCH_SIZE", default = "500")]
     pub producer_batch_size: usize,
-    #[envconfig(from = "FLUVIO_CONSUMER_LINGER_TIME_IN_MILLIS", default = "10000")]
+    #[envconfig(
+        from = "EVENT_STREAM_CONSUMER_LINGER_TIME_IN_MILLIS",
+        default = "10000"
+    )]
     pub consumer_linger_time: u64,
-    #[envconfig(from = "FLUVIO_CONSUMER_BATCH_SIZE", default = "500")]
+    #[envconfig(from = "EVENT_STREAM_CONSUMER_BATCH_SIZE", default = "500")]
     pub consumer_batch_size: usize,
-    #[envconfig(from = "FLUVIO_ABSOLUTE_OFFSET")]
+    #[envconfig(from = "EVENT_STREAM_ABSOLUTE_OFFSET")]
     pub absolute_offset: Option<i64>,
-    #[envconfig(from = "FLUVIO_CONSUMER_GROUP")]
+    #[envconfig(from = "EVENT_STREAM_CONSUMER_GROUP")]
     pub consumer_group: Option<String>,
 }
 
-impl StreamConfig {
+impl EventStreamConfig {
     pub fn endpoint(&self) -> String {
         format!("{}:{}", self.host, self.port)
     }
 }
 
-impl Display for StreamConfig {
+impl Display for EventStreamConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "FLUVIO_HOST: {}", self.host)?;
-        writeln!(f, "FLUVIO_PORT: {}", self.port)?;
-        writeln!(f, "FLUVIO_CONSUMER_TOPIC: {:?}", self.consumer_topic)?;
-        writeln!(f, "FLUVIO_PRODUCER_TOPIC: {:?}", self.producer_topic)?;
-        writeln!(f, "FLUVIO_DLQ_TOPIC: {:?}", self.dlq_topic)?;
+        writeln!(f, "EVENT_STREAM_HOST: {}", self.host)?;
+        writeln!(f, "EVENT_STREAM_PORT: {}", self.port)?;
+        writeln!(f, "EVENT_STREAM_CONSUMER_TOPIC: {:?}", self.consumer_topic)?;
+        writeln!(f, "EVENT_STREAM_PRODUCER_TOPIC: {:?}", self.producer_topic)?;
+        writeln!(f, "EVENT_STREAM_DLQ_TOPIC: {:?}", self.dlq_topic)?;
         writeln!(
             f,
-            "FLUVIO_PRODUCER_LINGER_TIME_IN_MILLIS: {}",
+            "EVENT_STREAM_PRODUCER_LINGER_TIME_IN_MILLIS: {}",
             self.producer_linger_time
         )?;
         writeln!(
             f,
-            "FLUVIO_PRODUCER_BATCH_SIZE: {}",
+            "EVENT_STREAM_PRODUCER_BATCH_SIZE: {}",
             self.producer_batch_size
         )?;
         writeln!(
             f,
-            "FLUVIO_CONSUMER_LINGER_TIME_IN_MILLIS: {}",
+            "EVENT_STREAM_CONSUMER_LINGER_TIME_IN_MILLIS: {}",
             self.consumer_linger_time
         )?;
         writeln!(
             f,
-            "FLUVIO_CONSUMER_BATCH_SIZE: {}",
+            "EVENT_STREAM_CONSUMER_BATCH_SIZE: {}",
             self.consumer_batch_size
         )?;
-        writeln!(f, "FLUVIO_ABSOLUTE_OFFSET: {:?}", self.absolute_offset)?;
-        writeln!(f, "FLUVIO_CONSUMER_GROUP: {:?}", self.consumer_group)
+        writeln!(
+            f,
+            "EVENT_STREAM_ABSOLUTE_OFFSET: {:?}",
+            self.absolute_offset
+        )?;
+        writeln!(f, "EVENT_STREAM_CONSUMER_GROUP: {:?}", self.consumer_group)
     }
 }
 
