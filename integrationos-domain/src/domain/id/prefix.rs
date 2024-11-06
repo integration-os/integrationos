@@ -226,7 +226,10 @@ mod test {
         );
         assert_eq!(IdPrefix::try_from("plf").unwrap(), IdPrefix::Platform);
         assert_eq!(IdPrefix::try_from("q").unwrap(), IdPrefix::Queue);
-        assert_eq!(IdPrefix::try_from("sched_evt").unwrap(), IdPrefix::ScheduledEvent);
+        assert_eq!(
+            IdPrefix::try_from("sched_evt").unwrap(),
+            IdPrefix::ScheduledEvent
+        );
         assert_eq!(IdPrefix::try_from("st").unwrap(), IdPrefix::Settings);
         assert_eq!(IdPrefix::try_from("tx").unwrap(), IdPrefix::Transaction);
         assert_eq!(IdPrefix::try_from("ut").unwrap(), IdPrefix::UnitTest);

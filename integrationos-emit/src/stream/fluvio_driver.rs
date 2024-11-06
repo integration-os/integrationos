@@ -277,8 +277,8 @@ impl EventStreamExt for FluvioDriverImpl {
      * @param event - The event to process
      *
      * It first checks if the event is already processed, if so, it returns without processing it.
-     * If the event is not processed, it checks if it is a scheduled event, if so, it executes the side effect and updates the event outcome.
-     * If the event is not a scheduled event, it deletes the deduplication record and publishes the event to the target topic.
+     * If the event is not processed, it executes the side effect and updates the event outcome.
+     *
      * Finally, it updates the event outcome in the events collection if the side effect was executed at least once.
      */
     async fn process(
