@@ -26,7 +26,10 @@ impl EventStreamExt for LoggerDriverImpl {
         target: EventStreamTopic,
         _ctx: &AppState,
     ) -> Result<Unit, IntegrationOSError> {
-        tracing::info!("Consuming records from {} using logger handler", target.as_ref());
+        tracing::info!(
+            "Consuming records from {} using logger handler",
+            target.as_ref()
+        );
 
         Ok(())
     }
@@ -37,7 +40,10 @@ impl EventStreamExt for LoggerDriverImpl {
         target: EventStreamTopic,
         _event: &Record,
     ) -> Result<Unit, IntegrationOSError> {
-        tracing::info!("Processing records from {} using logger handler", target.as_ref());
+        tracing::info!(
+            "Processing records from {} using logger handler",
+            target.as_ref()
+        );
 
         Ok(())
     }
