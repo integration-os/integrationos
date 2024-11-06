@@ -28,8 +28,14 @@ pub struct EmitterConfig {
     pub http_client_max_retries: u32,
     #[envconfig(from = "EVENT_STREAM_PROVIDER", default = "logger")]
     pub event_stream_provider: EventStreamProvider,
-    #[envconfig(from = "EVENT_PROCESSING_MAX_RETRIES", default = "3")]
+    #[envconfig(from = "EVENT_PROCESSING_MAX_RETRIES", default = "5")]
     pub event_processing_max_retries: u32,
+    #[envconfig(from = "SCHEDULED_MAX_CONCURRENT_TASKS", default = "10")]
+    pub scheduled_max_concurrent_tasks: usize,
+    #[envconfig(from = "SCHEDULED_SLEEP_DURATION_IN_MILLIS", default = "1000")]
+    pub scheduled_sleep_duration_millis: u64,
+    #[envconfig(from = "SCHEDULED_MAX_CHUNK_SIZE", default = "100")]
+    pub scheduled_max_chunk_size: usize,
     #[envconfig(nested = true)]
     pub fluvio: EventStreamConfig,
     #[envconfig(nested = true)]
@@ -80,7 +86,7 @@ pub struct EventStreamConfig {
     pub dlq_topic: Topic,
     #[envconfig(from = "EVENT_STREAM_PRODUCER_LINGER_TIME_IN_MILLIS", default = "500")]
     pub producer_linger_time: u64,
-    #[envconfig(from = "EVENT_STREAM_PRODUCER_BATCH_SIZE", default = "500")]
+    #[envconfig(from = "EVENT_STREAM_PRODUCER_BATCH_SIZE", default = "10000")]
     pub producer_batch_size: usize,
     #[envconfig(
         from = "EVENT_STREAM_CONSUMER_LINGER_TIME_IN_MILLIS",

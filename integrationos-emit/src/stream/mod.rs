@@ -1,5 +1,6 @@
 pub mod fluvio_driver;
 pub mod logger_driver;
+pub mod scheduler;
 
 use crate::{domain::event::EventEntity, server::AppState};
 use async_trait::async_trait;

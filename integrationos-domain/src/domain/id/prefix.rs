@@ -31,6 +31,7 @@ pub enum IdPrefix {
     Platform,
     PlatformPage,
     Queue,
+    ScheduledEvent,
     SessionId,
     Settings,
     Transaction,
@@ -67,6 +68,7 @@ impl Display for IdPrefix {
             IdPrefix::Platform => write!(f, "plf"),
             IdPrefix::PlatformPage => write!(f, "plf_pg"),
             IdPrefix::Queue => write!(f, "q"),
+            IdPrefix::ScheduledEvent => write!(f, "sched_evt"),
             IdPrefix::SessionId => write!(f, "session_id"),
             IdPrefix::Settings => write!(f, "st"),
             IdPrefix::Transaction => write!(f, "tx"),
@@ -107,6 +109,7 @@ impl TryFrom<&str> for IdPrefix {
             "plf" => Ok(IdPrefix::Platform),
             "plf_pg" => Ok(IdPrefix::PlatformPage),
             "q" => Ok(IdPrefix::Queue),
+            "sched_evt" => Ok(IdPrefix::ScheduledEvent),
             "session_id" => Ok(IdPrefix::SessionId),
             "st" => Ok(IdPrefix::Settings),
             "tx" => Ok(IdPrefix::Transaction),
@@ -149,6 +152,7 @@ impl From<IdPrefix> for String {
             IdPrefix::Platform => "plf".to_string(),
             IdPrefix::PlatformPage => "plf_pg".to_string(),
             IdPrefix::Queue => "q".to_string(),
+            IdPrefix::ScheduledEvent => "sched_evt".to_string(),
             IdPrefix::SessionId => "session_id".to_string(),
             IdPrefix::Settings => "st".to_string(),
             IdPrefix::Transaction => "tx".to_string(),
@@ -222,6 +226,7 @@ mod test {
         );
         assert_eq!(IdPrefix::try_from("plf").unwrap(), IdPrefix::Platform);
         assert_eq!(IdPrefix::try_from("q").unwrap(), IdPrefix::Queue);
+        assert_eq!(IdPrefix::try_from("sched_evt").unwrap(), IdPrefix::ScheduledEvent);
         assert_eq!(IdPrefix::try_from("st").unwrap(), IdPrefix::Settings);
         assert_eq!(IdPrefix::try_from("tx").unwrap(), IdPrefix::Transaction);
         assert_eq!(IdPrefix::try_from("ut").unwrap(), IdPrefix::UnitTest);
@@ -266,6 +271,7 @@ mod test {
         assert_eq!(format!("{}", IdPrefix::Platform), "plf");
         assert_eq!(format!("{}", IdPrefix::PlatformPage), "plf_pg");
         assert_eq!(format!("{}", IdPrefix::Queue), "q");
+        assert_eq!(format!("{}", IdPrefix::ScheduledEvent), "sched_evt");
         assert_eq!(format!("{}", IdPrefix::Settings), "st");
         assert_eq!(format!("{}", IdPrefix::Transaction), "tx");
         assert_eq!(format!("{}", IdPrefix::UnitTest), "ut");

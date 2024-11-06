@@ -1,6 +1,5 @@
 use crate::server::AppState;
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use integrationos_domain::{
     prefix::IdPrefix, record_metadata::RecordMetadata, Id, IntegrationOSError, Unit,
 };
@@ -18,7 +17,7 @@ pub enum Event {
     #[serde(rename_all = "camelCase")]
     DatabaseConnectionLost {
         connection_id: Id,
-        schedule_on: DateTime<Utc>,
+        schedule_on: Option<i64>,
     },
 }
 
@@ -43,15 +42,14 @@ impl Event {
         EventEntity {
             entity: self.clone(),
             entity_id: Id::now(IdPrefix::PipelineEvent),
-            parent_id: None,
             outcome: None,
             metadata: RecordMetadata::default(),
         }
     }
 
-    fn execute_now(&self) -> bool {
+    pub fn scheduled_on(&self) -> Option<i64> {
         match self {
-            Event::DatabaseConnectionLost { schedule_on, .. } => schedule_on.lt(&Utc::now()),
+            Event::DatabaseConnectionLost { schedule_on, .. } => *schedule_on,
         }
     }
 }
@@ -61,7 +59,6 @@ impl Event {
 pub struct EventEntity {
     #[serde(rename = "_id")]
     pub entity_id: Id,
-    pub parent_id: Option<Id>,
     pub entity: Event,
     pub outcome: Option<EventOutcome>,
     #[serde(flatten)]
@@ -69,6 +66,17 @@ pub struct EventEntity {
 }
 
 impl EventEntity {
+    pub fn with_outcome(&self, outcome: Option<EventOutcome>) -> Self {
+        let mut metadata = self.metadata.clone();
+        metadata.mark_updated("system");
+        Self {
+            entity_id: self.entity_id,
+            entity: self.entity.clone(),
+            outcome,
+            metadata,
+        }
+    }
+
     pub fn partition_key(&self) -> String {
         match self.entity {
             Event::DatabaseConnectionLost { .. } => "connection-broken".to_string(),
@@ -77,26 +85,6 @@ impl EventEntity {
 
     pub async fn side_effect(&self, ctx: &AppState) -> Result<Unit, IntegrationOSError> {
         self.entity.side_effect(ctx, self.entity_id).await
-    }
-
-    pub fn execute_now(&self) -> bool {
-        self.entity.execute_now()
-    }
-
-    /**
-     * Get a new event with the same data but with a new id, linked to the current event by the parent_id
-     *
-     * As events are immutable, we need to create a new one with the same data but with a new id
-     * This is used to create a new event with the same data but with a new id
-     */
-    pub fn new_immutable(&self) -> Self {
-        Self {
-            entity_id: Id::now(IdPrefix::PipelineEvent),
-            parent_id: Some(self.entity_id),
-            entity: self.entity.clone(),
-            outcome: None,
-            metadata: RecordMetadata::default(),
-        }
     }
 
     pub fn retries(&self) -> u32 {
@@ -114,7 +102,6 @@ impl EventEntity {
 pub enum EventOutcome {
     Success,
     Error { error: String, retries: u32 },
-    Deferred,
 }
 
 impl EventOutcome {
@@ -124,10 +111,6 @@ impl EventOutcome {
 
     pub fn error(error: String, retries: u32) -> Self {
         Self::Error { error, retries }
-    }
-
-    pub fn deferred() -> Self {
-        Self::Deferred
     }
 
     fn retries(&self) -> u32 {
@@ -143,4 +126,13 @@ impl EventOutcome {
             _ => None,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ScheduledEvent {
+    #[serde(rename = "_id")]
+    pub id: Id,
+    pub event: EventEntity,
+    pub schedule_on: i64,
 }

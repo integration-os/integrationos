@@ -13,6 +13,7 @@ use integrationos_domain::{
     prefix::IdPrefix, record_metadata::RecordMetadata, ApplicationError, Id, IntegrationOSError,
 };
 use mongodb::bson::doc;
+use serde::{Deserialize, Serialize};
 use std::{iter::once, sync::Arc};
 use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
 
@@ -25,12 +26,18 @@ pub fn get_router() -> Router<Arc<AppState>> {
         )))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntityIdResponse {
+    pub entity_id: Id,
+}
+
 #[tracing::instrument(skip(state, event))]
 pub async fn emit(
     State(state): State<Arc<AppState>>,
     Extension(idempotency_key): Extension<IdempotencyKey>,
     Json(event): Json<Event>,
-) -> Result<Json<Id>, IntegrationOSError> {
+) -> Result<Json<EntityIdResponse>, IntegrationOSError> {
     let is_processed = state
         .app_stores
         .idempotency
@@ -59,11 +66,23 @@ pub async fn emit(
             .create_one(&idempotency)
             .await?;
 
-        let id = state
-            .event_stream
-            .publish(event.as_entity(), EventStreamTopic::Target)
-            .await?;
+        match event.scheduled_on() {
+            None => {
+                let id = state
+                    .event_stream
+                    .publish(event.as_entity(), EventStreamTopic::Target)
+                    .await?;
 
-        Ok(Json(id))
+                Ok(Json(EntityIdResponse { entity_id: id }))
+            }
+            Some(schedule_on) => {
+                let id = state
+                    .scheduler
+                    .schedule(event.as_entity(), schedule_on)
+                    .await?;
+
+                Ok(Json(EntityIdResponse { entity_id: id }))
+            }
+        }
     }
 }

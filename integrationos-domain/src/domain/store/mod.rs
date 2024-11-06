@@ -49,6 +49,8 @@ generate_stores!(
     "idempotency",
     Deduplication,
     "deduplication",
+    ScheduledEvents,
+    "scheduled-events",
     Events,
     "external-events",
     EventAccess,
