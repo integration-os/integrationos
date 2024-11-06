@@ -2,7 +2,7 @@
 
 ## Architecture
 
-![zenuml](https://github.com/user-attachments/assets/db9450f0-0877-41dc-9bfe-06208d494d91)
+![zenuml](https://github.com/user-attachments/assets/e8ac8908-77af-491c-8489-ebd20f17f06e)
 
 ## Running the Emitter
 
