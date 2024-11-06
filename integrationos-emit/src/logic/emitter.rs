@@ -5,6 +5,7 @@ use crate::{
     },
     middleware::idempotency::{header_idempotency, IDEMPOTENCY_HEADER_STR},
     server::AppState,
+    stream::EventStreamTopic,
 };
 use axum::{extract::State, middleware::from_fn, routing::post, Extension, Json, Router};
 use http::HeaderName;
@@ -59,8 +60,8 @@ pub async fn emit(
             .await?;
 
         let id = state
-            .stream_client
-            .publish(event.as_entity(), false)
+            .event_stream
+            .publish(event.as_entity(), EventStreamTopic::Target)
             .await?;
 
         Ok(Json(id))

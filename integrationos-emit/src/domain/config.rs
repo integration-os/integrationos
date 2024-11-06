@@ -28,6 +28,8 @@ pub struct EmitterConfig {
     pub http_client_max_retries: u32,
     #[envconfig(from = "EVENT_STREAM_PROVIDER", default = "logger")]
     pub event_stream_provider: EventStreamProvider,
+    #[envconfig(from = "EVENT_PROCESSING_MAX_RETRIES", default = "3")]
+    pub event_processing_max_retries: u32,
     #[envconfig(nested = true)]
     pub fluvio: StreamConfig,
     #[envconfig(nested = true)]

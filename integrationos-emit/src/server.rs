@@ -5,8 +5,8 @@ use crate::{
     },
     router,
     stream::{
-        fluvio_driver::{FluvioDriverImpl, FluvioDriverLogger},
-        EventStreamExt, EventStreamProvider,
+        fluvio_driver::FluvioDriverImpl, logger_driver::LoggerDriverImpl, EventStreamExt,
+        EventStreamProvider, EventStreamTopic,
     },
 };
 use anyhow::Result as AnyhowResult;
@@ -33,7 +33,7 @@ pub struct AppState {
     pub config: EmitterConfig,
     pub app_stores: AppStores,
     pub http_client: ClientWithMiddleware,
-    pub stream_client: Arc<dyn EventStreamExt + Sync + Send>,
+    pub event_stream: Arc<dyn EventStreamExt + Sync + Send>,
 }
 
 #[derive(Clone)]
@@ -63,14 +63,14 @@ impl Server {
             deduplication: MongoStore::new(&database, &Store::Deduplication).await?,
         };
 
-        let stream_client: Arc<dyn EventStreamExt + Sync + Send> =
-            match config.event_stream_provider {
-                EventStreamProvider::Logger => Arc::new(FluvioDriverLogger),
-                EventStreamProvider::Fluvio => Arc::new(FluvioDriverImpl::new(&config).await?),
-            };
+        let event_stream: Arc<dyn EventStreamExt + Sync + Send> = match config.event_stream_provider
+        {
+            EventStreamProvider::Logger => Arc::new(LoggerDriverImpl),
+            EventStreamProvider::Fluvio => Arc::new(FluvioDriverImpl::new(&config).await?),
+        };
 
         // start events consumer
-        let cloned_stream = Arc::clone(&stream_client);
+        let cloned_stream = Arc::clone(&event_stream);
         let token = CancellationToken::new();
         let cloned_token = token.clone();
         let handle = Handle::new();
@@ -86,12 +86,14 @@ impl Server {
             config: config.clone(),
             app_stores,
             http_client,
-            stream_client,
+            event_stream,
         });
 
         let cloned_state = Arc::clone(&state);
         tokio::spawn(async move {
-            let res = cloned_stream.consume(cloned_token, &state).await;
+            let res = cloned_stream
+                .consume(cloned_token, EventStreamTopic::Target, &state)
+                .await;
 
             if let Err(ref e) = res {
                 tracing::info!("Consumer stopped: {:?}", e);
