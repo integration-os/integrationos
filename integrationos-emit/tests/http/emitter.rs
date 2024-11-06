@@ -14,8 +14,7 @@ async fn test_concurrent_requests() -> Result<Unit, IntegrationOSError> {
     let server = TestServer::new().await?;
     let payload = json!({
         "type": "DatabaseConnectionLost",
-        "connectionId": "conn::GAL2svWJp9k::MtmXaau5Qf6R5n3Y-L9ejQ",
-        "scheduleOn": Utc::now().to_rfc3339(),
+        "connectionId": "conn::GAL2svWJp9k::MtmXaau5Qf6R5n3Y-L9ejQ"
     });
 
     let headers = HashMap::from_iter(vec![(
