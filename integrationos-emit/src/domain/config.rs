@@ -36,6 +36,8 @@ pub struct EmitterConfig {
     pub scheduled_sleep_duration_millis: u64,
     #[envconfig(from = "SCHEDULED_MAX_CHUNK_SIZE", default = "100")]
     pub scheduled_max_chunk_size: usize,
+    #[envconfig(from = "SHUTDOWN_TIMEOUT_SECS", default = "10")]
+    pub shutdown_timeout_secs: u64,
     #[envconfig(nested = true)]
     pub fluvio: EventStreamConfig,
     #[envconfig(nested = true)]
@@ -66,6 +68,7 @@ impl Display for EmitterConfig {
             "EVENT_PROCESSING_MAX_RETRIES: {}",
             self.event_processing_max_retries
         )?;
+        writeln!(f, "SHUTDOWN_TIMEOUT_SECS: {}", self.shutdown_timeout_secs)?;
         writeln!(f, "{}", self.fluvio)?;
         writeln!(f, "{}", self.cache)?;
         writeln!(f, "{}", self.db_config)

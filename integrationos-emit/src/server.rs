@@ -118,12 +118,12 @@ impl Server {
                     .consume(cloned_token, topic, &cloned_state)
                     .await;
 
-                if let Err(ref e) = result {
-                    tracing::info!("{} consumer stopped: {:?}", topic.as_ref(), e);
-                }
+                tracing::info!("{} consumer stopped: {:?}", topic.as_ref(), result);
 
                 if !is_logger {
-                    cloned_handle.shutdown();
+                    cloned_handle.graceful_shutdown(Some(Duration::from_secs(
+                        cloned_state.config.shutdown_timeout_secs,
+                    )));
                 }
             });
         }

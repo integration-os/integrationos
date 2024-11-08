@@ -19,7 +19,9 @@ fn main() -> Result<()> {
         .enable_all()
         .build()?
         .block_on(async move {
-            let server: Server = Server::init(config).await?;
+            let server: Server = Server::init(config).await.inspect_err(|e| {
+                tracing::error!("Emitter server error: {e}");
+            })?;
 
             server.run().await
         })

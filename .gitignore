@@ -206,3 +206,9 @@ target/
 *.node
 
 */generated_test_output/*
+
+# test docker compose files
+test.docker-compose.yml
+fluvio-data/
+fluvio-metadata/
+mongo-data/
