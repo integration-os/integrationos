@@ -18,19 +18,19 @@ async fn subsystem(
     info!("Starting Emitter API with config:\n{config}");
 
     let state = server.state.clone();
-    let event_stream = server.state.event_stream.clone();
+    let stream = server.state.event_stream.clone();
 
     subsys.start(SubsystemBuilder::new(
         EventStreamTopic::Dlq.as_ref(),
-        |h| async move { event_stream.consume(EventStreamTopic::Dlq, h, &state).await },
+        |h| async move { stream.consume(EventStreamTopic::Dlq, h, &state).await },
     ));
 
     let state = server.state.clone();
-    let event_stream = server.state.event_stream.clone();
+    let stream = server.state.event_stream.clone();
     subsys.start(SubsystemBuilder::new(
         EventStreamTopic::Target.as_ref(),
         |h| async move {
-            event_stream
+            stream
                 .consume(EventStreamTopic::Target, h, &state)
                 .await
         },
