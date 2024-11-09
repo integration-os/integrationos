@@ -218,6 +218,12 @@ impl EventStreamExt for FluvioDriverImpl {
         interval.tick().await;
 
         loop {
+            if let Some(usage) = memory_stats::memory_stats() {
+                tracing::error!("Current physical memory usage: {}", usage.physical_mem);
+                tracing::error!("Current virtual memory usage: {}", usage.virtual_mem);
+            } else {
+                tracing::error!("Couldn't get the current memory usage :(");
+            }
             tokio::select! {
                 timeout = interval.tick() => {
 

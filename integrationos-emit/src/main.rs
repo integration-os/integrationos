@@ -19,6 +19,7 @@ async fn subsystem(
 
     let state = server.state.clone();
     let stream = server.state.event_stream.clone();
+    let scheduler = server.scheduler.clone();
 
     subsys.start(SubsystemBuilder::new(
         EventStreamTopic::Dlq.as_ref(),
@@ -29,11 +30,12 @@ async fn subsystem(
     let stream = server.state.event_stream.clone();
     subsys.start(SubsystemBuilder::new(
         EventStreamTopic::Target.as_ref(),
-        |h| async move {
-            stream
-                .consume(EventStreamTopic::Target, h, &state)
-                .await
-        },
+        |h| async move { stream.consume(EventStreamTopic::Target, h, &state).await },
+    ));
+
+    subsys.start(SubsystemBuilder::new(
+        "Scheduler Subsystem",
+        |_| async move { scheduler.start().await },
     ));
 
     server.run().await

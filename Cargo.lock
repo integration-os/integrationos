@@ -476,25 +476,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axum-server"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56bac90848f6a9393ac03c63c640925c4b7c8ca21654de40d53f55964667c7d8"
-dependencies = [
- "bytes",
- "futures-util",
- "http 1.1.0",
- "http-body 1.0.1",
- "http-body-util",
- "hyper 1.4.1",
- "hyper-util",
- "pin-project-lite",
- "tokio",
- "tower",
- "tower-service",
-]
-
-[[package]]
 name = "backoff"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2941,7 +2922,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum",
- "axum-server",
  "chrono",
  "ctrlc",
  "dotenvy",
@@ -2953,6 +2933,7 @@ dependencies = [
  "http-serde-ext",
  "integrationos-domain",
  "log",
+ "memory-stats",
  "mongodb",
  "num_cpus",
  "reqwest",
@@ -2965,7 +2946,6 @@ dependencies = [
  "testcontainers-modules",
  "tokio",
  "tokio-graceful-shutdown",
- "tokio-util",
  "tower-http",
  "tracing",
  "tracing-subscriber",
@@ -3590,6 +3570,16 @@ name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
+
+[[package]]
+name = "memory-stats"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c73f5c649995a115e1a0220b35e4df0a1294500477f97a91d0660fb5abeb574a"
+dependencies = [
+ "libc",
+ "windows-sys 0.52.0",
+]
 
 [[package]]
 name = "metrics"

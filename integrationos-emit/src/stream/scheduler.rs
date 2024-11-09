@@ -1,17 +1,13 @@
 use super::EventStreamExt;
-use crate::{
-    domain::event::{EventEntity, ScheduledEvent},
-    stream::EventStreamTopic,
-};
+use crate::{domain::event::ScheduledEvent, stream::EventStreamTopic};
 use chrono::Utc;
 use futures::{StreamExt, TryStreamExt};
-use integrationos_domain::{
-    prefix::IdPrefix, Id, IntegrationOSError, InternalError, MongoStore, Unit,
-};
+use integrationos_domain::{IntegrationOSError, InternalError, MongoStore, Unit};
 use mongodb::bson::doc;
 use std::{sync::Arc, time::Duration};
 
 // Simple scheduler. Heavily relies on the database for scheduling events
+#[derive(Clone)]
 pub struct PublishScheduler {
     pub event_stream: Arc<dyn EventStreamExt + Sync + Send>,
     pub scheduled: MongoStore<ScheduledEvent>,
@@ -21,27 +17,7 @@ pub struct PublishScheduler {
 }
 
 impl PublishScheduler {
-    pub async fn schedule(
-        &self,
-        event: EventEntity,
-        schedule_on: i64,
-    ) -> Result<Id, IntegrationOSError> {
-        let entity_id = event.entity_id;
-        let scheduled = ScheduledEvent {
-            id: Id::now(IdPrefix::ScheduledEvent),
-            event,
-            schedule_on,
-        };
-
-        self.scheduled
-            .create_one(&scheduled)
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to schedule event: {e}"))?;
-
-        Ok(entity_id)
-    }
-
-    pub async fn start(&self) {
+    pub async fn start(&self) -> Result<Unit, IntegrationOSError> {
         let scheduled = self.scheduled.clone();
         let event_stream = Arc::clone(&self.event_stream);
 

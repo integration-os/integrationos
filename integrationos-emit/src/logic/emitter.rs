@@ -1,6 +1,6 @@
 use crate::{
     domain::{
-        event::Event,
+        event::{Event, ScheduledEvent},
         idempotency::{Idempotency, IdempotencyKey},
     },
     middleware::idempotency::{header_idempotency, IDEMPOTENCY_HEADER_STR},
@@ -76,12 +76,22 @@ pub async fn emit(
                 Ok(Json(EntityIdResponse { entity_id: id }))
             }
             Some(schedule_on) => {
-                let id = state
-                    .scheduler
-                    .schedule(event.as_entity(), schedule_on)
-                    .await?;
+                let scheduled = ScheduledEvent {
+                    id: Id::now(IdPrefix::ScheduledEvent),
+                    event: event.as_entity(),
+                    schedule_on,
+                };
 
-                Ok(Json(EntityIdResponse { entity_id: id }))
+                state
+                    .app_stores
+                    .scheduled
+                    .create_one(&scheduled)
+                    .await
+                    .map_err(|e| anyhow::anyhow!("Failed to schedule event: {e}"))?;
+
+                Ok(Json(EntityIdResponse {
+                    entity_id: scheduled.id,
+                }))
             }
         }
     }

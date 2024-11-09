@@ -21,7 +21,7 @@ use reqwest_tracing::TracingMiddleware;
 use std::{sync::Arc, time::Duration};
 use tokio::net::TcpListener;
 
-// TODO: Remove tokio_util and axum_server
+// TODO: Remove memory_stats
 
 #[derive(Clone)]
 pub struct AppStores {
@@ -37,13 +37,13 @@ pub struct AppState {
     pub app_stores: AppStores,
     pub http_client: ClientWithMiddleware,
     pub event_stream: Arc<dyn EventStreamExt + Sync + Send>,
-    pub scheduler: Arc<PublishScheduler>,
 }
 
 #[derive(Clone)]
 pub struct Server {
     pub state: Arc<AppState>,
     pub event_stream: Arc<dyn EventStreamExt + Sync + Send>,
+    pub scheduler: Arc<PublishScheduler>,
 }
 
 impl Server {
@@ -82,22 +82,17 @@ impl Server {
             sleep_duration: config.scheduled_sleep_duration_millis,
         });
 
-        let cloned_scheduler = Arc::clone(&scheduler);
-        tokio::spawn(async move {
-            cloned_scheduler.start().await;
-        });
-
         let state = Arc::new(AppState {
             config: config.clone(),
             app_stores,
             http_client,
             event_stream: Arc::clone(&event_stream),
-            scheduler,
         });
 
         Ok(Self {
             state,
             event_stream,
+            scheduler,
         })
     }
 
