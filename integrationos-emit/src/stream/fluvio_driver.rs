@@ -36,7 +36,7 @@ pub type DlqProducer = TopicProducer<SpuSocketPool>;
 pub struct FluvioDriverImpl {
     pub client: Fluvio,
     pub tgt_consumer: ConsumerConfig,
-    pub dql_consumer: ConsumerConfig,
+    pub dlq_consumer: ConsumerConfig,
     pub tgt_producer: TargetProducer,
     pub dlq_producer: DlqProducer,
 }
@@ -126,7 +126,7 @@ impl FluvioDriverImpl {
             }
         };
 
-        let dql_consumer = {
+        let dlq_consumer = {
             let topic = config.fluvio.dlq_topic.clone();
             let consumer_id = config.fluvio.consumer_group.clone().ok_or_else(|| {
                 InternalError::invalid_argument(
@@ -154,7 +154,7 @@ impl FluvioDriverImpl {
         Ok(Self {
             client: fluvio_client,
             tgt_consumer,
-            dql_consumer,
+            dlq_consumer,
             tgt_producer,
             dlq_producer,
         })
@@ -202,7 +202,7 @@ impl EventStreamExt for FluvioDriverImpl {
     ) -> Result<Unit, IntegrationOSError> {
         let consumer = match target {
             EventStreamTopic::Target => &self.tgt_consumer,
-            EventStreamTopic::Dlq => &self.dql_consumer,
+            EventStreamTopic::Dlq => &self.dlq_consumer,
         };
 
         let mut stream = self
