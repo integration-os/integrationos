@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use fluvio::consumer::Record;
 use integrationos_domain::{prefix::IdPrefix, Id, IntegrationOSError, Unit};
 use std::boxed::Box;
-use tokio_util::sync::CancellationToken;
+use tokio_graceful_shutdown::SubsystemHandle;
 
 pub struct LoggerDriverImpl;
 
@@ -22,8 +22,8 @@ impl EventStreamExt for LoggerDriverImpl {
 
     async fn consume(
         &self,
-        _token: CancellationToken,
         target: EventStreamTopic,
+        _subsys: SubsystemHandle,
         _ctx: &AppState,
     ) -> Result<Unit, IntegrationOSError> {
         tracing::info!(

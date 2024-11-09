@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use fluvio::consumer::Record;
 use integrationos_domain::{Id, IntegrationOSError, Unit};
 use strum::{AsRefStr, Display, EnumIter, EnumString};
-use tokio_util::sync::CancellationToken;
+use tokio_graceful_shutdown::SubsystemHandle;
 
 #[async_trait]
 pub trait EventStreamExt<T = Record> {
@@ -18,8 +18,8 @@ pub trait EventStreamExt<T = Record> {
     ) -> Result<Id, IntegrationOSError>;
     async fn consume(
         &self,
-        token: CancellationToken,
         target: EventStreamTopic,
+        subsys: SubsystemHandle,
         ctx: &AppState,
     ) -> Result<Unit, IntegrationOSError>;
     async fn process(

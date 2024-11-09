@@ -23,7 +23,7 @@ use integrationos_domain::{Id, IntegrationOSError, InternalError, Unit};
 use mongodb::bson::doc;
 use std::boxed::Box;
 use std::time::Duration;
-use tokio_util::sync::CancellationToken;
+use tokio_graceful_shutdown::SubsystemHandle;
 
 pub struct ConsumerConfig {
     ext: ConsumerConfigExt,
@@ -198,8 +198,8 @@ impl EventStreamExt for FluvioDriverImpl {
 
     async fn consume(
         &self,
-        token: CancellationToken,
         target: EventStreamTopic,
+        subsys: SubsystemHandle,
         ctx: &AppState,
     ) -> Result<Unit, IntegrationOSError> {
         let consumer = match target {
@@ -220,7 +220,8 @@ impl EventStreamExt for FluvioDriverImpl {
         loop {
             tokio::select! {
                 timeout = interval.tick() => {
-                    if count > 0 || token.is_cancelled() {
+
+                    if count > 0 || subsys.is_shutdown_requested() {
                         tracing::info!("Committing offsets after {timeout:?}");
                         stream.offset_commit().map_err(|err| anyhow::anyhow!(err))?;
                         stream.offset_flush().await.map_err(|err| anyhow::anyhow!(err))?;
@@ -229,7 +230,7 @@ impl EventStreamExt for FluvioDriverImpl {
 
                     }
 
-                    if token.is_cancelled() {
+                    if subsys.is_shutdown_requested() {
                         tracing::info!("Consumer cancelled, gracefully shutting down. Committing pending offsets");
                         return Ok(());
                     }
@@ -249,18 +250,18 @@ impl EventStreamExt for FluvioDriverImpl {
                         }
                     }
 
-                    if count >= consumer.app.consumer_batch_size || token.is_cancelled() {
+                    if count >= consumer.app.consumer_batch_size || subsys.is_shutdown_requested() {
                         count = 0;
                         stream.offset_commit().map_err(|err| anyhow::anyhow!(err))?;
                         stream.offset_flush().await.map_err(|err| anyhow::anyhow!(err))?;
                     }
 
-                    if token.is_cancelled() {
+                    if subsys.is_shutdown_requested() {
                         tracing::info!("Consumer cancelled, gracefully shutting down. Committing pending offsets");
                         return Ok(());
                     }
                 }
-                _ = token.cancelled() => {
+                _ = subsys.on_shutdown_requested() => {
                         tracing::info!("Consumer cancelled, gracefully shutting down. Committing pending offsets");
                         stream.offset_commit().map_err(|err| anyhow::anyhow!(err))?;
                         stream.offset_flush().await.map_err(|err| anyhow::anyhow!(err))?;

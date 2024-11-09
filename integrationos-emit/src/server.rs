@@ -8,20 +8,20 @@ use crate::{
     router,
     stream::{
         fluvio_driver::FluvioDriverImpl, logger_driver::LoggerDriverImpl,
-        scheduler::PublishScheduler, EventStreamExt, EventStreamProvider, EventStreamTopic,
+        scheduler::PublishScheduler, EventStreamExt, EventStreamProvider,
     },
 };
 use anyhow::Result as AnyhowResult;
 use axum::Router;
-use axum_server::Handle;
 use integrationos_domain::{MongoStore, Store, Unit};
 use mongodb::Client;
 use reqwest_middleware::{reqwest, ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use reqwest_tracing::TracingMiddleware;
 use std::{sync::Arc, time::Duration};
-use strum::IntoEnumIterator;
-use tokio_util::sync::CancellationToken;
+use tokio::net::TcpListener;
+
+// TODO: Remove tokio_util and axum_server
 
 #[derive(Clone)]
 pub struct AppStores {
@@ -43,7 +43,7 @@ pub struct AppState {
 #[derive(Clone)]
 pub struct Server {
     pub state: Arc<AppState>,
-    pub handle: Handle,
+    pub event_stream: Arc<dyn EventStreamExt + Sync + Send>,
 }
 
 impl Server {
@@ -74,16 +74,6 @@ impl Server {
             EventStreamProvider::Fluvio => Arc::new(FluvioDriverImpl::new(&config).await?),
         };
 
-        let token = CancellationToken::new();
-        let handle = Handle::new();
-        ctrlc::try_set_handler({
-            let token = token.clone();
-            move || {
-                tracing::info!("Received Ctrl+C, shutting down...");
-                token.cancel();
-            }
-        })?;
-
         let scheduler = Arc::new(PublishScheduler {
             event_stream: Arc::clone(&event_stream),
             scheduled: app_stores.scheduled.clone(),
@@ -105,30 +95,10 @@ impl Server {
             scheduler,
         });
 
-        let is_logger = state.config.event_stream_provider == EventStreamProvider::Logger;
-
-        for topic in EventStreamTopic::iter() {
-            let cloned_stream = Arc::clone(&event_stream);
-            let cloned_state = Arc::clone(&state);
-            let cloned_token = token.clone();
-            let cloned_handle = handle.clone();
-
-            tokio::spawn(async move {
-                let result = cloned_stream
-                    .consume(cloned_token, topic, &cloned_state)
-                    .await;
-
-                tracing::info!("{} consumer stopped: {:?}", topic.as_ref(), result);
-
-                if !is_logger {
-                    cloned_handle.graceful_shutdown(Some(Duration::from_secs(
-                        cloned_state.config.shutdown_timeout_secs,
-                    )));
-                }
-            });
-        }
-
-        Ok(Self { state, handle })
+        Ok(Self {
+            state,
+            event_stream,
+        })
     }
 
     pub async fn run(&self) -> AnyhowResult<()> {
@@ -138,12 +108,10 @@ impl Server {
 
         tracing::info!("Emitter server listening on {}", self.state.config.address);
 
-        axum_server::bind(self.state.config.address)
-            .handle(self.handle.clone())
-            .serve(app.into_make_service())
-            .await
-            .map_err(|e| anyhow::anyhow!("Server error: {}", e))?;
+        let tcp_listener = TcpListener::bind(&self.state.config.address).await?;
 
-        Ok(())
+        axum::serve(tcp_listener, app)
+            .await
+            .map_err(|e| anyhow::anyhow!("Server error: {}", e))
     }
 }
