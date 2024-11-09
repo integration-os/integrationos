@@ -60,7 +60,6 @@ impl FluvioDriverImpl {
                     .map_err(|e| anyhow::anyhow!("Could not create producer config: {e}"))?;
 
                 fluvio_client
-                    // TODO: Use topic producer with config
                     .topic_producer_with_config(producer_topic, config)
                     .await?
             }
@@ -83,7 +82,6 @@ impl FluvioDriverImpl {
                 .map_err(|e| anyhow::anyhow!("Could not create producer config: {e}"))?;
 
             fluvio_client
-                // TODO: Use topic producer with config
                 .topic_producer_with_config(&topic, config)
                 .await?
         };
@@ -218,12 +216,6 @@ impl EventStreamExt for FluvioDriverImpl {
         interval.tick().await;
 
         loop {
-            if let Some(usage) = memory_stats::memory_stats() {
-                tracing::error!("Current physical memory usage: {}", usage.physical_mem);
-                tracing::error!("Current virtual memory usage: {}", usage.virtual_mem);
-            } else {
-                tracing::error!("Couldn't get the current memory usage :(");
-            }
             tokio::select! {
                 timeout = interval.tick() => {
 

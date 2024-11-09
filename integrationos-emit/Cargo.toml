@@ -31,7 +31,6 @@ tracing.workspace = true
 log = "0.4.22"
 ctrlc = { version = "3.4.5", features = ["termination"] }
 tokio-graceful-shutdown = "0.15.1"
-memory-stats = "1.2.0"
 
 [dev-dependencies]
 testcontainers-modules = { workspace = true, features = ["mongo"] }

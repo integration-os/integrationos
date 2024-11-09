@@ -21,8 +21,6 @@ use reqwest_tracing::TracingMiddleware;
 use std::{sync::Arc, time::Duration};
 use tokio::net::TcpListener;
 
-// TODO: Remove memory_stats
-
 #[derive(Clone)]
 pub struct AppStores {
     pub events: MongoStore<EventEntity>,
