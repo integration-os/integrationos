@@ -45,6 +45,7 @@ impl RequestExt for CreateRequest {
             id: self.id.unwrap_or_else(|| Id::now(IdPrefix::CommonEnum)),
             name: self.name.clone(),
             options: self.options.clone(),
+            record_metadata: Default::default(),
         };
         Some(record)
     }

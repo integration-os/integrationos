@@ -130,6 +130,7 @@ async fn generate_all_types(
                         id: Id::now(IdPrefix::CommonEnum),
                         name: e.name.pascal_case(),
                         options: options.unwrap_or_default(),
+                        record_metadata: Default::default(),
                     }),
                     _ => None,
                 }),
