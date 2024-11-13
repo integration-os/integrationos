@@ -32,7 +32,6 @@ pub struct CreateRequest {
     pub id: Option<Id>,
     pub name: String,
     pub options: Vec<String>,
-    pub deleted: bool,
 }
 
 impl PublicExt<CommonEnum> for CreateRequest {}
@@ -46,7 +45,7 @@ impl RequestExt for CreateRequest {
             id: self.id.unwrap_or_else(|| Id::now(IdPrefix::CommonEnum)),
             name: self.name.clone(),
             options: self.options.clone(),
-            deleted: self.deleted,
+            record_metadata: Default::default(),
         };
         Some(record)
     }
@@ -54,7 +53,6 @@ impl RequestExt for CreateRequest {
     fn update(&self, mut record: Self::Output) -> Self::Output {
         record.name.clone_from(&self.name);
         record.options.clone_from(&self.options);
-        record.deleted.clone_from(&self.deleted);
         record
     }
 

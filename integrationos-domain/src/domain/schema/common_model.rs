@@ -173,8 +173,8 @@ pub struct CommonEnum {
     pub id: Id,
     pub name: String,
     pub options: Vec<String>,
-    #[serde(default)]
-    pub deleted: bool,
+    #[serde(flatten, default)]
+    pub record_metadata: RecordMetadata,
 }
 
 fn replace_reserved_keyword(name: &str, lang: Lang) -> String {
@@ -1415,7 +1415,7 @@ impl CommonModel {
                     id: Id::now(IdPrefix::CommonEnum),
                     name: e.name.pascal_case(),
                     options: options.unwrap_or_default(),
-                    deleted: false,
+                    record_metadata: Default::default(),
                 }),
                 _ => None,
             })
@@ -1441,7 +1441,7 @@ impl CommonModel {
                         id: Id::now(IdPrefix::CommonEnum),
                         name: e.name.pascal_case(),
                         options: options.unwrap_or_default(),
-                        deleted: false,
+                        record_metadata: Default::default(),
                     }),
                     _ => None,
                 })
