@@ -79,6 +79,8 @@ pub struct DatabaseConnectionConfig {
     pub address: SocketAddr,
     #[envconfig(from = "ENVIRONMENT", default = "development")]
     pub environment: Environment,
+    #[envconfig(from = "EMIT_URL", default = "http://localhost:3001")]
+    pub emit_url: String,
     #[envconfig(nested = true)]
     pub postgres_config: PostgresConfig,
     #[envconfig(from = "DATABASE_CONNECTION_TYPE", default = "postgres")]
@@ -206,6 +208,7 @@ impl Default for DatabaseConnectionConfig {
     fn default() -> Self {
         Self {
             worker_threads: Some(1),
+            emit_url: "http://localhost:3001".to_string(),
             address: SocketAddr::new("0.0.0.0".parse().expect("Invalid address"), 5005),
             environment: Environment::Development,
             postgres_config: PostgresConfig::default(),
@@ -218,6 +221,7 @@ impl Display for DatabaseConnectionConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "WORKER_THREADS: {:?}", self.worker_threads)?;
         writeln!(f, "INTERNAL_SERVER_ADDRESS: {}", self.address)?;
+        writeln!(f, "EMIT_URL: {}", self.emit_url)?;
         writeln!(f, "{}", self.environment)?;
         match self.database_connection_type {
             DatabaseConnectionType::PostgreSql => writeln!(f, "{}", self.postgres_config),

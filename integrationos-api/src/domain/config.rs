@@ -59,6 +59,8 @@ pub struct ConnectionsConfig {
     /// This is the admin secret for the API. Be sure this value is not the one use to generate
     /// tokens for the users as it gives access to sensitive admin endpoints.
     pub jwt_secret: String,
+    #[envconfig(from = "EMIT_URL", default = "http://localhost:3001")]
+    pub emit_url: String,
     /// Burst size limit
     #[envconfig(from = "API_VERSION", default = "v1")]
     pub api_version: String,
@@ -114,6 +116,7 @@ impl Display for ConnectionsConfig {
             "CONNECTION_CACHE_TTL_SECS: {}",
             self.connection_cache_ttl_secs
         )?;
+        writeln!(f, "EMIT_URL: {}", self.emit_url)?;
         writeln!(
             f,
             "CONNECTION_DEFINITION_CACHE_TTL_SECS: {}",

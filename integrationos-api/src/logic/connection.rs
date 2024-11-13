@@ -1,6 +1,6 @@
 use super::{delete, event_access::DEFAULT_NAMESPACE, read, PublicExt, RequestExt};
 use crate::{
-    helper::{generate_service_name, DeploymentSpecParams, NamespaceScope, ServiceSpecParams},
+    helper::{DeploymentSpecParams, NamespaceScope, ServiceName, ServiceSpecParams},
     logic::event_access::{
         generate_event_access, get_client_throughput, CreateEventAccessPayloadWithOwnership,
     },
@@ -398,7 +398,7 @@ async fn generate_k8s_specs_and_secret(
                 ])
                 .collect();
 
-            let service_name = generate_service_name(connection_id)?;
+            let service_name = ServiceName::from_id(*connection_id)?;
 
             let namespace = match state.config.environment {
                 Environment::Test | Environment::Development => NamespaceScope::Development,
@@ -651,7 +651,7 @@ pub async fn delete_connection(
             Environment::Test | Environment::Development => NamespaceScope::Development,
             Environment::Live | Environment::Production => NamespaceScope::Production,
         };
-        let service_name = generate_service_name(&connection.args.id)?;
+        let service_name = ServiceName::from_id(connection.args.id)?;
         state.k8s_client.delete_all(namespace, service_name).await?;
     };
 
