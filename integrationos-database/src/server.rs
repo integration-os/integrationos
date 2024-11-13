@@ -22,7 +22,7 @@ impl Server {
 
         let app: Router<()> = app.with_state(self.state.clone());
 
-        tracing::info!("Api server listening on {}", self.state.config.address);
+        tracing::info!("Database server listening on {}", self.state.config.address);
 
         let tcp_listener = TcpListener::bind(&self.state.config.address).await?;
 

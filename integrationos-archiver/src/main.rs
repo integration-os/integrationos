@@ -47,6 +47,7 @@ async fn main() -> Result<Unit> {
 
     let client = Arc::new(Client::with_uri_str(&config.db_config.event_db_url).await?);
     let database = Arc::new(client.database(&config.db_config.event_db_name));
+    // TODO: Add TTL to the archived events
     let archives: Arc<MongoStore<Event>> =
         Arc::new(MongoStore::new(&database, &Store::Archives).await?);
 

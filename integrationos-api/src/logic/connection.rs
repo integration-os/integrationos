@@ -114,10 +114,14 @@ async fn test_connection(
             .transpose()?;
 
         // Wait up to 10 seconds to allow the resource to be created
-        tokio::time::sleep(Duration::from_secs(
-            state.config.database_connection_probe_timeout_secs,
-        ))
-        .await;
+        if connection_config.r#type == ConnectionDefinitionType::DatabaseSql
+            || connection_config.r#type == ConnectionDefinitionType::DatabaseNoSql
+        {
+            tokio::time::sleep(Duration::from_secs(
+                state.config.database_connection_probe_timeout_secs,
+            ))
+            .await;
+        }
 
         let res = state
             .extractor_caller

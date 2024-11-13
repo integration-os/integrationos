@@ -25,7 +25,7 @@ jsonwebtoken.workspace = true
 k8s-openapi = { workspace = true, features = ["latest"] }
 kube = { workspace = true, features = ["runtime", "derive", "client"] }
 mongodb.workspace = true
-num_cpus = "1"
+num_cpus.workspace = true
 openapiv3.workspace = true
 rand.workspace = true
 redis.workspace = true

@@ -359,7 +359,5 @@ pub async fn process_request(
 fn remove_event_headers(headers: &mut HeaderMap, headers_config: &Headers) {
     headers.remove(&headers_config.auth_header);
     headers.remove(&headers_config.connection_header);
-    headers.remove(&headers_config.include_overflow_header);
     headers.remove(&headers_config.enable_passthrough_header);
-    headers.remove(&headers_config.dynamic_platform_header);
 }

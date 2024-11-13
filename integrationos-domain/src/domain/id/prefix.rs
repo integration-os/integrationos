@@ -4,8 +4,9 @@ use std::{convert::TryFrom, fmt::Display, fmt::Formatter};
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 pub enum IdPrefix {
-    CommonModel,
+    Archive,
     CommonEnum,
+    CommonModel,
     Connection,
     ConnectionDefinition,
     ConnectionModelDefinition,
@@ -13,12 +14,11 @@ pub enum IdPrefix {
     ConnectionOAuthDefinition,
     Cursor,
     EmbedToken,
-    SessionId,
-    Archive,
     Event,
     EventAccess,
     EventDependency,
     EventKey,
+    Idempotency,
     Job,
     JobStage,
     LLMMessage,
@@ -27,9 +27,12 @@ pub enum IdPrefix {
     Log,
     LogTracking,
     Pipeline,
+    PipelineEvent,
     Platform,
     PlatformPage,
     Queue,
+    ScheduledEvent,
+    SessionId,
     Settings,
     Transaction,
     UnitTest,
@@ -38,8 +41,9 @@ pub enum IdPrefix {
 impl Display for IdPrefix {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            IdPrefix::CommonModel => write!(f, "cm"),
+            IdPrefix::Archive => write!(f, "arch"),
             IdPrefix::CommonEnum => write!(f, "ce"),
+            IdPrefix::CommonModel => write!(f, "cm"),
             IdPrefix::Connection => write!(f, "conn"),
             IdPrefix::ConnectionDefinition => write!(f, "conn_def"),
             IdPrefix::ConnectionModelDefinition => write!(f, "conn_mod_def"),
@@ -47,12 +51,11 @@ impl Display for IdPrefix {
             IdPrefix::ConnectionOAuthDefinition => write!(f, "conn_oauth_def"),
             IdPrefix::Cursor => write!(f, "crs"),
             IdPrefix::EmbedToken => write!(f, "embed_tk"),
-            IdPrefix::SessionId => write!(f, "session_id"),
-            IdPrefix::Archive => write!(f, "arch"),
             IdPrefix::Event => write!(f, "evt"),
             IdPrefix::EventAccess => write!(f, "evt_ac"),
             IdPrefix::EventDependency => write!(f, "evt_dep"),
             IdPrefix::EventKey => write!(f, "evt_k"),
+            IdPrefix::Idempotency => write!(f, "idem"),
             IdPrefix::Job => write!(f, "job"),
             IdPrefix::JobStage => write!(f, "job_stg"),
             IdPrefix::LLMMessage => write!(f, "llm_msg"),
@@ -61,9 +64,12 @@ impl Display for IdPrefix {
             IdPrefix::Log => write!(f, "log"),
             IdPrefix::LogTracking => write!(f, "log_trk"),
             IdPrefix::Pipeline => write!(f, "pipe"),
+            IdPrefix::PipelineEvent => write!(f, "pipe_evt"),
             IdPrefix::Platform => write!(f, "plf"),
             IdPrefix::PlatformPage => write!(f, "plf_pg"),
             IdPrefix::Queue => write!(f, "q"),
+            IdPrefix::ScheduledEvent => write!(f, "sched_evt"),
+            IdPrefix::SessionId => write!(f, "session_id"),
             IdPrefix::Settings => write!(f, "st"),
             IdPrefix::Transaction => write!(f, "tx"),
             IdPrefix::UnitTest => write!(f, "ut"),
@@ -76,8 +82,9 @@ impl TryFrom<&str> for IdPrefix {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
-            "cm" => Ok(IdPrefix::CommonModel),
+            "arch" => Ok(IdPrefix::Archive),
             "ce" => Ok(IdPrefix::CommonEnum),
+            "cm" => Ok(IdPrefix::CommonModel),
             "conn" => Ok(IdPrefix::Connection),
             "conn_def" => Ok(IdPrefix::ConnectionDefinition),
             "conn_mod_def" => Ok(IdPrefix::ConnectionModelDefinition),
@@ -85,12 +92,11 @@ impl TryFrom<&str> for IdPrefix {
             "conn_oauth_def" => Ok(IdPrefix::ConnectionOAuthDefinition),
             "crs" => Ok(IdPrefix::Cursor),
             "embed_tk" => Ok(IdPrefix::EmbedToken),
-            "session_id" => Ok(IdPrefix::SessionId),
-            "arch" => Ok(IdPrefix::Archive),
             "evt" => Ok(IdPrefix::Event),
             "evt_ac" => Ok(IdPrefix::EventAccess),
             "evt_dep" => Ok(IdPrefix::EventDependency),
             "evt_k" => Ok(IdPrefix::EventKey),
+            "idem" => Ok(IdPrefix::Idempotency),
             "job" => Ok(IdPrefix::Job),
             "job_stg" => Ok(IdPrefix::JobStage),
             "llm_msg" => Ok(IdPrefix::LLMMessage),
@@ -99,9 +105,12 @@ impl TryFrom<&str> for IdPrefix {
             "log" => Ok(IdPrefix::Log),
             "log_trk" => Ok(IdPrefix::LogTracking),
             "pipe" => Ok(IdPrefix::Pipeline),
+            "pipe_evt" => Ok(IdPrefix::PipelineEvent),
             "plf" => Ok(IdPrefix::Platform),
             "plf_pg" => Ok(IdPrefix::PlatformPage),
             "q" => Ok(IdPrefix::Queue),
+            "sched_evt" => Ok(IdPrefix::ScheduledEvent),
+            "session_id" => Ok(IdPrefix::SessionId),
             "st" => Ok(IdPrefix::Settings),
             "tx" => Ok(IdPrefix::Transaction),
             "ut" => Ok(IdPrefix::UnitTest),
@@ -116,8 +125,9 @@ impl TryFrom<&str> for IdPrefix {
 impl From<IdPrefix> for String {
     fn from(id: IdPrefix) -> Self {
         match id {
-            IdPrefix::CommonModel => "cm".to_string(),
+            IdPrefix::Archive => "arch".to_string(),
             IdPrefix::CommonEnum => "ce".to_string(),
+            IdPrefix::CommonModel => "cm".to_string(),
             IdPrefix::Connection => "conn".to_string(),
             IdPrefix::ConnectionDefinition => "conn_def".to_string(),
             IdPrefix::ConnectionModelDefinition => "conn_mod_def".to_string(),
@@ -125,12 +135,11 @@ impl From<IdPrefix> for String {
             IdPrefix::ConnectionOAuthDefinition => "conn_oauth_def".to_string(),
             IdPrefix::Cursor => "crs".to_string(),
             IdPrefix::EmbedToken => "embed_tk".to_string(),
-            IdPrefix::SessionId => "session_id".to_string(),
-            IdPrefix::Archive => "arch".to_string(),
             IdPrefix::Event => "evt".to_string(),
             IdPrefix::EventAccess => "evt_ac".to_string(),
             IdPrefix::EventDependency => "evt_dep".to_string(),
             IdPrefix::EventKey => "evt_k".to_string(),
+            IdPrefix::Idempotency => "idem".to_string(),
             IdPrefix::Job => "job".to_string(),
             IdPrefix::JobStage => "job_stg".to_string(),
             IdPrefix::LLMMessage => "llm_msg".to_string(),
@@ -139,9 +148,12 @@ impl From<IdPrefix> for String {
             IdPrefix::Log => "log".to_string(),
             IdPrefix::LogTracking => "log_trk".to_string(),
             IdPrefix::Pipeline => "pipe".to_string(),
+            IdPrefix::PipelineEvent => "pipe_evt".to_string(),
             IdPrefix::Platform => "plf".to_string(),
             IdPrefix::PlatformPage => "plf_pg".to_string(),
             IdPrefix::Queue => "q".to_string(),
+            IdPrefix::ScheduledEvent => "sched_evt".to_string(),
+            IdPrefix::SessionId => "session_id".to_string(),
             IdPrefix::Settings => "st".to_string(),
             IdPrefix::Transaction => "tx".to_string(),
             IdPrefix::UnitTest => "ut".to_string(),
@@ -200,6 +212,7 @@ mod test {
         assert_eq!(IdPrefix::try_from("arch").unwrap(), IdPrefix::Archive);
         assert_eq!(IdPrefix::try_from("evt_ac").unwrap(), IdPrefix::EventAccess);
         assert_eq!(IdPrefix::try_from("evt_k").unwrap(), IdPrefix::EventKey);
+        assert_eq!(IdPrefix::try_from("idem").unwrap(), IdPrefix::Idempotency);
         assert_eq!(IdPrefix::try_from("job").unwrap(), IdPrefix::Job);
         assert_eq!(IdPrefix::try_from("job_stg").unwrap(), IdPrefix::JobStage);
         assert_eq!(IdPrefix::try_from("llm_msg").unwrap(), IdPrefix::LLMMessage);
@@ -207,8 +220,16 @@ mod test {
         assert_eq!(IdPrefix::try_from("ln_tk").unwrap(), IdPrefix::LinkToken);
         assert_eq!(IdPrefix::try_from("log").unwrap(), IdPrefix::Log);
         assert_eq!(IdPrefix::try_from("pipe").unwrap(), IdPrefix::Pipeline);
+        assert_eq!(
+            IdPrefix::try_from("pipe_evt").unwrap(),
+            IdPrefix::PipelineEvent
+        );
         assert_eq!(IdPrefix::try_from("plf").unwrap(), IdPrefix::Platform);
         assert_eq!(IdPrefix::try_from("q").unwrap(), IdPrefix::Queue);
+        assert_eq!(
+            IdPrefix::try_from("sched_evt").unwrap(),
+            IdPrefix::ScheduledEvent
+        );
         assert_eq!(IdPrefix::try_from("st").unwrap(), IdPrefix::Settings);
         assert_eq!(IdPrefix::try_from("tx").unwrap(), IdPrefix::Transaction);
         assert_eq!(IdPrefix::try_from("ut").unwrap(), IdPrefix::UnitTest);
@@ -240,6 +261,7 @@ mod test {
         assert_eq!(format!("{}", IdPrefix::EventAccess), "evt_ac");
         assert_eq!(format!("{}", IdPrefix::EventDependency), "evt_dep");
         assert_eq!(format!("{}", IdPrefix::EventKey), "evt_k");
+        assert_eq!(format!("{}", IdPrefix::Idempotency), "idem");
         assert_eq!(format!("{}", IdPrefix::Job), "job");
         assert_eq!(format!("{}", IdPrefix::JobStage), "job_stg");
         assert_eq!(format!("{}", IdPrefix::LLMMessage), "llm_msg");
@@ -248,9 +270,11 @@ mod test {
         assert_eq!(format!("{}", IdPrefix::Log), "log");
         assert_eq!(format!("{}", IdPrefix::LogTracking), "log_trk");
         assert_eq!(format!("{}", IdPrefix::Pipeline), "pipe");
+        assert_eq!(format!("{}", IdPrefix::PipelineEvent), "pipe_evt");
         assert_eq!(format!("{}", IdPrefix::Platform), "plf");
         assert_eq!(format!("{}", IdPrefix::PlatformPage), "plf_pg");
         assert_eq!(format!("{}", IdPrefix::Queue), "q");
+        assert_eq!(format!("{}", IdPrefix::ScheduledEvent), "sched_evt");
         assert_eq!(format!("{}", IdPrefix::Settings), "st");
         assert_eq!(format!("{}", IdPrefix::Transaction), "tx");
         assert_eq!(format!("{}", IdPrefix::UnitTest), "ut");

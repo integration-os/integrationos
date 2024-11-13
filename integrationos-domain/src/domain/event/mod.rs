@@ -1,4 +1,5 @@
 pub mod duplicates;
+pub mod emitted_events;
 pub mod event_access;
 pub mod event_response;
 pub mod event_state;
