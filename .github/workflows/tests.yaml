@@ -53,7 +53,7 @@ jobs:
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
       - uses: actions/checkout@v4
       - name: Starting up Docker 🐳
-        run: ls && docker compose -f integrationos-emit/tests/resource/docker-compose.yml up -d
+        run: ls && docker compose -f ./integrationos-emit/tests/resource/docker-compose.yml up -d
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - uses: dtolnay/rust-toolchain@stable
