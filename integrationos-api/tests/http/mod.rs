@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod callback;
 pub mod connection;
 pub mod crud;
 pub mod pagination;

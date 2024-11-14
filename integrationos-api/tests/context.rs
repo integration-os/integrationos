@@ -319,7 +319,7 @@ impl TestServer {
         })
     }
 
-    pub async fn send_request_with_auth_headers<T: Serialize, U: DeserializeOwned>(
+    async fn send_request_with_auth_headers<T: Serialize, U: DeserializeOwned>(
         &self,
         path: &str,
         method: http::Method,
