@@ -215,12 +215,14 @@ impl EventStreamExt for FluvioDriverImpl {
             tokio::time::interval(Duration::from_millis(consumer.app.consumer_linger_time));
         interval.tick().await;
 
+        // TODO: Before shutdown, make sure to move current DLQ proccesed event to the scheduler queue
+        // if retry count < max_retries
         loop {
             tokio::select! {
                 timeout = interval.tick() => {
 
                     if count > 0 || subsys.is_shutdown_requested() {
-                        tracing::info!("Committing offsets after {timeout:?}");
+                        tracing::info!("Committing offsets after {:?}", timeout.elapsed());
                         stream.offset_commit().map_err(|err| anyhow::anyhow!(err))?;
                         stream.offset_flush().await.map_err(|err| anyhow::anyhow!(err))?;
                         tracing::info!("Periodic offset commit completed.");
