@@ -2932,6 +2932,7 @@ dependencies = [
  "http 1.1.0",
  "http-serde-ext",
  "integrationos-domain",
+ "jsonwebtoken 8.3.0",
  "log",
  "mongodb",
  "num_cpus",

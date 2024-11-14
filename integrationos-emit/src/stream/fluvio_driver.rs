@@ -19,7 +19,7 @@ use fluvio::{
     TopicProducerConfigBuilder,
 };
 use futures::StreamExt;
-use integrationos_domain::{Id, IntegrationOSError, InternalError, Unit};
+use integrationos_domain::{Id, IntegrationOSError, InternalError, TimedExt, Unit};
 use mongodb::bson::doc;
 use std::boxed::Box;
 use std::time::Duration;
@@ -329,7 +329,16 @@ impl EventStreamExt for FluvioDriverImpl {
                     })?;
 
                 tracing::info!("Event with id {} is ready to be processed", event.entity_id);
-                let result = event.side_effect(ctx).await;
+                let result = event
+                    .side_effect(ctx)
+                    .timed(|_, elapsed| {
+                        tracing::info!(
+                            "Side effect for entity id {} took {}ms",
+                            event.entity_id,
+                            elapsed.as_millis()
+                        )
+                    })
+                    .await;
 
                 if let Err(e) = result {
                     tracing::error!("Error processing event: {e}, removing deduplication record");

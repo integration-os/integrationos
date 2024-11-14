@@ -5,9 +5,10 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
-axum.workspace = true
 async-trait.workspace = true
+axum.workspace = true
 chrono.workspace = true
+ctrlc = { version = "3.4.5", features = ["termination"] }
 dotenvy.workspace = true
 envconfig.workspace = true
 fluvio = "0.23.3"
@@ -16,6 +17,8 @@ futures.workspace = true
 http-serde-ext.workspace = true
 http.workspace = true
 integrationos-domain = { path = "../integrationos-domain" }
+jsonwebtoken.workspace = true
+log = "0.4.22"
 mongodb.workspace = true
 num_cpus.workspace = true
 reqwest = { workspace = true, features = ["rustls-tls"] }
@@ -26,11 +29,9 @@ serde = { workspace = true , features = ["derive"] }
 serde_json.workspace = true
 strum.workspace = true
 tokio = { workspace = true, features = ["full"] }
+tokio-graceful-shutdown = "0.15.1"
 tower-http.workspace = true
 tracing.workspace = true
-log = "0.4.22"
-ctrlc = { version = "3.4.5", features = ["termination"] }
-tokio-graceful-shutdown = "0.15.1"
 
 [dev-dependencies]
 testcontainers-modules = { workspace = true, features = ["mongo"] }

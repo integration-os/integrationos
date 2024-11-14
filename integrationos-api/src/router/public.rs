@@ -27,8 +27,8 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         .route(
             "/event-access/default",
             post(create_event_access_for_new_user).layer(from_fn_with_state(
-                Arc::new(JwtState::new(state)),
-                jwt_auth::jwt_auth,
+                Arc::new(JwtState::from_state(state)),
+                jwt_auth::jwt_auth_middleware,
             )),
         )
         .route(

@@ -38,6 +38,16 @@ pub struct EmitterConfig {
     pub scheduled_max_chunk_size: usize,
     #[envconfig(from = "SHUTDOWN_TIMEOUT_SECS", default = "10")]
     pub shutdown_timeout_secs: u64,
+    #[envconfig(
+        from = "JWT_SECRET",
+        default = "2thZ2UiOnsibmFtZSI6IlN0YXJ0dXBsa3NoamRma3NqZGhma3NqZGhma3NqZG5jhYtggfaP9ubmVjdGlvbnMiOjUwMDAwMCwibW9kdWxlcyI6NSwiZW5kcG9pbnRzIjo3b4e05e2-f050-401f-9822-44f43f71753c"
+    )]
+    pub jwt_secret: String,
+    #[envconfig(
+        from = "EVENT_CALLBACK_URL",
+        default = "http://localhost:3005/v1/event-callbacks"
+    )]
+    pub event_callback_url: String,
     #[envconfig(nested = true)]
     pub fluvio: EventStreamConfig,
     #[envconfig(nested = true)]
@@ -63,6 +73,8 @@ impl Display for EmitterConfig {
             self.http_client_max_retries
         )?;
         writeln!(f, "EVENT_STREAM_PROVIDER: {}", self.event_stream_provider)?;
+        writeln!(f, "JWT_SECRET: ****")?;
+        writeln!(f, "EVENT_CALLBACK_URL: {}", self.event_callback_url)?;
         writeln!(
             f,
             "EVENT_PROCESSING_MAX_RETRIES: {}",

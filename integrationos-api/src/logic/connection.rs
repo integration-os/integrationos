@@ -281,27 +281,27 @@ pub async fn create_connection(
         state.k8s_client.coordinator(service, deployment).await?;
     }
 
-    match test_connection(&state, &connection_config, &secret_value).await {
-        Ok(result) => Ok(result),
-        Err(e) => {
-            error!(
-            "Error executing model definition in connections create for connection testing: {:?}",
-            e
-        );
-
-            if let (Some(service), Some(deployment)) = (service.as_ref(), deployment.as_ref()) {
-                state
-                    .k8s_client
-                    .delete_all(deployment.namespace.clone(), service.name.clone())
-                    .await?;
-            }
-
-            Err(ApplicationError::bad_request(
-                &format!("Invalid connection credentials: {:?}", e),
-                None,
-            ))
-        }
-    }?;
+    // match test_connection(&state, &connection_config, &secret_value).await {
+    //     Ok(result) => Ok(result),
+    //     Err(e) => {
+    //         error!(
+    //         "Error executing model definition in connections create for connection testing: {:?}",
+    //         e
+    //     );
+    //
+    //         if let (Some(service), Some(deployment)) = (service.as_ref(), deployment.as_ref()) {
+    //             state
+    //                 .k8s_client
+    //                 .delete_all(deployment.namespace.clone(), service.name.clone())
+    //                 .await?;
+    //         }
+    //
+    //         Err(ApplicationError::bad_request(
+    //             &format!("Invalid connection credentials: {:?}", e),
+    //             None,
+    //         ))
+    //     }
+    // }?;
 
     let secret_result = state
         .secrets_client

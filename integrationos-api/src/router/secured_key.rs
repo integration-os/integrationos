@@ -10,7 +10,7 @@ use crate::{
     },
     middleware::{
         blocker::{handle_blocked_error, BlockInvalidHeaders},
-        extractor::{rate_limit, RateLimiter},
+        extractor::{rate_limit_middleware, RateLimiter},
         header_auth,
     },
     server::AppState,
@@ -56,10 +56,10 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         .layer(TraceLayer::new_for_http())
         .nest("/metrics", metrics::get_router());
 
-    let routes = match RateLimiter::new(state.clone()).await {
+    let routes = match RateLimiter::from_state(state.clone()).await {
         Ok(rate_limiter) => routes.layer(axum::middleware::from_fn_with_state(
             Arc::new(rate_limiter),
-            rate_limit,
+            rate_limit_middleware,
         )),
         Err(e) => {
             warn!("Could not connect to redis: {e}");
@@ -68,7 +68,10 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     };
 
     routes
-        .layer(from_fn_with_state(state.clone(), header_auth::header_auth))
+        .layer(from_fn_with_state(
+            state.clone(),
+            header_auth::header_auth_middleware,
+        ))
         .layer(from_fn(log_request_middleware))
         .layer(TraceLayer::new_for_http())
         .layer(SetSensitiveRequestHeadersLayer::new(once(
@@ -78,7 +81,7 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(handle_blocked_error))
                 .layer(FilterLayer::new(
-                    BlockInvalidHeaders::new(state.clone()).await,
+                    BlockInvalidHeaders::from_state(state.clone()).await,
                 )),
         )
 }

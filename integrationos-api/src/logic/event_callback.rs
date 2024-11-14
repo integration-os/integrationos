@@ -1,41 +1,33 @@
+use super::connection::DatabaseConnectionSecret;
 use crate::{
     helper::{NamespaceScope, ServiceName},
     server::AppState,
 };
-use axum::{extract::State, routing::post, Json, Router};
+use axum::{
+    extract::{Path, State},
+    routing::post,
+    Json, Router,
+};
 use bson::doc;
 use integrationos_domain::{ApplicationError, Connection, Id, IntegrationOSError};
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-
-use super::connection::DatabaseConnectionSecret;
 
 pub fn get_router() -> Router<Arc<AppState>> {
     Router::new().route(
-        "/mark-as-non-functional",
+        "/database-connection-lost/:connection_id",
         post(database_connection_lost_callback),
     )
 }
 
-// FIX: This should come from the event, as it should receive the exact same data as the event.
-// Move the event to domain and import here
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MarkConnectionAsNonFunctionalRequest {
-    pub connection_id: Id,
-    pub reason: Option<String>,
-}
-
 // TODO: Write tests for this endpoint
 async fn database_connection_lost_callback(
-    // Extension(access): Extension<Arc<EventAccess>>,
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<MarkConnectionAsNonFunctionalRequest>,
+    Path(connection_id): Path<Id>,
 ) -> Result<Json<Connection>, IntegrationOSError> {
     // Instead of direcly updating we're getting the record first so that we can
     // modify the active and deprecated fields from the record metadata
     // without having to update the whole record
-    let id = payload.connection_id.to_string();
+    let id = connection_id.to_string();
     let connection = state
         .app_stores
         .connection
@@ -62,7 +54,7 @@ async fn database_connection_lost_callback(
                 // and we need to delete these resources
                 if let Ok(secret) = secret.decode::<DatabaseConnectionSecret>() {
                     let namespace: NamespaceScope = secret.namespace.as_str().try_into()?;
-                    let service_name = ServiceName::from_id(payload.connection_id)?;
+                    let service_name = ServiceName::from_id(connection_id)?;
 
                     tracing::info!(
                         "Deleting all resources for connection {id} in namespace {}",

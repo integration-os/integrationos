@@ -1,6 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
+pub const DEFAULT_AUDIENCE: &str = "integrationos-users";
+pub const DEFAULT_ISSUER: &str = "integrationos";
+
+pub const FALLBACK_AUDIENCE: &str = "buildable-users";
+pub const FALLBACK_ISSUER: &str = "buildable";
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Claims {
     #[serde(rename = "_id")]

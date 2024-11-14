@@ -1,7 +1,9 @@
-use crate::server::AppState;
+use crate::{router::generate_token, server::AppState};
 use async_trait::async_trait;
+use http::header::AUTHORIZATION;
 use integrationos_domain::{
-    prefix::IdPrefix, record_metadata::RecordMetadata, Id, IntegrationOSError, Unit,
+    prefix::IdPrefix, record_metadata::RecordMetadata, ApplicationError, Id, IntegrationOSError,
+    InternalError, Unit,
 };
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumString};
@@ -23,16 +25,47 @@ pub enum Event {
 
 #[async_trait]
 impl EventExt for Event {
-    async fn side_effect(
-        &self,
-        _ctx: &AppState,
-        entity_id: Id,
-    ) -> Result<Unit, IntegrationOSError> {
+    async fn side_effect(&self, ctx: &AppState, entity_id: Id) -> Result<Unit, IntegrationOSError> {
         match self {
-            Event::DatabaseConnectionLost { .. } => Ok(tracing::info!(
-                "Received event: {:?}. With id: {entity_id}",
-                self
-            )),
+            Event::DatabaseConnectionLost { connection_id, .. } => {
+                let base_path = &ctx.config.event_callback_url;
+                let path = format!("{base_path}/database-connection-lost/{connection_id}");
+
+                let authorization = generate_token(ctx)?;
+
+                let request = ctx
+                    .http_client
+                    .post(path)
+                    .header(AUTHORIZATION, format!("Bearer {authorization}"))
+                    .build()
+                    .map_err(|e| {
+                        tracing::error!("Failed to build request for entity id {entity_id}: {e}");
+                        InternalError::io_err(
+                            &format!("Failed to build request for entity id {entity_id}"),
+                            None,
+                        )
+                    })?;
+
+                ctx.http_client
+                    .execute(request)
+                    .await
+                    .map_err(|e| {
+                        tracing::error!("Failed to execute request for entity id {entity_id}: {e}");
+                        InternalError::io_err(
+                            &format!("Failed to execute request for entity id {entity_id}"),
+                            None,
+                        )
+                    })?
+                    .error_for_status()
+                    .map_err(|e| {
+                        tracing::error!("Failed to execute request for entity id {entity_id}: {e}");
+                        ApplicationError::bad_request(
+                            &format!("Failed to execute request for entity id {entity_id}"),
+                            None,
+                        )
+                    })
+                    .map(|res| tracing::info!("Response: {:?}", res))
+            }
         }
     }
 }

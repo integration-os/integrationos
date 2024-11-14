@@ -44,8 +44,8 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
 
     routes
         .layer(from_fn_with_state(
-            Arc::new(JwtState::new(state)),
-            jwt_auth::jwt_auth,
+            Arc::new(JwtState::from_state(state)),
+            jwt_auth::jwt_auth_middleware,
         ))
         .layer(from_fn(log_request_middleware))
         .layer(TraceLayer::new_for_http())

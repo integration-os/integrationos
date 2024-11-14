@@ -29,7 +29,7 @@ pub struct RateLimiter {
 }
 
 impl RateLimiter {
-    pub async fn new(state: Arc<AppState>) -> Result<Self> {
+    pub async fn from_state(state: Arc<AppState>) -> Result<Self> {
         if !state.config.rate_limit_enabled {
             return Err(anyhow::anyhow!("Rate limiting is disabled"));
         };
@@ -94,7 +94,7 @@ impl RateLimiter {
     }
 }
 
-pub async fn rate_limit(
+pub async fn rate_limit_middleware(
     Extension(event_access): Extension<Arc<EventAccess>>,
     State(state): State<Arc<RateLimiter>>,
     req: Request<Body>,

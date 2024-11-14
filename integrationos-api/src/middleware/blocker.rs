@@ -24,7 +24,7 @@ pub struct BlockInvalidHeaders {
 }
 
 impl BlockInvalidHeaders {
-    pub async fn new(state: Arc<AppState>) -> Self {
+    pub async fn from_state(state: Arc<AppState>) -> Self {
         let whitelist = Arc::new(RwLock::new(BTreeSet::new()));
 
         let header_name =
