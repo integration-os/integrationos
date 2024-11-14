@@ -55,9 +55,9 @@ jobs:
       - name: Starting up Docker 🐳
         run: ls && docker compose -f ./integrationos-emit/tests/resource/docker-compose.yml up -d
       - name: Install fluvio CLI
-        run: curl -fsS https://hub.infinyon.cloud/install/install.sh | bash && echo 'source "${HOME}/.fvm/env"' >> ~/.bashrc
+        run: curl -fsS https://hub.infinyon.cloud/install/install.sh | bash
       - name: Create fluvio topic
-        run: fluvio topic create -p 2 events && fluvio topic create -p 2 dlq
+        run: ~/.fluvio/bin/fluvio topic create -p 2 events && ~/.fluvio/bin/fluvio topic create -p 2 dlq
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - uses: dtolnay/rust-toolchain@stable
