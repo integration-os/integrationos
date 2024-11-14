@@ -2934,6 +2934,7 @@ dependencies = [
  "integrationos-domain",
  "jsonwebtoken 8.3.0",
  "log",
+ "mockito",
  "mongodb",
  "num_cpus",
  "reqwest",

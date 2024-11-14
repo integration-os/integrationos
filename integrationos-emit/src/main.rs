@@ -1,45 +1,10 @@
 use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
-use integrationos_domain::{
-    telemetry::{get_subscriber, init_subscriber},
-    Unit,
-};
-use integrationos_emit::{domain::config::EmitterConfig, server::Server, stream::EventStreamTopic};
+use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
+use integrationos_emit::{domain::config::EmitterConfig, server::Server};
 use std::time::Duration;
-use tokio_graceful_shutdown::{SubsystemBuilder, SubsystemHandle, Toplevel};
-use tracing::info;
-
-async fn subsystem(
-    server: Server,
-    config: &EmitterConfig,
-    subsys: SubsystemHandle,
-) -> Result<Unit> {
-    info!("Starting Emitter API with config:\n{config}");
-
-    let state = server.state.clone();
-    let stream = server.state.event_stream.clone();
-    let scheduler = server.scheduler.clone();
-
-    subsys.start(SubsystemBuilder::new(
-        EventStreamTopic::Dlq.as_ref(),
-        |h| async move { stream.consume(EventStreamTopic::Dlq, h, &state).await },
-    ));
-
-    let state = server.state.clone();
-    let stream = server.state.event_stream.clone();
-    subsys.start(SubsystemBuilder::new(
-        EventStreamTopic::Target.as_ref(),
-        |h| async move { stream.consume(EventStreamTopic::Target, h, &state).await },
-    ));
-
-    subsys.start(SubsystemBuilder::new(
-        "Scheduler Subsystem",
-        |_| async move { scheduler.start().await },
-    ));
-
-    server.run().await
-}
+use tokio_graceful_shutdown::{SubsystemBuilder, Toplevel};
 
 fn main() -> Result<()> {
     dotenv().ok();
@@ -61,7 +26,7 @@ fn main() -> Result<()> {
                     .expect("Failed to initialize server");
 
                 s.start(SubsystemBuilder::new("ServerSubsys", |handle| async move {
-                    subsystem(server, &config, handle).await
+                    Server::subsystem(server, &config, handle).await
                 }));
             })
             .catch_signals()

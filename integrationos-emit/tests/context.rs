@@ -3,6 +3,7 @@ use http::{Method, StatusCode};
 use integrationos_domain::{IntegrationOSError, InternalError};
 use integrationos_emit::domain::config::EmitterConfig;
 use integrationos_emit::server::Server;
+use mockito::{Server as MockServer, ServerGuard};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::error::Error;
@@ -13,6 +14,7 @@ use testcontainers_modules::{
     testcontainers::{clients::Cli as Docker, Container},
 };
 use tokio::net::TcpListener;
+use tokio_graceful_shutdown::{SubsystemBuilder, Toplevel};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
@@ -24,6 +26,7 @@ static TRACING: OnceLock<()> = OnceLock::new();
 pub struct TestServer {
     pub port: u16,
     pub client: reqwest::Client,
+    pub mock_server: ServerGuard,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -33,7 +36,7 @@ pub struct ApiResponse<T: DeserializeOwned = Value> {
 }
 
 impl TestServer {
-    pub async fn new() -> Result<Self, IntegrationOSError> {
+    pub async fn new(stream: bool) -> Result<Self, IntegrationOSError> {
         TRACING.get_or_init(|| {
             let filter = EnvFilter::builder()
                 .with_default_directive(LevelFilter::INFO.into())
@@ -55,7 +58,7 @@ impl TestServer {
             .expect("Failed to get local address")
             .port();
 
-        let config = EmitterConfig::init_from_hashmap(&HashMap::from([
+        let mut config = vec![
             (
                 "INTERNAL_SERVER_ADDRESS".to_string(),
                 format!("0.0.0.0:{port}"),
@@ -66,20 +69,60 @@ impl TestServer {
             ("CONTEXT_DATABASE_NAME".to_string(), database_name.clone()),
             ("EVENT_DATABASE_URL".to_string(), database_uri.clone()),
             ("EVENT_DATABASE_NAME".to_string(), database_name.clone()),
-        ]))
-        .expect("Failed to initialize storage config");
+        ];
+
+        let mock_server = MockServer::new_async().await;
+
+        if stream {
+            let uri = mock_server.url();
+
+            config.push(("EVENT_STREAM_PROVIDER".to_string(), "fluvio".to_string()));
+            config.push(("EVENT_STREAM_PORT".to_string(), "9103".to_string()));
+            config.push((
+                "EVENT_STREAM_PRODUCER_TOPIC".to_string(),
+                "events".to_string(),
+            ));
+            config.push((
+                "EVENT_STREAM_CONSUMER_TOPIC".to_string(),
+                "events".to_string(),
+            ));
+            config.push((
+                "EVENT_STREAM_CONSUMER_GROUP".to_string(),
+                "event-all-partitions-consumer".to_string(),
+            ));
+            config.push((
+                "EVENT_CALLBACK_URL".to_string(),
+                format!("{uri}/v1/event-callbacks"),
+            ));
+        }
+
+        let config = EmitterConfig::init_from_hashmap(&HashMap::from_iter(config))
+            .expect("Failed to initialize storage config");
 
         let server = Server::init(config.clone())
             .await
             .expect("Failed to initialize storage");
 
-        tokio::task::spawn(async move { server.run().await });
+        tokio::task::spawn(async move {
+            Toplevel::new(|s| async move {
+                s.start(SubsystemBuilder::new("ServerSubsys", |handle| async move {
+                    Server::subsystem(server, &config, handle).await
+                }));
+            })
+            .catch_signals()
+            .handle_shutdown_requests(Duration::from_secs(5))
+            .await
+        });
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
 
         let client = reqwest::Client::new();
 
-        Ok(Self { port, client })
+        Ok(Self {
+            port,
+            client,
+            mock_server,
+        })
     }
 
     pub async fn send_request<T: Serialize, U: DeserializeOwned + Debug>(
@@ -90,7 +133,6 @@ impl TestServer {
         header: Option<&HashMap<String, String>>,
     ) -> Result<ApiResponse<U>, IntegrationOSError> {
         let uri = format!("http://localhost:{}/{path}", self.port);
-        println!("Sending request to {uri}");
         let mut req = self.client.request(method, uri);
         if let Some(payload) = payload {
             req = req.json(payload);

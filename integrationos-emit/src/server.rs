@@ -8,7 +8,7 @@ use crate::{
     router,
     stream::{
         fluvio_driver::FluvioDriverImpl, logger_driver::LoggerDriverImpl,
-        scheduler::PublishScheduler, EventStreamExt, EventStreamProvider,
+        scheduler::PublishScheduler, EventStreamExt, EventStreamProvider, EventStreamTopic,
     },
 };
 use anyhow::Result as AnyhowResult;
@@ -20,6 +20,7 @@ use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use reqwest_tracing::TracingMiddleware;
 use std::{sync::Arc, time::Duration};
 use tokio::net::TcpListener;
+use tokio_graceful_shutdown::{SubsystemBuilder, SubsystemHandle};
 
 #[derive(Clone)]
 pub struct AppStores {
@@ -106,5 +107,36 @@ impl Server {
         axum::serve(tcp_listener, app)
             .await
             .map_err(|e| anyhow::anyhow!("Server error: {}", e))
+    }
+
+    pub async fn subsystem(
+        server: Server,
+        config: &EmitterConfig,
+        subsys: SubsystemHandle,
+    ) -> AnyhowResult<Unit> {
+        tracing::info!("Starting Emitter API with config:\n{config}");
+
+        let state = server.state.clone();
+        let stream = server.state.event_stream.clone();
+        let scheduler = server.scheduler.clone();
+
+        subsys.start(SubsystemBuilder::new(
+            EventStreamTopic::Dlq.as_ref(),
+            |h| async move { stream.consume(EventStreamTopic::Dlq, h, &state).await },
+        ));
+
+        let state = server.state.clone();
+        let stream = server.state.event_stream.clone();
+        subsys.start(SubsystemBuilder::new(
+            EventStreamTopic::Target.as_ref(),
+            |h| async move { stream.consume(EventStreamTopic::Target, h, &state).await },
+        ));
+
+        subsys.start(SubsystemBuilder::new(
+            "SchedulerSubsystem",
+            |_| async move { scheduler.start().await },
+        ));
+
+        server.run().await
     }
 }

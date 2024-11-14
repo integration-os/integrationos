@@ -28,31 +28,24 @@ impl EventExt for Event {
     async fn side_effect(&self, ctx: &AppState, entity_id: Id) -> Result<Unit, IntegrationOSError> {
         match self {
             Event::DatabaseConnectionLost { connection_id, .. } => {
+                tracing::info!("Side effect for entity id {entity_id}");
                 let base_path = &ctx.config.event_callback_url;
                 let path = format!("{base_path}/database-connection-lost/{connection_id}");
 
                 let authorization = generate_token(ctx)?;
 
-                let request = ctx
-                    .http_client
+                ctx.http_client
                     .post(path)
                     .header(AUTHORIZATION, format!("Bearer {authorization}"))
-                    .build()
+                    .send()
+                    .await
+                    .inspect(|res| {
+                        tracing::info!("Response: {:?}", res);
+                    })
                     .map_err(|e| {
                         tracing::error!("Failed to build request for entity id {entity_id}: {e}");
                         InternalError::io_err(
                             &format!("Failed to build request for entity id {entity_id}"),
-                            None,
-                        )
-                    })?;
-
-                ctx.http_client
-                    .execute(request)
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("Failed to execute request for entity id {entity_id}: {e}");
-                        InternalError::io_err(
-                            &format!("Failed to execute request for entity id {entity_id}"),
                             None,
                         )
                     })?

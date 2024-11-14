@@ -34,6 +34,7 @@ tower-http.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
+mockito.workspace = true
 testcontainers-modules = { workspace = true, features = ["mongo"] }
 tracing-subscriber.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
