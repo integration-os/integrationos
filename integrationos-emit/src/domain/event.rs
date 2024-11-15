@@ -1,9 +1,9 @@
-use crate::{router::generate_token, server::AppState};
+use crate::server::AppState;
 use async_trait::async_trait;
 use http::header::AUTHORIZATION;
 use integrationos_domain::{
-    prefix::IdPrefix, record_metadata::RecordMetadata, ApplicationError, Id, IntegrationOSError,
-    InternalError, Unit,
+    prefix::IdPrefix, record_metadata::RecordMetadata, ApplicationError, Claims, Id,
+    IntegrationOSError, InternalError, Unit,
 };
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumString};
@@ -31,7 +31,7 @@ impl EventExt for Event {
                 let base_path = &ctx.config.event_callback_url;
                 let path = format!("{base_path}/database-connection-lost/{connection_id}");
 
-                let authorization = generate_token(ctx)?;
+                let authorization = Claims::from_secret(ctx.config.jwt_secret.as_str())?;
 
                 ctx.http_client
                     .post(path)

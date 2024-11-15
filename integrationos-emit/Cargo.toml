@@ -17,7 +17,6 @@ futures.workspace = true
 http-serde-ext.workspace = true
 http.workspace = true
 integrationos-domain = { path = "../integrationos-domain" }
-jsonwebtoken.workspace = true
 log = "0.4.22"
 mongodb.workspace = true
 num_cpus.workspace = true

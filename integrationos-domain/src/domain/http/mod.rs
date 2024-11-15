@@ -1,3 +1,7 @@
+use super::IntegrationOSError;
+use crate::InternalError;
+use chrono::Utc;
+use jsonwebtoken::{EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_AUDIENCE: &str = "integrationos-users";
@@ -24,4 +28,26 @@ pub struct Claims {
     pub exp: i64,
     pub aud: String,
     pub iss: String,
+}
+
+impl Claims {
+    pub fn from_secret(secret: &str) -> Result<String, IntegrationOSError> {
+        let now = Utc::now();
+
+        let header = Header::default();
+        let claims = Claims {
+            is_buildable_core: true,
+            iat: now.timestamp(),
+            exp: now.timestamp() + 60,
+            aud: DEFAULT_AUDIENCE.to_string(),
+            iss: DEFAULT_ISSUER.to_string(),
+            ..Default::default()
+        };
+        let key = EncodingKey::from_secret(secret.as_bytes());
+
+        jsonwebtoken::encode(&header, &claims, &key).map_err(|e| {
+            tracing::error!("Failed to encode token: {e}");
+            InternalError::invalid_argument("Failed to encode token", None)
+        })
+    }
 }

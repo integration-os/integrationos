@@ -45,6 +45,7 @@ http.workspace = true
 indexmap = "2.1.0"
 js-sandbox-ios.workspace = true
 jsonpath_lib.workspace = true
+jsonwebtoken.workspace = true
 kube.workspace = true
 k8s-openapi = { workspace = true, features = ["latest"] }
 mongodb.workspace = true
