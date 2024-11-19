@@ -1,9 +1,6 @@
 use super::EventStreamExt;
 use crate::{
-    domain::{
-        config::EmitterConfig,
-        event::{EventEntity, ScheduledEvent},
-    },
+    domain::{config::EmitterConfig, deduplication::Deduplication, event::EventEntity},
     stream::EventStreamTopic,
 };
 use chrono::{Duration as CDuration, Utc};
@@ -16,6 +13,7 @@ use std::{sync::Arc, time::Duration};
 pub struct EventPusher {
     pub event_stream: Arc<dyn EventStreamExt + Sync + Send>,
     pub events: MongoStore<EventEntity>,
+    pub deduplication: MongoStore<Deduplication>,
     pub max_concurrent_tasks: usize,
     pub max_chunk_size: usize,
     pub sleep_duration: u64,
@@ -24,21 +22,19 @@ pub struct EventPusher {
 impl EventPusher {
     pub async fn start(&self, config: &EmitterConfig) -> Result<Unit, IntegrationOSError> {
         let events_store = self.events.clone();
+        let deduplication_store = self.deduplication.clone();
         let event_stream = Arc::clone(&self.event_stream);
 
         let max_concurrent_tasks = self.max_concurrent_tasks;
         let max_chunk_size = self.max_chunk_size;
         let sleep_duration = self.sleep_duration;
 
-        tracing::info!("Starting scheduled event publisher");
+        tracing::info!("Starting event pusher");
         loop {
-            tracing::debug!(
-                "Polling for scheduled events at {}",
-                Utc::now().timestamp_millis()
-            );
-
             let now = Utc::now();
-            let yesterday = now - CDuration::days(config.event_max_span_for_retry_days);
+            let before = now - CDuration::seconds(config.event_max_span_for_retry_secs);
+
+            tracing::debug!("Polling for events at {}", now);
 
             let query = doc! {
                 "$or": [
@@ -50,7 +46,7 @@ impl EventPusher {
                             "outcome.retries": { "$lt": config.event_processing_max_retries}
                         },
                         {
-                            "createdAt": { "$lt": yesterday.timestamp_millis() }
+                            "createdAt": { "$lt": before.timestamp_millis() }
                         },
                     ]},
                     {"$and": [
@@ -58,7 +54,7 @@ impl EventPusher {
                             "outcome.type": "executed"
                         },
                         {
-                            "createdAt": { "$lt": yesterday.timestamp_millis() }
+                            "createdAt": { "$lt": before.timestamp_millis() }
                         }
                     ]},
                     {"$and": [
@@ -66,30 +62,35 @@ impl EventPusher {
                             "outcome.type": "created"
                         },
                         {
-                            "createdAt": { "$lt": yesterday.timestamp_millis() }
+                            "createdAt": { "$lt": before.timestamp_millis() }
                         }
                     ]}
                 ]
             };
 
+            tracing::info!("Querying for events: {query}");
+
             let events = events_store.collection.find(query, None).await;
 
             if let Ok(events) = events {
                 let event_stream = Arc::clone(&event_stream);
-                let scheduled = events_store.clone();
-                let results = events
-                    .try_chunks(max_chunk_size)
-                    .map(|result| {
-                        let event_stream = Arc::clone(&event_stream);
-                        let scheduled = scheduled.clone();
+                let deduplication_store = deduplication_store.clone();
+                let results =
+                    events
+                        .try_chunks(max_chunk_size)
+                        .map(|result| {
+                            let event_stream = Arc::clone(&event_stream);
+                            let deduplication_store = deduplication_store.clone();
 
-                        let result =
-                            result.map_err(|e| InternalError::io_err(&e.to_string(), None));
-                        async move { process_chunk(result, &event_stream, &scheduled).await }
-                    })
-                    .buffer_unordered(max_concurrent_tasks)
-                    .collect::<Vec<_>>()
-                    .await;
+                            let result =
+                                result.map_err(|e| InternalError::io_err(&e.to_string(), None));
+                            async move {
+                                process_chunk(result, &event_stream, &deduplication_store).await
+                            }
+                        })
+                        .buffer_unordered(max_concurrent_tasks)
+                        .collect::<Vec<_>>()
+                        .await;
 
                 if results.iter().any(|r| r.is_err()) {
                     tracing::error!("Failed to publish one or more event chunks");
@@ -106,37 +107,44 @@ impl EventPusher {
 async fn process_chunk(
     result: Result<Vec<EventEntity>, IntegrationOSError>,
     event_stream: &Arc<dyn EventStreamExt + Sync + Send>,
-    event_store: &MongoStore<EventEntity>,
+    deduplication_store: &MongoStore<Deduplication>,
 ) -> Result<Unit, IntegrationOSError> {
-    // FIX: Remove from deduplication table before publishing
-    // FIX: On the process_chunk also add a target, if its an `errored` send to DQL,
-    // send to `Events` otherwise
+    match result {
+        Ok(chunk) => {
+            tracing::info!("Publishing {} event(s)", chunk.len());
+            for event in chunk {
+                let entity_id = event.entity_id;
+                let topic = if event.is_created() {
+                    EventStreamTopic::Target
+                } else {
+                    EventStreamTopic::Dlq
+                };
 
-    todo!()
-    // match result {
-    //     Ok(chunk) => {
-    //         tracing::info!("Publishing {} scheduled event(s)", chunk.len());
-    //         for event in chunk {
-    //             let id = event.id;
-    //             let entity_id = event.event.entity_id;
-    //             if let Err(e) = event_stream
-    //                 .publish(event.event, EventStreamTopic::Target)
-    //                 .await
-    //             {
-    //                 tracing::error!("Failed to publish event: {e}");
-    //             } else {
-    //                 tracing::info!("Event with id {} is published", entity_id);
-    //                 event_store
-    //                     .collection
-    //                     .delete_one(doc! { "_id": id.to_string() }, None)
-    //                     .await?;
-    //             }
-    //         }
-    //         Ok(())
-    //     }
-    //     Err(e) => {
-    //         tracing::error!("Failed to chunk events: {e}");
-    //         Err(e)
-    //     }
-    // }
+                let deleted = deduplication_store
+                    .collection
+                    .delete_one(doc! { "_id": entity_id.to_string() }, None)
+                    .await?;
+
+                tracing::info!(
+                    "Deleted event with id {:?} from deduplication store",
+                    deleted
+                );
+
+                event_stream
+                    .publish(event, topic)
+                    .await
+                    .inspect_err(|e| {
+                        tracing::error!("Failed to publish event: {e}");
+                    })
+                    .inspect(|_| {
+                        tracing::info!("Event with id {} is published", entity_id);
+                    })?;
+            }
+            Ok(())
+        }
+        Err(e) => {
+            tracing::error!("Failed to chunk events: {e}");
+            Err(e)
+        }
+    }
 }

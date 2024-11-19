@@ -30,14 +30,20 @@ pub struct EmitterConfig {
     pub event_stream_provider: EventStreamProvider,
     #[envconfig(from = "EVENT_PROCESSING_MAX_RETRIES", default = "5")]
     pub event_processing_max_retries: u32,
-    #[envconfig(from = "EVENT_MAX_SPAN_FOR_RETRY_DAYS", default = "1")]
-    pub event_max_span_for_retry_days: i64,
+    #[envconfig(from = "EVENT_MAX_SPAN_FOR_RETRY_SECS", default = "86400")]
+    pub event_max_span_for_retry_secs: i64,
     #[envconfig(from = "SCHEDULED_MAX_CONCURRENT_TASKS", default = "10")]
     pub scheduled_max_concurrent_tasks: usize,
     #[envconfig(from = "SCHEDULED_SLEEP_DURATION_IN_MILLIS", default = "1000")]
     pub scheduled_sleep_duration_millis: u64,
     #[envconfig(from = "SCHEDULED_MAX_CHUNK_SIZE", default = "100")]
     pub scheduled_max_chunk_size: usize,
+    #[envconfig(from = "PUSHER_MAX_CONCURRENT_TASKS", default = "10")]
+    pub pusher_max_concurrent_tasks: usize,
+    #[envconfig(from = "PUSHER_SLEEP_DURATION_IN_MILLIS", default = "1000")]
+    pub pusher_sleep_duration_millis: u64,
+    #[envconfig(from = "PUSHER_MAX_CHUNK_SIZE", default = "100")]
+    pub pusher_max_chunk_size: usize,
     #[envconfig(from = "SHUTDOWN_TIMEOUT_SECS", default = "10")]
     pub shutdown_timeout_secs: u64,
     #[envconfig(
@@ -78,8 +84,19 @@ impl Display for EmitterConfig {
         writeln!(
             f,
             "EVENT_MAX_SPAN_FOR_RETRY_DAYS: {}",
-            self.event_max_span_for_retry_days
+            self.event_max_span_for_retry_secs
         )?;
+        writeln!(
+            f,
+            "PUSHER_MAX_CONCURRENT_TASKS: {}",
+            self.pusher_max_concurrent_tasks
+        )?;
+        writeln!(
+            f,
+            "PUSHER_SLEEP_DURATION_IN_MILLIS: {}",
+            self.pusher_sleep_duration_millis
+        )?;
+        writeln!(f, "PUSHER_MAX_CHUNK_SIZE: {}", self.pusher_max_chunk_size)?;
         writeln!(f, "JWT_SECRET: ****")?;
         writeln!(f, "EVENT_CALLBACK_URL: {}", self.event_callback_url)?;
         writeln!(

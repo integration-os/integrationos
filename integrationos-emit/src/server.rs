@@ -7,7 +7,7 @@ use crate::{
     },
     router,
     stream::{
-        fluvio_driver::FluvioDriverImpl, logger_driver::LoggerDriverImpl,
+        fluvio_driver::FluvioDriverImpl, logger_driver::LoggerDriverImpl, pusher::EventPusher,
         scheduler::PublishScheduler, EventStreamExt, EventStreamProvider, EventStreamTopic,
     },
 };
@@ -44,6 +44,7 @@ pub struct Server {
     pub state: Arc<AppState>,
     pub event_stream: Arc<dyn EventStreamExt + Sync + Send>,
     pub scheduler: Arc<PublishScheduler>,
+    pub pusher: Arc<EventPusher>,
 }
 
 impl Server {
@@ -83,6 +84,15 @@ impl Server {
             sleep_duration: config.scheduled_sleep_duration_millis,
         });
 
+        let pusher = Arc::new(EventPusher {
+            event_stream: Arc::clone(&event_stream),
+            events: app_stores.events.clone(),
+            deduplication: app_stores.deduplication.clone(),
+            max_concurrent_tasks: config.pusher_max_concurrent_tasks,
+            max_chunk_size: config.pusher_max_chunk_size,
+            sleep_duration: config.pusher_sleep_duration_millis,
+        });
+
         let state = Arc::new(AppState {
             config: config.clone(),
             app_stores,
@@ -94,6 +104,7 @@ impl Server {
             state,
             event_stream,
             scheduler,
+            pusher,
         })
     }
 
@@ -121,6 +132,7 @@ impl Server {
         let state = server.state.clone();
         let stream = server.state.event_stream.clone();
         let scheduler = server.scheduler.clone();
+        let pusher = server.pusher.clone();
 
         subsys.start(SubsystemBuilder::new(
             EventStreamTopic::Dlq.as_ref(),
@@ -133,6 +145,11 @@ impl Server {
             EventStreamTopic::Target.as_ref(),
             |h| async move { stream.consume(EventStreamTopic::Target, h, &state).await },
         ));
+
+        let config = server.state.config.clone();
+        subsys.start(SubsystemBuilder::new("PusherSubsystem", |_| async move {
+            pusher.start(&config).await
+        }));
 
         subsys.start(SubsystemBuilder::new(
             "SchedulerSubsystem",
