@@ -29,6 +29,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EntityIdResponse {
+    pub idempotency_key: Id,
     pub entity_id: Id,
 }
 
@@ -42,7 +43,7 @@ pub async fn emit(
         .app_stores
         .idempotency
         .get_one(doc! {
-            "_id": idempotency_key.inner()
+            "_id": idempotency_key.inner().to_string()
         })
         .await
         .map(|idempotency| idempotency.is_some())
@@ -56,7 +57,6 @@ pub async fn emit(
     } else {
         let idempotency = Idempotency {
             key: idempotency_key.clone(),
-            indexable: Id::now(IdPrefix::Idempotency),
             metadata: RecordMetadata::default(),
         };
 
@@ -73,7 +73,10 @@ pub async fn emit(
                     .publish(event.as_entity(), EventStreamTopic::Target)
                     .await?;
 
-                Ok(Json(EntityIdResponse { entity_id: id }))
+                Ok(Json(EntityIdResponse {
+                    entity_id: id,
+                    idempotency_key: idempotency_key.inner(),
+                }))
             }
             Some(schedule_on) => {
                 let scheduled = ScheduledEvent {
@@ -91,6 +94,7 @@ pub async fn emit(
 
                 Ok(Json(EntityIdResponse {
                     entity_id: scheduled.id,
+                    idempotency_key: idempotency_key.inner(),
                 }))
             }
         }

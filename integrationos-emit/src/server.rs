@@ -28,6 +28,7 @@ pub struct AppStores {
     pub idempotency: MongoStore<Idempotency>,
     pub deduplication: MongoStore<Deduplication>,
     pub scheduled: MongoStore<ScheduledEvent>,
+    pub client: Client,
 }
 
 #[derive(Clone)]
@@ -50,6 +51,14 @@ impl Server {
         let client = Client::with_uri_str(&config.db_config.event_db_url).await?;
         let database = client.database(&config.db_config.event_db_name);
 
+        let app_stores = AppStores {
+            events: MongoStore::new(&database, &Store::PipelineEvents).await?,
+            idempotency: MongoStore::new(&database, &Store::Idempotency).await?,
+            deduplication: MongoStore::new(&database, &Store::Deduplication).await?,
+            scheduled: MongoStore::new(&database, &Store::ScheduledEvents).await?,
+            client,
+        };
+
         let retry_policy =
             ExponentialBackoff::builder().build_with_max_retries(config.http_client_max_retries);
         let client = reqwest::Client::builder()
@@ -59,13 +68,6 @@ impl Server {
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .with(TracingMiddleware::default())
             .build();
-
-        let app_stores = AppStores {
-            events: MongoStore::new(&database, &Store::PipelineEvents).await?,
-            idempotency: MongoStore::new(&database, &Store::Idempotency).await?,
-            deduplication: MongoStore::new(&database, &Store::Deduplication).await?,
-            scheduled: MongoStore::new(&database, &Store::ScheduledEvents).await?,
-        };
 
         let event_stream: Arc<dyn EventStreamExt + Sync + Send> = match config.event_stream_provider
         {
@@ -132,9 +134,13 @@ impl Server {
             |h| async move { stream.consume(EventStreamTopic::Target, h, &state).await },
         ));
 
+        let state = server.state.clone();
         subsys.start(SubsystemBuilder::new(
             "SchedulerSubsystem",
-            |_| async move { scheduler.start().await },
+            |_| async move {
+                let max_retries = state.config.event_processing_max_retries;
+                scheduler.start(max_retries).await
+            },
         ));
 
         server.run().await

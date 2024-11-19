@@ -175,7 +175,7 @@ impl EventStreamExt for FluvioDriverImpl {
         match target {
             EventStreamTopic::Target => {
                 self.tgt_producer
-                    .send(event.partition_key(), payload)
+                    .send(event.entity_id.to_string(), payload)
                     .await
                     .map_err(|e| {
                         InternalError::io_err(&format!("Could not send event to fluvio: {e}"), None)
@@ -183,7 +183,7 @@ impl EventStreamExt for FluvioDriverImpl {
             }
             EventStreamTopic::Dlq => {
                 self.dlq_producer
-                    .send(event.partition_key(), payload)
+                    .send(event.entity_id.to_string(), payload)
                     .await
                     .map_err(|e| {
                         InternalError::io_err(&format!("Could not send event to fluvio: {e}"), None)
@@ -342,12 +342,14 @@ impl EventStreamExt for FluvioDriverImpl {
                     })
                     .await;
 
+                update_event_outcome(ctx, &event, EventOutcome::executed()).await?;
+
                 if let Err(e) = result {
                     tracing::error!("Error processing event: {e}, removing deduplication record");
                     delete_deduplication_record(ctx, &event).await?;
 
-                    let outcome = EventOutcome::error(e.to_string(), 1);
-                    let event = event.with_outcome(Some(outcome.clone()));
+                    let outcome = EventOutcome::errored(e.to_string(), 1);
+                    let event = event.with_outcome(outcome.clone());
 
                     self.publish(event.clone(), EventStreamTopic::Dlq).await?;
 
@@ -356,7 +358,7 @@ impl EventStreamExt for FluvioDriverImpl {
                     return Ok(());
                 }
 
-                update_event_outcome(ctx, &event, EventOutcome::success()).await?;
+                update_event_outcome(ctx, &event, EventOutcome::succeded(event.retries())).await?;
             }
             EventStreamTopic::Dlq => {
                 tracing::info!("Event with id {} is in DLQ", event.entity_id);
@@ -369,8 +371,8 @@ impl EventStreamExt for FluvioDriverImpl {
                         );
                         delete_deduplication_record(ctx, &event).await?;
 
-                        let outcome = EventOutcome::error(e.to_string(), event.retries() + 1);
-                        let event = event.with_outcome(Some(outcome.clone()));
+                        let outcome = EventOutcome::errored(e.to_string(), event.retries() + 1);
+                        let event = event.with_outcome(outcome.clone());
 
                         self.publish(event.clone(), EventStreamTopic::Dlq).await?;
 
@@ -379,7 +381,8 @@ impl EventStreamExt for FluvioDriverImpl {
                         return Ok(());
                     }
 
-                    update_event_outcome(ctx, &event, EventOutcome::success()).await?;
+                    update_event_outcome(ctx, &event, EventOutcome::succeded(event.retries()))
+                        .await?;
                 } else {
                     tracing::info!("Giving up on event with id {}", event.entity_id);
                     // this is the case where we exhausted the retries, now
@@ -387,8 +390,12 @@ impl EventStreamExt for FluvioDriverImpl {
                     let error = event.error().unwrap_or_default()
                         + ".\n Exhausted retries, cannot process event";
 
-                    update_event_outcome(ctx, &event, EventOutcome::error(error, event.retries()))
-                        .await?;
+                    update_event_outcome(
+                        ctx,
+                        &event,
+                        EventOutcome::errored(error, event.retries()),
+                    )
+                    .await?;
 
                     // TODO: create an alert on grafana
                 }

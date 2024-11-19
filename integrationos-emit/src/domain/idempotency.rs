@@ -3,15 +3,15 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct IdempotencyKey(String);
+pub struct IdempotencyKey(Id);
 
 impl IdempotencyKey {
-    pub fn new(key: String) -> Self {
+    pub fn new(key: Id) -> Self {
         Self(key)
     }
 
-    pub fn inner(&self) -> &str {
-        &self.0
+    pub fn inner(&self) -> Id {
+        self.0
     }
 }
 
@@ -29,7 +29,6 @@ pub struct Idempotency {
     /// the box and we can use it as a conflict generation key
     #[serde(rename = "_id")]
     pub key: IdempotencyKey,
-    pub indexable: Id,
     #[serde(flatten)]
     pub metadata: RecordMetadata,
 }

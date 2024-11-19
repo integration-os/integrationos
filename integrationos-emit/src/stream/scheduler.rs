@@ -1,6 +1,6 @@
 use super::EventStreamExt;
 use crate::{domain::event::ScheduledEvent, stream::EventStreamTopic};
-use chrono::Utc;
+use chrono::{Duration as CDuration, Utc};
 use futures::{StreamExt, TryStreamExt};
 use integrationos_domain::{IntegrationOSError, InternalError, MongoStore, Unit};
 use mongodb::bson::doc;
@@ -17,7 +17,7 @@ pub struct PublishScheduler {
 }
 
 impl PublishScheduler {
-    pub async fn start(&self) -> Result<Unit, IntegrationOSError> {
+    pub async fn start(&self, max_retries: u32) -> Result<Unit, IntegrationOSError> {
         let scheduled = self.scheduled.clone();
         let event_stream = Arc::clone(&self.event_stream);
 
@@ -31,13 +31,32 @@ impl PublishScheduler {
                 "Polling for scheduled events at {}",
                 Utc::now().timestamp_millis()
             );
-            let events = scheduled
-                .collection
-                .find(
-                    doc! { "scheduleOn": { "$lte": Utc::now().timestamp_millis() } },
-                    None,
-                )
-                .await;
+
+            let query = doc! {
+                "$or": [
+                    {
+                        "scheduleOn": { "$lte": Utc::now().timestamp_millis() }
+                    },
+                    {"$and": [
+                        {
+                            "outcome.type": "errored"
+                        },
+                        {
+                            "outcome.retries": { "$lt": max_retries }
+                        }
+                    ]},
+                    {"$and": [
+                        {
+                            "outcome.type": "executed"
+                        },
+                        {
+                            "createdAt": { "$lt": (Utc::now() - CDuration::days(1)).timestamp_millis() }
+                        }
+                    ]}
+                ]
+            };
+
+            let events = scheduled.collection.find(query, None).await;
 
             if let Ok(events) = events {
                 let event_stream = Arc::clone(&event_stream);
@@ -47,7 +66,7 @@ impl PublishScheduler {
                     .map(|result| {
                         let event_stream = Arc::clone(&event_stream);
                         let scheduled = scheduled.clone();
-                        //
+
                         let result =
                             result.map_err(|e| InternalError::io_err(&e.to_string(), None));
                         async move { process_chunk(result, &event_stream, &scheduled).await }
