@@ -4,7 +4,6 @@ use http::Request;
 use integrationos_domain::{prefix::IdPrefix, ApplicationError, Id, IntegrationOSError};
 
 pub const IDEMPOTENCY_HEADER_STR: &str = "x-integrationos-idempotency-key";
-const MAX_LENGTH: usize = 50;
 
 pub async fn header_idempotency(
     mut req: Request<Body>,

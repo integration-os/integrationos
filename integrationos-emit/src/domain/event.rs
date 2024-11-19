@@ -29,7 +29,7 @@ impl EventExt for Event {
     async fn side_effect(&self, ctx: &AppState, entity_id: Id) -> Result<Unit, IntegrationOSError> {
         match self {
             Event::DatabaseConnectionLost { connection_id, .. } => {
-                tracing::info!("Received event for connection {connection_id}");
+                tracing::info!("Processed event for connection {connection_id}");
                 Ok(())
                 // let base_path = &ctx.config.event_callback_url;
                 // let path = format!("{base_path}/database-connection-lost/{connection_id}");

@@ -134,13 +134,9 @@ impl Server {
             |h| async move { stream.consume(EventStreamTopic::Target, h, &state).await },
         ));
 
-        let state = server.state.clone();
         subsys.start(SubsystemBuilder::new(
             "SchedulerSubsystem",
-            |_| async move {
-                let max_retries = state.config.event_processing_max_retries;
-                scheduler.start(max_retries).await
-            },
+            |_| async move { scheduler.start().await },
         ));
 
         server.run().await

@@ -1,5 +1,6 @@
 pub mod fluvio_driver;
 pub mod logger_driver;
+pub mod pusher;
 pub mod scheduler;
 
 use crate::{domain::event::EventEntity, server::AppState};

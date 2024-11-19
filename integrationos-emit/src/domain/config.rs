@@ -30,6 +30,8 @@ pub struct EmitterConfig {
     pub event_stream_provider: EventStreamProvider,
     #[envconfig(from = "EVENT_PROCESSING_MAX_RETRIES", default = "5")]
     pub event_processing_max_retries: u32,
+    #[envconfig(from = "EVENT_MAX_SPAN_FOR_RETRY_DAYS", default = "1")]
+    pub event_max_span_for_retry_days: i64,
     #[envconfig(from = "SCHEDULED_MAX_CONCURRENT_TASKS", default = "10")]
     pub scheduled_max_concurrent_tasks: usize,
     #[envconfig(from = "SCHEDULED_SLEEP_DURATION_IN_MILLIS", default = "1000")]
@@ -73,6 +75,11 @@ impl Display for EmitterConfig {
             self.http_client_max_retries
         )?;
         writeln!(f, "EVENT_STREAM_PROVIDER: {}", self.event_stream_provider)?;
+        writeln!(
+            f,
+            "EVENT_MAX_SPAN_FOR_RETRY_DAYS: {}",
+            self.event_max_span_for_retry_days
+        )?;
         writeln!(f, "JWT_SECRET: ****")?;
         writeln!(f, "EVENT_CALLBACK_URL: {}", self.event_callback_url)?;
         writeln!(
