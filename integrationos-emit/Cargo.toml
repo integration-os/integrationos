@@ -8,7 +8,6 @@ anyhow.workspace = true
 async-trait.workspace = true
 axum.workspace = true
 chrono.workspace = true
-ctrlc = { version = "3.4.5", features = ["termination"] }
 dotenvy.workspace = true
 envconfig.workspace = true
 fluvio = "0.23.3"
@@ -17,7 +16,6 @@ futures.workspace = true
 http-serde-ext.workspace = true
 http.workspace = true
 integrationos-domain = { path = "../integrationos-domain" }
-log = "0.4.22"
 mongodb.workspace = true
 num_cpus.workspace = true
 reqwest = { workspace = true, features = ["rustls-tls"] }
@@ -31,7 +29,6 @@ tokio = { workspace = true, features = ["full"] }
 tokio-graceful-shutdown = "0.15.1"
 tower-http.workspace = true
 tracing.workspace = true
-serde_with = { version = "3.11.0", features = ["chrono_0_4"] }
 
 [dev-dependencies]
 mockito.workspace = true

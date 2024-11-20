@@ -283,29 +283,6 @@ impl EventStreamExt for FluvioDriverImpl {
         self.consume_topic(target, &subsys, ctx, consumer, &mut stream)
             .await
     }
-    // .cancel_on_shutdown(&subsys)
-    //     {
-    //         Ok(_) => {
-    //             tracing::info!("Consumer stream closed");
-    //
-    //             subsys.on_shutdown_requested().await;
-    //
-    //             Ok(())
-    //         }
-    //         Err(_) => {
-    //             tracing::info!("Consumer for {} cancelled by external request, gracefully shutting down. Committing pending offsets", target.as_ref());
-    //             stream.offset_commit().map_err(|err| anyhow::anyhow!(err))?;
-    //             stream
-    //                 .offset_flush()
-    //                 .await
-    //                 .map_err(|err| anyhow::anyhow!(err))?;
-    //
-    //             subsys.on_shutdown_requested().await;
-    //
-    //             Ok(())
-    //         }
-    //     }
-    // }
 
     /**
      * Processes an event from the consumer stream
