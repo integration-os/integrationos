@@ -1,11 +1,7 @@
 use crate::{logic::emitter, server::AppState};
 use axum::{middleware::from_fn, response::IntoResponse, routing::get, Json, Router};
-use chrono::Utc;
 use http::StatusCode;
-use integrationos_domain::{
-    telemetry::log_request_middleware, Claims, IntegrationOSError, InternalError, DEFAULT_AUDIENCE,
-    DEFAULT_ISSUER,
-};
+use integrationos_domain::telemetry::log_request_middleware;
 use serde_json::json;
 use std::sync::Arc;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};

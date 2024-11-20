@@ -1,7 +1,6 @@
 use super::{EventStreamExt, EventStreamTopic};
 use crate::{domain::event::EventEntity, server::AppState};
 use async_trait::async_trait;
-use fluvio::consumer::Record;
 use integrationos_domain::{prefix::IdPrefix, Id, IntegrationOSError, Unit};
 use std::boxed::Box;
 use tokio_graceful_shutdown::SubsystemHandle;
@@ -38,7 +37,7 @@ impl EventStreamExt for LoggerDriverImpl {
         &self,
         _ctx: &AppState,
         target: EventStreamTopic,
-        _event: &Record,
+        _event: &EventEntity,
     ) -> Result<Unit, IntegrationOSError> {
         tracing::info!(
             "Processing records from {} using logger handler",

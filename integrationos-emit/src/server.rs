@@ -19,7 +19,7 @@ use reqwest_middleware::{reqwest, ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use reqwest_tracing::TracingMiddleware;
 use std::{sync::Arc, time::Duration};
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, signal};
 use tokio_graceful_shutdown::{SubsystemBuilder, SubsystemHandle};
 
 #[derive(Clone)]
@@ -108,7 +108,7 @@ impl Server {
         })
     }
 
-    pub async fn run(&self) -> AnyhowResult<()> {
+    pub async fn run(&self, subsys: SubsystemHandle) -> AnyhowResult<()> {
         let app = router::get_router(&self.state).await;
 
         let app: Router<Unit> = app.with_state(self.state.clone());
@@ -118,44 +118,80 @@ impl Server {
         let tcp_listener = TcpListener::bind(&self.state.config.address).await?;
 
         axum::serve(tcp_listener, app)
+            .with_graceful_shutdown(Self::shutdown(subsys))
             .await
             .map_err(|e| anyhow::anyhow!("Server error: {}", e))
     }
 
-    pub async fn subsystem(
-        server: Server,
-        config: &EmitterConfig,
-        subsys: SubsystemHandle,
-    ) -> AnyhowResult<Unit> {
-        tracing::info!("Starting Emitter API with config:\n{config}");
+    async fn shutdown(subsys: SubsystemHandle) {
+        let ctrl_c = async {
+            signal::ctrl_c()
+                .await
+                .expect("failed to install Ctrl+C handler");
+        };
 
-        let state = server.state.clone();
-        let stream = server.state.event_stream.clone();
-        let scheduler = server.scheduler.clone();
-        let pusher = server.pusher.clone();
+        #[cfg(unix)]
+        let terminate = async {
+            signal::unix::signal(signal::unix::SignalKind::terminate())
+                .expect("failed to install signal handler")
+                .recv()
+                .await;
+        };
 
-        subsys.start(SubsystemBuilder::new(
-            EventStreamTopic::Dlq.as_ref(),
-            |h| async move { stream.consume(EventStreamTopic::Dlq, h, &state).await },
-        ));
+        #[cfg(not(unix))]
+        let terminate = std::future::pending::<()>();
 
-        let state = server.state.clone();
-        let stream = server.state.event_stream.clone();
-        subsys.start(SubsystemBuilder::new(
-            EventStreamTopic::Target.as_ref(),
-            |h| async move { stream.consume(EventStreamTopic::Target, h, &state).await },
-        ));
-
-        let config = server.state.config.clone();
-        subsys.start(SubsystemBuilder::new("PusherSubsystem", |_| async move {
-            pusher.start(&config).await
-        }));
-
-        subsys.start(SubsystemBuilder::new(
-            "SchedulerSubsystem",
-            |_| async move { scheduler.start().await },
-        ));
-
-        server.run().await
+        tokio::select! {
+            _ = ctrl_c => {
+                subsys.on_shutdown_requested().await;
+            },
+            _ = terminate => {
+                subsys.on_shutdown_requested().await;
+            },
+        }
+        tracing::info!("Starting server shutdown ...");
     }
+
+    // pub async fn subsystem(
+    //     server: Server,
+    //     config: &EmitterConfig,
+    //     subsys: SubsystemHandle,
+    // ) -> AnyhowResult<Unit> {
+    //     tracing::info!("Starting Emitter API with config:\n{config}");
+    //
+    //     let state = server.state.clone();
+    //     let stream = server.state.event_stream.clone();
+    //     let scheduler = server.scheduler.clone();
+    //     let pusher = server.pusher.clone();
+    //
+    //     subsys.start(SubsystemBuilder::new(
+    //         EventStreamTopic::Dlq.as_ref(),
+    //         |h| async move { stream.consume(EventStreamTopic::Dlq, h, &state).await },
+    //     ));
+    //
+    //     let state = server.state.clone();
+    //     let stream = server.state.event_stream.clone();
+    //     subsys.start(SubsystemBuilder::new(
+    //         EventStreamTopic::Target.as_ref(),
+    //         |h| async move { stream.consume(EventStreamTopic::Target, h, &state).await },
+    //     ));
+    //
+    //     let config = server.state.config.clone();
+    //     subsys.start(SubsystemBuilder::new("PusherSubsystem", |_| async move {
+    //         pusher.start(&config).await
+    //     }));
+    //
+    //     subsys.start(SubsystemBuilder::new(
+    //         "SchedulerSubsystem",
+    //         |_| async move { scheduler.start().await },
+    //     ));
+    //
+    //     subsys.start(SubsystemBuilder::new("ServerSubsystem", |_| async move {
+    //         server.run().await
+    //     }));
+    //
+    //     subsys.wait_for_children().await;
+    //
+    //     Ok(())
+    // }
 }

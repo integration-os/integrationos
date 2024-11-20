@@ -44,8 +44,8 @@ pub struct EmitterConfig {
     pub pusher_sleep_duration_millis: u64,
     #[envconfig(from = "PUSHER_MAX_CHUNK_SIZE", default = "100")]
     pub pusher_max_chunk_size: usize,
-    #[envconfig(from = "SHUTDOWN_TIMEOUT_SECS", default = "10")]
-    pub shutdown_timeout_secs: u64,
+    #[envconfig(from = "SHUTDOWN_TIMEOUT_MILLIS", default = "20000")]
+    pub shutdown_timeout_millis: u64,
     #[envconfig(
         from = "JWT_SECRET",
         default = "2thZ2UiOnsibmFtZSI6IlN0YXJ0dXBsa3NoamRma3NqZGhma3NqZGhma3NqZG5jhYtggfaP9ubmVjdGlvbnMiOjUwMDAwMCwibW9kdWxlcyI6NSwiZW5kcG9pbnRzIjo3b4e05e2-f050-401f-9822-44f43f71753c"
@@ -104,7 +104,7 @@ impl Display for EmitterConfig {
             "EVENT_PROCESSING_MAX_RETRIES: {}",
             self.event_processing_max_retries
         )?;
-        writeln!(f, "SHUTDOWN_TIMEOUT_SECS: {}", self.shutdown_timeout_secs)?;
+        writeln!(f, "SHUTDOWN_TIMEOUT_SECS: {}", self.shutdown_timeout_millis)?;
         writeln!(f, "{}", self.fluvio)?;
         writeln!(f, "{}", self.cache)?;
         writeln!(f, "{}", self.db_config)

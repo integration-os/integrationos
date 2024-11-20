@@ -5,13 +5,12 @@ pub mod scheduler;
 
 use crate::{domain::event::EventEntity, server::AppState};
 use async_trait::async_trait;
-use fluvio::consumer::Record;
 use integrationos_domain::{Id, IntegrationOSError, Unit};
 use strum::{AsRefStr, Display, EnumIter, EnumString};
 use tokio_graceful_shutdown::SubsystemHandle;
 
 #[async_trait]
-pub trait EventStreamExt<T = Record> {
+pub trait EventStreamExt<T = EventEntity> {
     async fn publish(
         &self,
         event: EventEntity,
@@ -27,7 +26,7 @@ pub trait EventStreamExt<T = Record> {
         &self,
         ctx: &AppState,
         target: EventStreamTopic,
-        event: &T,
+        events: &T,
     ) -> Result<Unit, IntegrationOSError>;
 }
 

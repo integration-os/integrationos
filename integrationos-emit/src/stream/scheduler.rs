@@ -5,6 +5,7 @@ use futures::{StreamExt, TryStreamExt};
 use integrationos_domain::{IntegrationOSError, InternalError, MongoStore, Unit};
 use mongodb::bson::doc;
 use std::{sync::Arc, time::Duration};
+use tokio_graceful_shutdown::{FutureExt, SubsystemHandle};
 
 // Simple scheduler. Heavily relies on the database for scheduling events
 #[derive(Clone)]
@@ -17,7 +18,23 @@ pub struct PublishScheduler {
 }
 
 impl PublishScheduler {
-    pub async fn start(&self) -> Result<Unit, IntegrationOSError> {
+    pub async fn start(&self, subsys: SubsystemHandle) -> Result<Unit, IntegrationOSError> {
+        match self.process().cancel_on_shutdown(&subsys).await {
+            Ok(result) => {
+                tracing::info!("Scheduled event publisher finished");
+                subsys.on_shutdown_requested().await;
+
+                result
+            }
+            Err(_) => {
+                tracing::warn!("PublishScheduler was cancelled due to shutdown");
+                subsys.on_shutdown_requested().await;
+                Ok(())
+            }
+        }
+    }
+
+    async fn process(&self) -> Result<Unit, IntegrationOSError> {
         let scheduled = self.scheduled.clone();
         let event_stream = Arc::clone(&self.event_stream);
 

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::server::AppState;
 use async_trait::async_trait;
 use chrono::Utc;
@@ -29,6 +31,8 @@ impl EventExt for Event {
     async fn side_effect(&self, ctx: &AppState, entity_id: Id) -> Result<Unit, IntegrationOSError> {
         match self {
             Event::DatabaseConnectionLost { connection_id, .. } => {
+                tracing::info!("Sleeping to simulate a very long running side effect");
+                tokio::time::sleep(Duration::from_secs(10)).await;
                 let base_path = &ctx.config.event_callback_url;
                 let path = format!("{base_path}/database-connection-lost/{connection_id}");
 
@@ -68,7 +72,7 @@ impl Event {
         EventEntity {
             entity: self.clone(),
             entity_id: Id::now(IdPrefix::PipelineEvent),
-            outcome: EventOutcome::Created,
+            outcome: EventStatus::Created,
             metadata: RecordMetadata::default(),
         }
     }
@@ -86,13 +90,13 @@ pub struct EventEntity {
     #[serde(rename = "_id")]
     pub entity_id: Id,
     pub entity: Event,
-    pub outcome: EventOutcome,
+    pub outcome: EventStatus,
     #[serde(flatten, default)]
     pub metadata: RecordMetadata,
 }
 
 impl EventEntity {
-    pub fn with_outcome(&self, outcome: EventOutcome) -> Self {
+    pub fn with_outcome(&self, outcome: EventStatus) -> Self {
         let mut metadata = self.metadata.clone();
         metadata.mark_updated("system");
         Self {
@@ -116,21 +120,21 @@ impl EventEntity {
     }
 
     pub fn is_created(&self) -> bool {
-        matches!(self.outcome, EventOutcome::Created)
+        matches!(self.outcome, EventStatus::Created)
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, EnumString, AsRefStr)]
 #[serde(rename_all = "kebab-case", tag = "type")]
 #[strum(serialize_all = "kebab-case")]
-pub enum EventOutcome {
+pub enum EventStatus {
     Created,
     Executed { timestamp: i64 },
     Succeded { retries: u32 },
     Errored { error: String, retries: u32 },
 }
 
-impl EventOutcome {
+impl EventStatus {
     pub fn succeded(retries: u32) -> Self {
         Self::Succeded { retries }
     }

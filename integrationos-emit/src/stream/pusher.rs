@@ -8,6 +8,7 @@ use futures::{StreamExt, TryStreamExt};
 use integrationos_domain::{IntegrationOSError, InternalError, MongoStore, Unit};
 use mongodb::bson::doc;
 use std::{sync::Arc, time::Duration};
+use tokio_graceful_shutdown::{FutureExt, SubsystemHandle};
 
 #[derive(Clone)]
 pub struct EventPusher {
@@ -20,7 +21,27 @@ pub struct EventPusher {
 }
 
 impl EventPusher {
-    pub async fn start(&self, config: &EmitterConfig) -> Result<Unit, IntegrationOSError> {
+    pub async fn start(
+        &self,
+        config: &EmitterConfig,
+        subsys: SubsystemHandle,
+    ) -> Result<Unit, IntegrationOSError> {
+        match self.process(config).cancel_on_shutdown(&subsys).await {
+            Ok(result) => {
+                tracing::info!("Scheduled event publisher finished");
+                subsys.on_shutdown_requested().await;
+
+                result
+            }
+            Err(_) => {
+                tracing::warn!("EventPusher was cancelled due to shutdown");
+                subsys.on_shutdown_requested().await;
+                Ok(())
+            }
+        }
+    }
+
+    async fn process(&self, config: &EmitterConfig) -> Result<Unit, IntegrationOSError> {
         let events_store = self.events.clone();
         let deduplication_store = self.deduplication.clone();
         let event_stream = Arc::clone(&self.event_stream);
@@ -67,8 +88,6 @@ impl EventPusher {
                     ]}
                 ]
             };
-
-            tracing::info!("Querying for events: {query}");
 
             let events = events_store.collection.find(query, None).await;
 
