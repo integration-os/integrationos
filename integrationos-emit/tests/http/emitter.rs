@@ -5,6 +5,7 @@ use http::{
     Method, StatusCode,
 };
 use integrationos_domain::{prefix::IdPrefix, Id, IntegrationOSError, Unit};
+use integrationos_emit::logic::emitter::EntityIdResponse;
 use mockito::Matcher;
 use serde_json::{json, Value};
 use std::{collections::HashMap, time::Duration};
@@ -20,9 +21,19 @@ async fn test_concurrent_requests() -> Result<Unit, IntegrationOSError> {
         "connectionId": "conn::GAL2svWJp9k::MtmXaau5Qf6R5n3Y-L9ejQ"
     });
 
+    let response = server
+        .send_request::<Value, EntityIdResponse>("v1/emit", Method::POST, Some(&payload), None)
+        .await;
+
+    assert!(response.is_ok());
+
     let headers = HashMap::from_iter(vec![(
         "x-integrationos-idempotency-key".to_string(),
-        Uuid::new_v4().to_string(),
+        response
+            .expect("Failed to get response")
+            .data
+            .entity_id
+            .to_string(),
     )]);
 
     let reqs = vec!["v1/emit"; PARALLEL_REQUESTS];
@@ -84,13 +95,8 @@ async fn test_event_processed_correctly() -> Result<Unit, IntegrationOSError> {
         .create_async()
         .await;
 
-    let headers = HashMap::from_iter(vec![(
-        "x-integrationos-idempotency-key".to_string(),
-        Uuid::new_v4().to_string(),
-    )]);
-
     let res = server
-        .send_request::<Value, Value>("v1/emit", Method::POST, Some(&payload), Some(&headers))
+        .send_request::<Value, Value>("v1/emit", Method::POST, Some(&payload), None)
         .await
         .expect("Failed to send request");
 

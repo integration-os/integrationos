@@ -152,46 +152,42 @@ impl Server {
         tracing::info!("Starting server shutdown ...");
     }
 
-    // pub async fn subsystem(
-    //     server: Server,
-    //     config: &EmitterConfig,
-    //     subsys: SubsystemHandle,
-    // ) -> AnyhowResult<Unit> {
-    //     tracing::info!("Starting Emitter API with config:\n{config}");
-    //
-    //     let state = server.state.clone();
-    //     let stream = server.state.event_stream.clone();
-    //     let scheduler = server.scheduler.clone();
-    //     let pusher = server.pusher.clone();
-    //
-    //     subsys.start(SubsystemBuilder::new(
-    //         EventStreamTopic::Dlq.as_ref(),
-    //         |h| async move { stream.consume(EventStreamTopic::Dlq, h, &state).await },
-    //     ));
-    //
-    //     let state = server.state.clone();
-    //     let stream = server.state.event_stream.clone();
-    //     subsys.start(SubsystemBuilder::new(
-    //         EventStreamTopic::Target.as_ref(),
-    //         |h| async move { stream.consume(EventStreamTopic::Target, h, &state).await },
-    //     ));
-    //
-    //     let config = server.state.config.clone();
-    //     subsys.start(SubsystemBuilder::new("PusherSubsystem", |_| async move {
-    //         pusher.start(&config).await
-    //     }));
-    //
-    //     subsys.start(SubsystemBuilder::new(
-    //         "SchedulerSubsystem",
-    //         |_| async move { scheduler.start().await },
-    //     ));
-    //
-    //     subsys.start(SubsystemBuilder::new("ServerSubsystem", |_| async move {
-    //         server.run().await
-    //     }));
-    //
-    //     subsys.wait_for_children().await;
-    //
-    //     Ok(())
-    // }
+    pub async fn subsystem(
+        server: Server,
+        config: &EmitterConfig,
+        subsys: SubsystemHandle,
+    ) -> Unit {
+        tracing::info!("Starting Emitter API with config:\n{config}");
+
+        let state = server.state.clone();
+        let stream = server.state.event_stream.clone();
+        let scheduler = server.scheduler.clone();
+        let pusher = server.pusher.clone();
+
+        subsys.start(SubsystemBuilder::new(
+            EventStreamTopic::Dlq.as_ref(),
+            |h| async move { stream.consume(EventStreamTopic::Dlq, h, &state).await },
+        ));
+
+        let state = server.state.clone();
+        let stream = server.state.event_stream.clone();
+        subsys.start(SubsystemBuilder::new(
+            EventStreamTopic::Target.as_ref(),
+            |s| async move { stream.consume(EventStreamTopic::Target, s, &state).await },
+        ));
+        //
+        let config = server.state.config.clone();
+        subsys.start(SubsystemBuilder::new("PusherSubsystem", |s| async move {
+            pusher.start(&config, s).await
+        }));
+
+        subsys.start(SubsystemBuilder::new(
+            "SchedulerSubsystem",
+            |s| async move { scheduler.start(s).await },
+        ));
+
+        subsys.start(SubsystemBuilder::new("ServerSubsystem", |s| async move {
+            server.run(s).await
+        }));
+    }
 }

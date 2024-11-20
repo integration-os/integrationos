@@ -105,9 +105,7 @@ impl TestServer {
 
         tokio::task::spawn(async move {
             Toplevel::new(|s| async move {
-                s.start(SubsystemBuilder::new("ServerSubsys", |handle| async move {
-                    Server::subsystem(server, &config, handle).await
-                }));
+                Server::subsystem(server, &config, s).await;
             })
             .catch_signals()
             .handle_shutdown_requests(Duration::from_secs(5))
