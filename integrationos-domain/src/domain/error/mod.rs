@@ -1135,20 +1135,6 @@ impl From<IntegrationOSError> for StatusCode {
 }
 
 impl IntegrationOSError {
-    pub fn collect(errors: Vec<Self>) -> Option<Self> {
-        if errors.is_empty() {
-            return None;
-        }
-
-        let errors = errors
-            .into_iter()
-            .map(|e| e.to_string())
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        Some(InternalError::unknown(&errors, None))
-    }
-
     pub fn status(&self) -> u16 {
         StatusCode::from(self).as_u16()
     }
