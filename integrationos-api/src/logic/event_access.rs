@@ -188,17 +188,16 @@ pub async fn create_event_access_for_new_user(
         ..req
     };
 
-    let mut event_access =
-        generate_event_access(state.config.clone(), req.clone()).map_err(|e| {
-            error!("Error generating event access for new user: {:?}", e);
+    let event_access = generate_event_access(state.config.clone(), req.clone()).map_err(|e| {
+        error!("Error generating event access for new user: {:?}", e);
 
-            InternalError::io_err("Could not generate event access", None)
-        })?;
+        InternalError::io_err("Could not generate event access", None)
+    })?;
 
-    event_access.key = format!(
+    let event_access = event_access.with_key(format!(
         "event_access::custom::{}::default::event-inc::internal-ui",
         req.environment
-    );
+    ));
 
     state
         .app_stores

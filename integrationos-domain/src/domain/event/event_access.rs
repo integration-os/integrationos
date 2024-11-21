@@ -35,3 +35,10 @@ pub struct EventAccess {
 fn throughput_default() -> u64 {
     500
 }
+
+impl EventAccess {
+    pub fn with_key(mut self, key: String) -> Self {
+        self.key = key;
+        self
+    }
+}
