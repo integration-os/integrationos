@@ -6,8 +6,7 @@ use integrationos_emit::{domain::config::EmitterConfig, server::Server};
 use std::time::Duration;
 use tokio_graceful_shutdown::{SubsystemHandle, Toplevel};
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     dotenv().ok();
 
     let config = EmitterConfig::init_from_env()?;
