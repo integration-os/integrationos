@@ -1,6 +1,6 @@
 use envconfig::Envconfig;
 use http::{Method, StatusCode};
-use integrationos_domain::{IntegrationOSError, InternalError};
+use integrationos_domain::{IntegrationOSError, InternalError, Unit};
 use integrationos_emit::domain::config::EmitterConfig;
 use integrationos_emit::server::Server;
 use mockito::{Server as MockServer, ServerGuard};
@@ -14,14 +14,14 @@ use testcontainers_modules::{
     testcontainers::{clients::Cli as Docker, Container},
 };
 use tokio::net::TcpListener;
-use tokio_graceful_shutdown::{SubsystemBuilder, Toplevel};
+use tokio_graceful_shutdown::Toplevel;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
 
 static DOCKER: OnceLock<Docker> = OnceLock::new();
 static MONGO: OnceLock<Container<'static, Mongo>> = OnceLock::new();
-static TRACING: OnceLock<()> = OnceLock::new();
+static TRACING: OnceLock<Unit> = OnceLock::new();
 
 pub struct TestServer {
     pub port: u16,

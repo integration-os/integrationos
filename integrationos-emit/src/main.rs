@@ -1,12 +1,15 @@
 use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
-use integrationos_domain::telemetry::{get_subscriber, init_subscriber};
+use integrationos_domain::{
+    telemetry::{get_subscriber, init_subscriber},
+    Unit,
+};
 use integrationos_emit::{domain::config::EmitterConfig, server::Server};
 use std::time::Duration;
 use tokio_graceful_shutdown::{SubsystemHandle, Toplevel};
 
-fn main() -> Result<()> {
+fn main() -> Result<Unit> {
     dotenv().ok();
 
     let config = EmitterConfig::init_from_env()?;

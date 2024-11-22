@@ -108,7 +108,7 @@ impl Server {
         })
     }
 
-    pub async fn run(&self, subsys: SubsystemHandle) -> AnyhowResult<()> {
+    pub async fn run(&self, subsys: SubsystemHandle) -> AnyhowResult<Unit> {
         let app = router::get_router(&self.state).await;
 
         let app: Router<Unit> = app.with_state(self.state.clone());
@@ -139,7 +139,7 @@ impl Server {
         };
 
         #[cfg(not(unix))]
-        let terminate = std::future::pending::<()>();
+        let terminate = std::future::pending::<Unit>();
 
         tokio::select! {
             _ = ctrl_c => {

@@ -35,8 +35,8 @@ pub struct ConsumerConfig {
     app: EventStreamConfig,
 }
 
-pub type TargetProducer = TopicProducer<SpuSocketPool>;
-pub type DlqProducer = TopicProducer<SpuSocketPool>;
+type TargetProducer = TopicProducer<SpuSocketPool>;
+type DlqProducer = TopicProducer<SpuSocketPool>;
 
 pub struct FluvioDriverImpl {
     pub client: Fluvio,
@@ -232,6 +232,13 @@ impl FluvioDriverImpl {
 
 #[async_trait]
 impl EventStreamExt for FluvioDriverImpl {
+    /**
+     * Publishes an event to the specified topic
+     * @param event - The event to publish
+     * @param target - The target topic of the event
+     *
+     * It serializes the event using serde_json and sends it to the specified topic.
+     */
     async fn publish(
         &self,
         event: EventEntity,
@@ -263,6 +270,15 @@ impl EventStreamExt for FluvioDriverImpl {
         Ok(event.entity_id)
     }
 
+    /**
+     * Consumes events from the specified topic
+     * @param target - The target topic of the event
+     * @param subsys - The subsystem handle
+     * @param ctx - The application state
+     *
+     * It consumes events from the specified topic using the consumer stream.
+     * It processes each event and updates the event outcome in the events collection.
+     */
     async fn consume(
         &self,
         target: EventStreamTopic,
