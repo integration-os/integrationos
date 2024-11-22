@@ -355,7 +355,7 @@ async fn get_connection(
             })
             .build();
 
-        let sparse_connection = match collection.find_one(filter, options).await {
+        let sparse_connection = match collection.find_one(filter).with_options(options).await {
             Ok(Some(data)) => data,
             Ok(None) => return Err(ApplicationError::not_found("Connection", None)),
             Err(e) => {

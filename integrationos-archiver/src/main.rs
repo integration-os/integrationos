@@ -110,14 +110,12 @@ async fn dump(
 
     let document = target_store
         .collection
-        .find_one(
-            doc! {},
-            Some(
-                mongodb::options::FindOneOptions::builder()
-                    .sort(doc! { "createdAt": 1 }) // Sort by `createdAt` in ascending order
-                    .projection(doc! { "createdAt": 1 }) // Only retrieve the `createdAt` field
-                    .build(),
-            ),
+        .find_one(doc! {})
+        .with_options(
+            FindOneOptions::builder()
+                .sort(doc! { "createdAt": 1 }) // Sort by `createdAt` in ascending order
+                .projection(doc! { "createdAt": 1 }) // Only retrieve the `createdAt` field
+                .build(),
         )
         .await
         .map_err(|e| anyhow!("Failed to find first event in collection: {e}"))?;
@@ -139,10 +137,10 @@ async fn dump(
 
     let last_chosen_date_event = archives
         .collection
-        .find_one(
-            doc! {
-                "type": "DateChosen"
-            },
+        .find_one(doc! {
+            "type": "DateChosen"
+        })
+        .with_options(
             FindOneOptions::builder()
                 .sort(doc! { "endsAt": -1 })
                 .build(),
@@ -156,13 +154,10 @@ async fn dump(
             Event::DateChosen(e) => {
                 let finished = archives
                     .collection
-                    .find_one(
-                        doc! {
-                            "type": "Finished",
-                            "reference": e.reference().to_string()
-                        },
-                        None,
-                    )
+                    .find_one(doc! {
+                        "type": "Finished",
+                        "reference": e.reference().to_string()
+                    })
                     .await?
                     .map(|e| e.is_finished())
                     .unwrap_or(false);
@@ -253,7 +248,7 @@ async fn dump(
                     }
                 };
 
-                target_store.collection.delete_many(filter, None).await?;
+                target_store.collection.delete_many(filter).await?;
                 tracing::warn!("Old events deleted successfully");
             }
             Ok::<_, anyhow::Error>(())
@@ -302,7 +297,7 @@ async fn save(
     };
     let count = target_store
         .collection
-        .count_documents(filter.clone(), None)
+        .count_documents(filter.clone())
         .await?;
 
     tracing::info!(
@@ -320,7 +315,7 @@ async fn save(
 
     // Run this only on debug mode
     if cfg!(debug_assertions) {
-        let events = target_store.collection.find(filter.clone(), None).await?;
+        let events = target_store.collection.find(filter.clone()).await?;
 
         let events = events.try_collect::<Vec<_>>().await?;
 

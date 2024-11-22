@@ -51,13 +51,10 @@ impl PublishScheduler {
 
             let events = scheduled
                 .collection
-                .find(
-                    doc! {
-                                "scheduleOn": { "$lte": Utc::now().timestamp_millis() }
+                .find(doc! {
+                            "scheduleOn": { "$lte": Utc::now().timestamp_millis() }
 
-                    },
-                    None,
-                )
+                })
                 .await;
 
             if let Ok(events) = events {
@@ -109,7 +106,7 @@ async fn process_chunk(
                     tracing::info!("Event with id {} is published", entity_id);
                     scheduled
                         .collection
-                        .delete_one(doc! { "_id": id.to_string() }, None)
+                        .delete_one(doc! { "_id": id.to_string() })
                         .await?;
                 }
             }

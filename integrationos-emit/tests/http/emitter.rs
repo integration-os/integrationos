@@ -9,7 +9,6 @@ use integrationos_emit::logic::emitter::EntityIdResponse;
 use mockito::Matcher;
 use serde_json::{json, Value};
 use std::{collections::HashMap, time::Duration};
-use uuid::Uuid;
 
 const PARALLEL_REQUESTS: usize = 10;
 

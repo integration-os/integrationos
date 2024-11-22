@@ -1038,8 +1038,8 @@ impl From<mongodb::error::Error> for IntegrationOSError {
             mongodb::error::ErrorKind::BulkWrite(error) => InternalError::unknown(
                 &error
                     .write_errors
-                    .into_iter()
-                    .map(|e| e.into_iter().map(|e| e.message).collect())
+                    .into_values()
+                    .map(|e| e.message)
                     .collect::<Vec<String>>()
                     .join(", "),
                 Some("Bulk write error"),

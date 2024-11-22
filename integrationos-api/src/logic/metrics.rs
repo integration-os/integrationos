@@ -68,10 +68,7 @@ pub async fn get_full_record(
         .collection::<Document>(&Store::Metrics.to_string());
 
     let doc = match coll
-        .find_one(
-            bson::doc! { "clientId": access.ownership.client_id.clone()},
-            None,
-        )
+        .find_one(bson::doc! { "clientId": access.ownership.client_id.clone()})
         .await
     {
         Ok(Some(doc)) => doc,
@@ -114,7 +111,7 @@ pub async fn get_metrics(
         .unwrap_or(state.config.metric_system_id.clone());
 
     let doc = match coll
-        .find_one(bson::doc! { "clientId": &client_id }, None)
+        .find_one(bson::doc! { "clientId": &client_id })
         .await
     {
         Ok(Some(doc)) => doc,

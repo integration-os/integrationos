@@ -89,12 +89,13 @@ impl EventPusher {
                 ]
             };
 
-            let events = events_store.collection.find(query, None).await;
+            let events = events_store.collection.find(query).await;
 
             if let Ok(events) = events {
                 let event_stream = Arc::clone(&event_stream);
                 let deduplication_store = deduplication_store.clone();
-                let results =
+
+                let result =
                     events
                         .try_chunks(max_chunk_size)
                         .map(|result| {
@@ -109,10 +110,12 @@ impl EventPusher {
                         })
                         .buffer_unordered(max_concurrent_tasks)
                         .collect::<Vec<_>>()
-                        .await;
+                        .await
+                        .into_iter()
+                        .collect::<Result<Vec<Unit>, IntegrationOSError>>();
 
-                if results.iter().any(|r| r.is_err()) {
-                    tracing::error!("Failed to publish one or more event chunks");
+                if let Err(e) = result {
+                    tracing::error!("Failed to publish one or more event chunks: {e}");
                 }
             } else if let Err(e) = events {
                 tracing::error!("Failed to fetch events: {e}");
@@ -141,7 +144,7 @@ async fn process_chunk(
 
                 let deleted = deduplication_store
                     .collection
-                    .delete_one(doc! { "_id": entity_id.to_string() }, None)
+                    .delete_one(doc! { "_id": entity_id.to_string() })
                     .await?;
 
                 tracing::info!(
@@ -152,11 +155,11 @@ async fn process_chunk(
                 event_stream
                     .publish(event, topic)
                     .await
-                    .inspect_err(|e| {
-                        tracing::error!("Failed to publish event: {e}");
-                    })
                     .inspect(|_| {
                         tracing::info!("Event with id {} is published", entity_id);
+                    })
+                    .inspect_err(|e| {
+                        tracing::error!("Failed to publish event: {e}");
                     })?;
             }
             Ok(())

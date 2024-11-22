@@ -9,7 +9,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 #[derive(Debug, Clone)]
-pub struct MongoStore<T: Serialize + DeserializeOwned + Unpin + Sync> {
+pub struct MongoStore<T: Serialize + DeserializeOwned + Unpin + Sync + Send + Sync> {
     pub collection: Collection<T>,
 }
 
@@ -23,29 +23,19 @@ impl<T: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static> MongoStore
         &self,
         pipeline: Vec<Document>,
     ) -> Result<Vec<Document>, IntegrationOSError> {
-        let cursor = self.collection.aggregate(pipeline, None).await?;
+        let cursor = self.collection.aggregate(pipeline).await?;
         let results = cursor.try_collect().await?;
         Ok(results)
     }
 
     pub async fn get_one(&self, filter: Document) -> Result<Option<T>, IntegrationOSError> {
-        Ok(self.collection.find_one(filter, None).await?)
+        Ok(self.collection.find_one(filter).await?)
     }
 
     pub async fn get_one_by_id(&self, id: &str) -> Result<Option<T>, IntegrationOSError> {
         let filter = doc! { "_id": id };
 
-        Ok(self.collection.find_one(filter, None).await?)
-    }
-
-    /// Get all records from the collection
-    ///
-    /// Use this method with caution, as it can be very slow for large collections.
-    pub async fn get_all(&self) -> Result<Vec<T>, IntegrationOSError> {
-        let cursor = self.collection.find(None, None).await?;
-        let records = cursor.try_collect().await?;
-
-        Ok(records)
+        Ok(self.collection.find_one(filter).await?)
     }
 
     pub async fn get_many(
@@ -66,20 +56,25 @@ impl<T: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static> MongoStore
             filter_options.sort = Some(doc! { "createdAt": -1 });
         }
 
-        let cursor = self.collection.find(filter, filter_options).await?;
+        let cursor = self
+            .collection
+            .find(filter.unwrap_or_default())
+            .with_options(filter_options)
+            .await?;
+
         let records = cursor.try_collect().await?;
 
         Ok(records)
     }
 
     pub async fn create_one(&self, data: &T) -> Result<(), IntegrationOSError> {
-        self.collection.insert_one(data, None).await?;
+        self.collection.insert_one(data).await?;
 
         Ok(())
     }
 
     pub async fn create_many(&self, data: &[T]) -> Result<(), IntegrationOSError> {
-        self.collection.insert_many(data, None).await?;
+        self.collection.insert_many(data).await?;
 
         Ok(())
     }
@@ -87,7 +82,7 @@ impl<T: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static> MongoStore
     pub async fn update_one(&self, id: &str, data: Document) -> Result<(), IntegrationOSError> {
         let filter = doc! { "_id": id };
 
-        self.collection.update_one(filter, data, None).await?;
+        self.collection.update_one(filter, data).await?;
         Ok(())
     }
 
@@ -96,7 +91,7 @@ impl<T: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static> MongoStore
         filter: Document,
         data: Document,
     ) -> Result<(), IntegrationOSError> {
-        self.collection.update_many(filter, data, None).await?;
+        self.collection.update_many(filter, data).await?;
 
         Ok(())
     }
@@ -106,9 +101,7 @@ impl<T: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static> MongoStore
         filter: Document,
         data: &[Document],
     ) -> Result<(), IntegrationOSError> {
-        self.collection
-            .update_many(filter, data.to_vec(), None)
-            .await?;
+        self.collection.update_many(filter, data.to_vec()).await?;
 
         Ok(())
     }
@@ -120,7 +113,8 @@ impl<T: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static> MongoStore
     ) -> Result<u64, IntegrationOSError> {
         Ok(self
             .collection
-            .count_documents(filter, CountOptions::builder().limit(limit).build())
+            .count_documents(filter)
+            .with_options(CountOptions::builder().limit(limit).build())
             .await?)
     }
 }

@@ -431,12 +431,9 @@ async fn delete_deduplication_record(
     ctx.app_stores
         .deduplication
         .collection
-        .delete_one(
-            doc! {
-                "_id": event.entity_id.to_string()
-            },
-            None,
-        )
+        .delete_one(doc! {
+            "_id": event.entity_id.to_string()
+        })
         .await?;
 
     Ok(())

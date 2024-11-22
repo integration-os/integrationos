@@ -28,7 +28,6 @@ pub struct AppStores {
     pub idempotency: MongoStore<Idempotency>,
     pub deduplication: MongoStore<Deduplication>,
     pub scheduled: MongoStore<ScheduledEvent>,
-    pub client: Client,
 }
 
 #[derive(Clone)]
@@ -57,8 +56,30 @@ impl Server {
             idempotency: MongoStore::new(&database, &Store::Idempotency).await?,
             deduplication: MongoStore::new(&database, &Store::Deduplication).await?,
             scheduled: MongoStore::new(&database, &Store::ScheduledEvents).await?,
-            client,
         };
+
+        let event_stream: Arc<dyn EventStreamExt + Sync + Send> = match config.event_stream_provider
+        {
+            EventStreamProvider::Logger => Arc::new(LoggerDriverImpl),
+            EventStreamProvider::Fluvio => Arc::new(FluvioDriverImpl::new(&config).await?),
+        };
+
+        let pusher = Arc::new(EventPusher {
+            event_stream: Arc::clone(&event_stream),
+            events: app_stores.events.clone(),
+            deduplication: app_stores.deduplication.clone(),
+            max_concurrent_tasks: config.pusher_max_concurrent_tasks,
+            max_chunk_size: config.pusher_max_chunk_size,
+            sleep_duration: config.pusher_sleep_duration_millis,
+        });
+
+        let scheduler = Arc::new(PublishScheduler {
+            event_stream: Arc::clone(&event_stream),
+            scheduled: app_stores.scheduled.clone(),
+            max_concurrent_tasks: config.scheduled_max_concurrent_tasks,
+            max_chunk_size: config.scheduled_max_chunk_size,
+            sleep_duration: config.scheduled_sleep_duration_millis,
+        });
 
         let retry_policy =
             ExponentialBackoff::builder().build_with_max_retries(config.http_client_max_retries);
@@ -69,29 +90,6 @@ impl Server {
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .with(TracingMiddleware::default())
             .build();
-
-        let event_stream: Arc<dyn EventStreamExt + Sync + Send> = match config.event_stream_provider
-        {
-            EventStreamProvider::Logger => Arc::new(LoggerDriverImpl),
-            EventStreamProvider::Fluvio => Arc::new(FluvioDriverImpl::new(&config).await?),
-        };
-
-        let scheduler = Arc::new(PublishScheduler {
-            event_stream: Arc::clone(&event_stream),
-            scheduled: app_stores.scheduled.clone(),
-            max_concurrent_tasks: config.scheduled_max_concurrent_tasks,
-            max_chunk_size: config.scheduled_max_chunk_size,
-            sleep_duration: config.scheduled_sleep_duration_millis,
-        });
-
-        let pusher = Arc::new(EventPusher {
-            event_stream: Arc::clone(&event_stream),
-            events: app_stores.events.clone(),
-            deduplication: app_stores.deduplication.clone(),
-            max_concurrent_tasks: config.pusher_max_concurrent_tasks,
-            max_chunk_size: config.pusher_max_chunk_size,
-            sleep_duration: config.pusher_sleep_duration_millis,
-        });
 
         let state = Arc::new(AppState {
             config: config.clone(),

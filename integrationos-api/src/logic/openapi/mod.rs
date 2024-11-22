@@ -191,7 +191,7 @@ fn spawn_openapi_generation(
     tokio::spawn(async move {
         let stream: StreamResult = cm_store
             .collection
-            .find(Some(doc! { "primary": true }), None)
+            .find(doc! { "primary": true })
             .await
             .map_err(|e| {
                 error!("Could not fetch common model: {:?}", e);

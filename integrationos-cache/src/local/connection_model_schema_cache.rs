@@ -40,7 +40,11 @@ impl ConnectionModelSchemaCache {
             }
             None => {
                 tracing::debug!("Cache miss for key: {:?}", key);
-                let value = store.collection.find_one(filter, options).await?;
+                let value = store
+                    .collection
+                    .find_one(filter)
+                    .with_options(options)
+                    .await?;
                 if let Some(value) = value {
                     self.set(key, &value).await?;
                     Ok(value)

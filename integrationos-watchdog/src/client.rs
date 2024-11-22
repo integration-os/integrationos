@@ -156,7 +156,7 @@ impl WatchdogClient {
                 },
             ];
 
-            let mut event_keys = match coll.clone().aggregate(pipeline, None).await {
+            let mut event_keys = match coll.clone().aggregate(pipeline).await {
                 Ok(e) => e,
                 Err(e) => {
                     error!("Failed to fetch event keys: {e}");
@@ -179,13 +179,11 @@ impl WatchdogClient {
                 // Get the latest root context, then also get all latest pipeline contexts and extractor contexts if applicable
                 let root_context = match root_coll
                     .clone()
-                    .find_one(
-                        doc! {
-                            "eventKey": event_key,
-                            "type": "root"
-                        },
-                        options.clone(),
-                    )
+                    .find_one(doc! {
+                        "eventKey": event_key,
+                        "type": "root"
+                    })
+                    .with_options(options.clone())
                     .await
                 {
                     Ok(c) => c,
@@ -200,15 +198,15 @@ impl WatchdogClient {
                 };
 
                 if let RootStage::ProcessingPipelines(ref mut pipelines) = root_context.stage {
-                    let futs = pipelines.values().map(|p| {
-                        pipeline_coll.find_one(
-                            doc! {
+                    let futs = pipelines.values().map(|p| async {
+                        pipeline_coll
+                            .find_one(doc! {
                                 "eventKey": p.event_key.to_string(),
                                 "pipelineKey": p.pipeline_key.clone(),
                                 "type": "pipeline"
-                            },
-                            options.clone(),
-                        )
+                            })
+                            .with_options(options.clone())
+                            .await
                     });
 
                     let results = join_all(futs).await;
@@ -222,14 +220,18 @@ impl WatchdogClient {
                                 if let PipelineStage::ExecutingExtractors(ref mut extractors) =
                                     context.stage
                                 {
-                                    let futs = extractors.values().map(|e| {
+                                    let futs = extractors.values().map(|e| async {
                                         let filter = doc! {
                                             "eventKey": e.event_key.to_string(),
                                             "pipelineKey": e.pipeline_key.clone(),
                                             "extractorKey": e.extractor_key.to_string(),
                                             "type": "extractor"
                                         };
-                                        extractor_coll.find_one(filter, options.clone())
+
+                                        extractor_coll
+                                            .find_one(filter)
+                                            .with_options(options.clone())
+                                            .await
                                     });
                                     let results = join_all(futs).await;
                                     for result in results {

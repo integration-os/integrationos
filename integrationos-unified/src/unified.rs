@@ -175,12 +175,12 @@ impl UnifiedDestination {
             Action::Unified { name, action, .. } => Ok(self
                 .connection_model_definitions_store
                 .collection
-                .find_one(
-                    doc! {
-                        "connectionPlatform": destination.platform.as_ref(),
-                        "mapping.commonModelName": name.as_ref(),
-                        "actionName": action.to_string()
-                    },
+                .find_one(doc! {
+                    "connectionPlatform": destination.platform.as_ref(),
+                    "mapping.commonModelName": name.as_ref(),
+                    "actionName": action.to_string()
+                })
+                .with_options(
                     FindOneOptions::builder()
                         .collation(Some(
                             Collation::builder()
