@@ -13,7 +13,7 @@ envconfig.workspace = true
 fluvio = "0.23.3"
 futures-util.workspace = true
 futures.workspace = true
-http-serde-ext.workspace = true
+http-serde-ext = { path = "../http-serde-ext" }
 http.workspace = true
 integrationos-domain = { path = "../integrationos-domain" }
 mongodb.workspace = true

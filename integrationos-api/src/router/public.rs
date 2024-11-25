@@ -36,6 +36,10 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             get(read::<connection_definition::CreateRequest, ConnectionDefinition>),
         )
         .nest("/schemas", schema_generator::get_router())
+        .nest(
+            "/connection-oauth-definitions",
+            connection_oauth_definition::get_router(),
+        )
         .route(
             "/connection-oauth-definition-schema",
             get(read::<

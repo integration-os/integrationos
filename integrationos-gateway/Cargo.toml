@@ -10,7 +10,7 @@ axum-prometheus = "0.6.1"
 axum.workspace = true
 dotenvy.workspace = true
 envconfig.workspace = true
-http-serde-ext.workspace = true
+http-serde-ext = { path = "../http-serde-ext" }
 http.workspace = true
 integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain" }

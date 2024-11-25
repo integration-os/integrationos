@@ -12,7 +12,7 @@ dotenvy.workspace = true
 envconfig.workspace = true
 futures-util.workspace = true
 futures.workspace = true
-http-serde-ext.workspace = true
+http-serde-ext = { path = "../http-serde-ext" }
 http.workspace = true
 hyper = "0.14.27"
 integrationos-cache = { path = "../integrationos-cache" }
