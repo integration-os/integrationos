@@ -14,7 +14,7 @@ futures-util.workspace = true
 futures.workspace = true
 http-serde-ext = { path = "../http-serde-ext" }
 http.workspace = true
-hyper = "0.14.27"
+hyper = "0.14.31"
 integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain" }
 integrationos-unified = { path = "../integrationos-unified" }
