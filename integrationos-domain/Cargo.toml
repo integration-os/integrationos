@@ -40,7 +40,7 @@ google-cloud-kms = { version = "0.5.1", features = [
 ] }
 handlebars.workspace = true
 hmac = { version = "0.12.1", features = ["std"] }
-http-serde-ext = { path = "../http-serde-ext" }
+http-serde-ext-ios.workspace = true
 http.workspace = true
 indexmap = "2.6.0"
 js-sandbox-ios.workspace = true

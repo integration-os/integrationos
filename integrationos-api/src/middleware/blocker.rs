@@ -37,7 +37,7 @@ impl BlockInvalidHeaders {
             loop {
                 #[derive(Deserialize)]
                 struct SparseEventAccess {
-                    #[serde(with = "http_serde_ext::header_value", rename = "accessKey")]
+                    #[serde(with = "http_serde_ext_ios::header_value", rename = "accessKey")]
                     access_key: HeaderValue,
                 }
 

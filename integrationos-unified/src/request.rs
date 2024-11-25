@@ -8,7 +8,7 @@ use std::collections::HashMap;
 #[serde(rename_all = "camelCase")]
 pub struct RequestCrudBorrowed<'a> {
     pub query_params: &'a HashMap<String, String>,
-    #[serde(with = "http_serde_ext::header_map", default)]
+    #[serde(with = "http_serde_ext_ios::header_map", default)]
     pub headers: &'a HeaderMap,
     pub path_params: Option<PathParams<'a>>,
 }
@@ -23,7 +23,7 @@ pub struct PathParams<'a> {
 #[serde(rename_all = "camelCase")]
 pub struct RequestCrud {
     pub query_params: Option<HashMap<String, String>>,
-    #[serde(with = "http_serde_ext::header_map", default)]
+    #[serde(with = "http_serde_ext_ios::header_map", default)]
     pub headers: HeaderMap,
     pub path_params: Option<HashMap<String, String>>,
     pub body: Option<Value>,
@@ -32,7 +32,7 @@ pub struct RequestCrud {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResponseCrudToMap<'a> {
-    #[serde(with = "http_serde_ext::header_map")]
+    #[serde(with = "http_serde_ext_ios::header_map")]
     pub headers: &'a HeaderMap,
     pub pagination: Option<Value>,
     pub request: ResponseCrudToMapRequest<'a>,

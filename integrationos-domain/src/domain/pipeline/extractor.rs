@@ -9,7 +9,7 @@ use super::policies::Policies;
 pub struct HttpExtractor {
     pub key: String,
     pub url: String,
-    #[serde(with = "http_serde_ext::method")]
+    #[serde(with = "http_serde_ext_ios::method")]
     pub method: http::Method,
     pub headers: String,
     pub data: String,

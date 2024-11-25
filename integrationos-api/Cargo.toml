@@ -14,7 +14,7 @@ envconfig.workspace = true
 fake.workspace = true
 futures-util.workspace = true
 futures.workspace = true
-http-serde-ext = { path = "../http-serde-ext" }
+http-serde-ext-ios.workspace = true
 http.workspace = true
 hyper = "0.14.31"
 indexmap = "2.6.0"

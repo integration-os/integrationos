@@ -29,7 +29,7 @@ pub struct ConnectionModelDefinition {
     pub title: String,
     pub name: String,
     pub model_name: String,
-    #[serde(with = "http_serde_ext::method")]
+    #[serde(with = "http_serde_ext_ios::method")]
     #[cfg_attr(feature = "dummy", dummy(expr = "http::Method::GET"))]
     pub action: http::Method,
     pub action_name: CrudAction,

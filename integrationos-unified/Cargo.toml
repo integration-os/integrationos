@@ -13,7 +13,7 @@ integrationos-domain = { path = "../integrationos-domain" }
 futures.workspace = true
 handlebars.workspace = true
 http.workspace = true
-http-serde-ext = { path = "../http-serde-ext" }
+http-serde-ext-ios.workspace = true
 js-sandbox-ios.workspace = true
 mongodb.workspace = true
 reqwest = { workspace = true, features = [
