@@ -10,22 +10,22 @@ members = [
     "integrationos-database",
     "integrationos-unified",
     "integrationos-watchdog",
-    "integrationos-emit",
+    "integrationos-emit"
 ]
 
 [workspace.dependencies]
-anyhow = "1.0.75"
-async-recursion = "1.0.5"
-async-trait = "0.1.74"
+anyhow = "1.0.93"
+async-recursion = "1.1.1"
+async-trait = "0.1.83"
 axum = { version = "0.7", features = ["macros"] }
-base64 = "0.21.5"
+base64 = "0.21.7"
 base64ct = { version = "1.6.0", features = ["alloc"] }
-bson = "2.7.0"
-chrono = { version = "0.4.31", features = ["serde"] }
+bson = "2.13.0"
+chrono = { version = "0.4.38", features = ["serde"] }
 convert_case = "0.6.0"
 dotenvy = "0.15.7"
 envconfig = "0.10.0"
-fake = { version = "2.9.2", features = [
+fake = { version = "2.10.0", features = [
     "uuid",
     "derive",
     "dummy",
@@ -35,36 +35,37 @@ fake = { version = "2.9.2", features = [
     "serde_json",
     "semver",
 ] }
-futures = "0.3.28"
-futures-util = "0.3.28"
-handlebars = "4.4.0"
+futures = "0.3.31"
+futures-util = "0.3.31"
+handlebars = "4.5.0"
 http = "1.1.0"
-http-serde-ext = "1.0.2"
+http-serde-ext-ios = "1.0.0"
 js-sandbox-ios = "0.1.1"
 jsonpath_lib = "0.3.0"
 jsonwebtoken = "8.3.0"
 kube = "0.95.0"
 k8s-openapi = "0.23.0"
-mockito = "1.2.0"
-moka = { version = "0.12.4", features = ["future"] }
+mockito = "1.6.1"
+moka = { version = "0.12.8", features = ["future"] }
 mongodb = "3.1.0"
 num_cpus = "1"
 openapiv3 = { version = "2.0.0", features = ["skip_serializing_defaults"] }
 rand = "0.8.5"
 redis = { version = "0.27", features = ["connection-manager", "tokio-comp"] }
-reqwest = { version = "0.12.7", features = [
+reqwest = { version = "0.12.9", features = [
     "json",
     "rustls-tls",
 ], default-features = false }
-semver = { version = "1.0.20", features = ["serde"] }
-serde = { version = "1.0.189", features = ["derive", "rc"] }
-serde_json = "1.0.107"
-schemars = "0.8.16"
-sha2 = "0.10.6"
+semver = { version = "1.0.23", features = ["serde"] }
+serde = { version = "1.0.215", features = ["derive", "rc"] }
+serde_json = "1.0.133"
+serde_yaml = "0.9.34"
+schemars = "0.8.21"
+sha2 = "0.10.8"
 strum = { version = "0.25", features = ["derive"] }
 testcontainers-modules = "0.3"
-thiserror = "1.0.56"
-tokio = { version = "1.33.0", features = [
+thiserror = "1.0.69"
+tokio = { version = "1.41.1", features = [
     "macros",
     "rt-multi-thread",
     "time",
@@ -76,8 +77,8 @@ tower-http = { version = "0.5", features = [
     "sensitive-headers",
 ] }
 tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
-uuid = { version = "1.5.0", features = ["v4", "serde"] }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+uuid = { version = "1.11.0", features = ["v4", "serde"] }
 validator = { version = "0.16.1", features = ["derive"] }
 
 [profile.release]

@@ -13,7 +13,7 @@ integrationos-domain = { path = "../integrationos-domain" }
 futures.workspace = true
 handlebars.workspace = true
 http.workspace = true
-http-serde-ext.workspace = true
+http-serde-ext-ios.workspace = true
 js-sandbox-ios.workspace = true
 mongodb.workspace = true
 reqwest = { workspace = true, features = [
@@ -25,10 +25,10 @@ serde_json.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 tracing.workspace = true
 uuid = { workspace = true, features = ["v4"] }
-indexmap = "2.4.0"
+indexmap = "2.6.0"
 
 [dev-dependencies]
-mockito = "1.2.0"
+mockito = "1.6.1"
 
 [lib]
 path = "src/lib.rs"

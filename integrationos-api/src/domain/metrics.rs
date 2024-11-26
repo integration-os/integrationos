@@ -22,7 +22,7 @@ pub enum MetricType {
     Unified(Arc<Connection>),
     RateLimited(
         Arc<EventAccess>,
-        #[serde(with = "http_serde_ext::header_value::option")] Option<HeaderValue>,
+        #[serde(with = "http_serde_ext_ios::header_value::option")] Option<HeaderValue>,
     ),
 }
 

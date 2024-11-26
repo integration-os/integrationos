@@ -14,7 +14,7 @@ pub struct ApiModelConfig {
     pub path: String,
     pub auth_method: AuthMethod,
     #[serde(
-        with = "http_serde_ext::header_map::option",
+        with = "http_serde_ext_ios::header_map::option",
         skip_serializing_if = "Option::is_none",
         default
     )]
@@ -82,7 +82,7 @@ pub struct ResponseModelPaths {
 #[serde(rename_all = "camelCase")]
 pub struct SamplesInput {
     #[serde(
-        with = "http_serde_ext::header_map::option",
+        with = "http_serde_ext_ios::header_map::option",
         skip_serializing_if = "Option::is_none",
         default
     )]
@@ -109,7 +109,7 @@ pub struct SchemasInput {
 pub struct ResponseBody {
     pub status_code: u16,
     #[serde(
-        with = "http_serde_ext::header_map::option",
+        with = "http_serde_ext_ios::header_map::option",
         skip_serializing_if = "Option::is_none",
         default
     )]

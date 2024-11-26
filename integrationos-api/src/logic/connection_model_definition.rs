@@ -60,7 +60,7 @@ pub struct TestConnectionPayload {
 #[serde(rename_all = "camelCase")]
 pub struct TestConnectionRequest {
     #[serde(
-        with = "http_serde_ext::header_map::option",
+        with = "http_serde_ext_ios::header_map::option",
         skip_serializing_if = "Option::is_none",
         default
     )]
@@ -72,7 +72,7 @@ pub struct TestConnectionRequest {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TestConnectionResponse {
-    #[serde(with = "http_serde_ext::status_code")]
+    #[serde(with = "http_serde_ext_ios::status_code")]
     pub code: StatusCode,
     pub status: TestConnection,
     pub meta: Meta,
@@ -88,7 +88,7 @@ pub struct Meta {
     pub connection_definition_id: Id,
     pub connection_key: String,
     pub model_name: String,
-    #[serde(with = "http_serde_ext::method")]
+    #[serde(with = "http_serde_ext_ios::method")]
     pub action: http::Method,
 }
 
@@ -285,10 +285,10 @@ pub struct CreateRequest {
     pub path: String,
     pub auth_method: AuthMethod,
     pub action_name: CrudAction,
-    #[serde(with = "http_serde_ext::method", rename = "action")]
+    #[serde(with = "http_serde_ext_ios::method", rename = "action")]
     pub http_method: http::Method,
     #[serde(
-        with = "http_serde_ext::header_map::option",
+        with = "http_serde_ext_ios::header_map::option",
         skip_serializing_if = "Option::is_none",
         default
     )]

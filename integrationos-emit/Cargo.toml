@@ -10,23 +10,23 @@ axum.workspace = true
 chrono.workspace = true
 dotenvy.workspace = true
 envconfig.workspace = true
-fluvio = "0.23.3"
+fluvio = "0.23.4"
 futures-util.workspace = true
 futures.workspace = true
-http-serde-ext.workspace = true
+http-serde-ext-ios.workspace = true
 http.workspace = true
 integrationos-domain = { path = "../integrationos-domain" }
 mongodb.workspace = true
 num_cpus.workspace = true
 reqwest = { workspace = true, features = ["rustls-tls"] }
-reqwest-middleware = "0.3.3"
-reqwest-retry = "0.6.1"
-reqwest-tracing = "0.5.3"
+reqwest-middleware = "0.4"
+reqwest-retry = "0.7"
+reqwest-tracing = "0.5.4"
 serde = { workspace = true , features = ["derive"] }
 serde_json.workspace = true
 strum.workspace = true
 tokio = { workspace = true, features = ["full"] }
-tokio-graceful-shutdown = "0.15.1"
+tokio-graceful-shutdown = "0.15.2"
 tower-http.workspace = true
 tracing.workspace = true
 

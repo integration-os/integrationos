@@ -19,7 +19,7 @@ integrationos-domain = { path = "../integrationos-domain" }
 integrationos-unified = { path = "../integrationos-unified" }
 js-sandbox-ios.workspace = true
 metrics = "0.21.1"
-metrics-exporter-prometheus = "0.12.1"
+metrics-exporter-prometheus = "0.12.2"
 moka.workspace = true
 mongodb.workspace = true
 redis.workspace = true
