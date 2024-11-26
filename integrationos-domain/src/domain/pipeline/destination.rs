@@ -8,7 +8,7 @@ use crate::prelude::connection::connection_model_definition::CrudAction;
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 pub enum Action {
     Passthrough {
-        #[serde(with = "http_serde_ext::method")]
+        #[serde(with = "http_serde_ext_ios::method")]
         method: http::Method,
         #[cfg_attr(feature = "dummy", dummy(expr = "String::new().into()"))]
         path: Arc<str>,

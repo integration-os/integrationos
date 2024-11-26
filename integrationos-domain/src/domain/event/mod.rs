@@ -38,7 +38,7 @@ pub struct Event {
     pub topic: String,
     pub environment: Environment,
     pub body: String,
-    #[serde(with = "http_serde_ext::header_map")]
+    #[serde(with = "http_serde_ext_ios::header_map")]
     pub headers: HeaderMap,
     #[serde(with = "chrono::serde::ts_milliseconds")]
     pub arrived_at: DateTime<Utc>,
@@ -66,7 +66,7 @@ pub struct PublicEvent {
     pub topic: String,
     pub environment: Environment,
     pub body: String,
-    #[serde(with = "http_serde_ext::header_map")]
+    #[serde(with = "http_serde_ext_ios::header_map")]
     pub headers: HeaderMap,
     #[serde(with = "chrono::serde::ts_milliseconds")]
     pub arrived_at: DateTime<Utc>,

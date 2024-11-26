@@ -14,7 +14,8 @@ pub fn get_value_from_path(
     }
 
     let body = serde_json::from_slice::<serde_json::Value>(body)?;
-    let headers = http_serde_ext::header_map::serialize(headers, serde_json::value::Serializer)?;
+    let headers =
+        http_serde_ext_ios::header_map::serialize(headers, serde_json::value::Serializer)?;
     let mut obj = json!({
         "headers": headers,
         "body": body,
@@ -49,7 +50,7 @@ mod tests {
     fn test_stripe_signature() {
         let mut path = r#"_.headers.stripe-signature"#.to_owned();
         let headers = r#"{"content-type":"application/json; charset=utf-8","cache-control":"no-cache","user-agent":"Stripe/1.0 (+https://stripe.com/docs/webhooks)","accept":"*/*; q=0.5, application/xml","stripe-signature":"t=1689703968,v1=035b09d5fd7ddad1ba0a05798e7fa914ad704e50e39845eb2d03c2234d1fbb2a,v0=a78258146fc18af95b4bca66051fe7dae809a398ba524d10c0a972b26106d33e","host":"development-stream.event.dev","content-length":"1117","x-cloud-trace-context":"283401a42e9257773bfe4320acce8e17/319072271516621528","via":"1.1 google","x-forwarded-for":"35.154.171.200, 34.117.226.41","x-forwarded-proto":"https","connection":"Keep-Alive"}"#;
-        let headers = http_serde_ext::header_map::deserialize(
+        let headers = http_serde_ext_ios::header_map::deserialize(
             &mut serde_json::Deserializer::from_str(headers),
         )
         .unwrap();

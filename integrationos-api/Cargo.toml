@@ -14,10 +14,10 @@ envconfig.workspace = true
 fake.workspace = true
 futures-util.workspace = true
 futures.workspace = true
-http-serde-ext.workspace = true
+http-serde-ext-ios.workspace = true
 http.workspace = true
-hyper = "0.14.27"
-indexmap = "2.1.0"
+hyper = "0.14.31"
+indexmap = "2.6.0"
 integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain" }
 integrationos-unified = { path = "../integrationos-unified" }
@@ -32,11 +32,11 @@ redis.workspace = true
 reqwest.workspace = true
 regex = "1"
 schemars.workspace = true
-segment = "0.2.3"
+segment = "0.2.4"
 semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-serde_yaml = "0.9.34"
+serde_yaml.workspace = true
 strum.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
