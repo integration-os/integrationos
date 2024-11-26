@@ -10,7 +10,7 @@ chrono.workspace = true
 dotenvy.workspace = true
 envconfig.workspace = true
 futures.workspace = true
-google-cloud-storage = "0.22.1"
+google-cloud-storage = "0.23.0"
 http.workspace = true
 integrationos-domain = { path = "../integrationos-domain" }
 integrationos-unified = { path = "../integrationos-unified" }

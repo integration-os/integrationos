@@ -9,6 +9,9 @@ use google_cloud_storage::http::objects::upload::{UploadObjectRequest, UploadTyp
 use google_cloud_storage::http::objects::Object;
 use google_cloud_storage::http::resumable_upload_client::ChunkSize;
 use integrationos_domain::Unit;
+use reqwest_middleware::ClientBuilder;
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use reqwest_tracing::TracingMiddleware;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -21,20 +24,16 @@ pub struct GoogleCloudStorage {
 }
 
 impl GoogleCloudStorage {
-    pub async fn new(_config: &ArchiverConfig) -> Result<Self> {
-        // TODO: Add this back once https://github.com/yoshidan/google-cloud-rust/commit/75b566c967dd69ca32db5bb572dac865f211bb6e
-        // gets published
-        //
-        // let retry_policy = ExponentialBackoff::builder().build_with_max_retries(config.max_retries);
-        // let client = reqwest::Client::default();
-        //
-        // let middleware = ClientBuilder::new(client)
-        //     .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        //     .with(TracingMiddleware::default())
-        //     .build();
+    pub async fn new(config: &ArchiverConfig) -> Result<Self> {
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(config.max_retries);
+        let client = reqwest::Client::default();
+        let middleware = ClientBuilder::new(client)
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .with(TracingMiddleware::default())
+            .build();
         let storage = GClient::new(
             ClientConfig {
-                // http: Some(middleware),
+                http: Some(middleware),
                 ..Default::default()
             }
             .with_auth()
