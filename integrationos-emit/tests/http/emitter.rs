@@ -73,7 +73,7 @@ async fn test_concurrent_requests() -> Result<Unit, IntegrationOSError> {
 }
 
 #[tokio::test]
-async fn test_event_processed_correctly() -> Result<Unit, IntegrationOSError> {
+async fn test_event_processed_correctly_serial_integration() -> Result<Unit, IntegrationOSError> {
     let mut server = TestServer::new(true).await?;
 
     let id = Id::now(IdPrefix::Connection).to_string();
@@ -101,14 +101,46 @@ async fn test_event_processed_correctly() -> Result<Unit, IntegrationOSError> {
 
     assert_eq!(res.code, StatusCode::OK);
 
-    tokio::time::sleep(Duration::from_secs(3)).await;
+    // Giving it some time for the commit to happen
+    tokio::time::sleep(Duration::from_secs(10)).await;
 
     mock_server.expect_at_most(1).assert_async().await;
 
     Ok(())
 }
 
-//TODO: Write test for unhappy path [retry, idempotency and recovery]
-// #[tokio::test]
-// async fn test_event_processed_incorrectly() -> Result<Unit, IntegrationOSError> {
-// }
+#[tokio::test]
+async fn test_event_processed_errored_and_retried_serial_integration() -> Result<Unit, IntegrationOSError> {
+    let mut server = TestServer::new(true).await?;
+
+    let id = Id::now(IdPrefix::Connection).to_string();
+    let payload = json!({
+        "type": "DatabaseConnectionLost",
+        "connectionId": id.clone()
+    });
+    let path = format!("/v1/event-callbacks/database-connection-lost/{}", id);
+    let mock_server = server
+        .mock_server
+        .mock("POST", path.as_str())
+        .match_header(AUTHORIZATION, Matcher::Any)
+        .match_header(ACCEPT, "*/*")
+        .match_header(HOST, server.mock_server.host_with_port().as_str())
+        .with_status(500)
+        .with_body("{}")
+        .with_header("content-type", "application/json")
+        .create_async()
+        .await;
+
+    let res = server
+        .send_request::<Value, Value>("v1/emit", Method::POST, Some(&payload), None)
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(res.code, StatusCode::OK);
+
+    tokio::time::sleep(Duration::from_secs(3)).await;
+
+    mock_server.expect(3).assert_async().await;
+
+    Ok(())
+}
