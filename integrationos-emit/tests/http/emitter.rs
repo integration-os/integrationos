@@ -110,7 +110,8 @@ async fn test_event_processed_correctly_serial_integration() -> Result<Unit, Int
 }
 
 #[tokio::test]
-async fn test_event_processed_errored_and_retried_serial_integration() -> Result<Unit, IntegrationOSError> {
+async fn test_event_processed_errored_and_retried_serial_integration(
+) -> Result<Unit, IntegrationOSError> {
     let mut server = TestServer::new(true).await?;
 
     let id = Id::now(IdPrefix::Connection).to_string();
