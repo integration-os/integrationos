@@ -5,47 +5,15 @@ use integrationos_domain::{
     telemetry::{get_subscriber, init_subscriber},
     Unit,
 };
-use integrationos_emit::{domain::config::EmitterConfig, server::Server, stream::EventStreamTopic};
+use integrationos_emit::{domain::config::EmitterConfig, server::Server};
 use std::time::Duration;
-use tokio_graceful_shutdown::{SubsystemBuilder, SubsystemHandle, Toplevel};
-use tracing::info;
+use tokio_graceful_shutdown::{SubsystemHandle, Toplevel};
 
-async fn subsystem(
-    server: Server,
-    config: &EmitterConfig,
-    subsys: SubsystemHandle,
-) -> Result<Unit> {
-    info!("Starting Emitter API with config:\n{config}");
-
-    let state = server.state.clone();
-    let stream = server.state.event_stream.clone();
-    let scheduler = server.scheduler.clone();
-
-    subsys.start(SubsystemBuilder::new(
-        EventStreamTopic::Dlq.as_ref(),
-        |h| async move { stream.consume(EventStreamTopic::Dlq, h, &state).await },
-    ));
-
-    let state = server.state.clone();
-    let stream = server.state.event_stream.clone();
-    subsys.start(SubsystemBuilder::new(
-        EventStreamTopic::Target.as_ref(),
-        |h| async move { stream.consume(EventStreamTopic::Target, h, &state).await },
-    ));
-
-    subsys.start(SubsystemBuilder::new(
-        "Scheduler Subsystem",
-        |_| async move { scheduler.start().await },
-    ));
-
-    server.run().await
-}
-
-fn main() -> Result<()> {
+fn main() -> Result<Unit> {
     dotenv().ok();
 
     let config = EmitterConfig::init_from_env()?;
-    let shutdown_timeout_secs = config.shutdown_timeout_secs;
+    let shutdown_timeout_millis = config.shutdown_timeout_millis;
 
     let subscriber = get_subscriber("emitter".into(), "info".into(), std::io::stdout, None);
     init_subscriber(subscriber);
@@ -55,17 +23,15 @@ fn main() -> Result<()> {
         .enable_all()
         .build()?
         .block_on(async move {
-            Toplevel::new(|s| async move {
+            Toplevel::new(|subsys: SubsystemHandle| async move {
                 let server = Server::init(config.clone())
                     .await
                     .expect("Failed to initialize server");
 
-                s.start(SubsystemBuilder::new("ServerSubsys", |handle| async move {
-                    subsystem(server, &config, handle).await
-                }));
+                Server::subsystem(server, &config, subsys).await;
             })
             .catch_signals()
-            .handle_shutdown_requests(Duration::from_millis(shutdown_timeout_secs))
+            .handle_shutdown_requests(Duration::from_millis(shutdown_timeout_millis))
             .await
             .map_err(Into::into)
         })

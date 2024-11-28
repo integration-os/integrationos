@@ -71,7 +71,7 @@ impl FinalizeEvent for Finalizer {
             }
         }
         let context = RootContext::new(event.id);
-        match self.context_collection.insert_one(&context, None).await {
+        match self.context_collection.insert_one(&context).await {
             Err(e) => {
                 error!("Failed to save event context: {e}");
                 bail!(e);

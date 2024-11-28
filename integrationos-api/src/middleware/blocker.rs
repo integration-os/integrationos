@@ -24,7 +24,7 @@ pub struct BlockInvalidHeaders {
 }
 
 impl BlockInvalidHeaders {
-    pub async fn new(state: Arc<AppState>) -> Self {
+    pub async fn from_state(state: Arc<AppState>) -> Self {
         let whitelist = Arc::new(RwLock::new(BTreeSet::new()));
 
         let header_name =
@@ -45,8 +45,8 @@ impl BlockInvalidHeaders {
                     .app_stores
                     .db
                     .collection::<SparseEventAccess>(&Store::EventAccess.to_string())
-                    .find(
-                        bson::doc! { "deleted": false },
+                    .find(bson::doc! { "deleted": false })
+                    .with_options(
                         FindOptions::builder()
                             .projection(bson::doc! {
                                "accessKey": 1

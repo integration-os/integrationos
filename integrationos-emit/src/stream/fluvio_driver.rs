@@ -3,7 +3,7 @@ use crate::{
     domain::{
         config::{EmitterConfig, EventStreamConfig},
         deduplication::Deduplication,
-        event::{EventEntity, EventOutcome},
+        event::{EventEntity, EventStatus},
     },
     server::AppState,
 };
@@ -14,15 +14,20 @@ use fluvio::{
         ConsumerConfigExt, ConsumerConfigExtBuilder, ConsumerStream, OffsetManagementStrategy,
         Record,
     },
+    dataplane::link::ErrorCode,
     spu::SpuSocketPool,
     Compression, Fluvio, FluvioConfig, Offset, RetryPolicy, TopicProducer,
     TopicProducerConfigBuilder,
 };
 use futures::StreamExt;
-use integrationos_domain::{Id, IntegrationOSError, InternalError, Unit};
+use integrationos_domain::{Id, IntegrationOSError, InternalError, TimedExt, Unit};
 use mongodb::bson::doc;
 use std::boxed::Box;
-use std::time::Duration;
+use std::{
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
+    time::Duration,
+};
+use tokio::time::interval;
 use tokio_graceful_shutdown::SubsystemHandle;
 
 pub struct ConsumerConfig {
@@ -30,8 +35,8 @@ pub struct ConsumerConfig {
     app: EventStreamConfig,
 }
 
-pub type TargetProducer = TopicProducer<SpuSocketPool>;
-pub type DlqProducer = TopicProducer<SpuSocketPool>;
+type TargetProducer = TopicProducer<SpuSocketPool>;
+type DlqProducer = TopicProducer<SpuSocketPool>;
 
 pub struct FluvioDriverImpl {
     pub client: Fluvio,
@@ -159,10 +164,81 @@ impl FluvioDriverImpl {
             dlq_producer,
         })
     }
+
+    async fn consume_topic(
+        &self,
+        target: EventStreamTopic,
+        subsys: &SubsystemHandle,
+        ctx: &AppState,
+        consumer: &ConsumerConfig,
+        stream: &mut impl ConsumerStream<Item = Result<Record, ErrorCode>>,
+    ) -> Result<Unit, IntegrationOSError> {
+        let mut interval = interval(Duration::from_millis(consumer.app.consumer_linger_time));
+        interval.tick().await;
+
+        // We don't really need it but we may use a different approach if something comes out of https://github.com/infinyon/fluvio/issues/4267#issuecomment-2489354987
+        let count = AtomicU64::new(0);
+        let is_processing = AtomicBool::new(true);
+
+        loop {
+            is_processing.store(false, Ordering::SeqCst);
+            tokio::select! {
+                timeout = interval.tick() => {
+                    if count.load(std::sync::atomic::Ordering::SeqCst) > 0 {
+                        tracing::info!("Committing offsets after {:?} for topic {}", timeout.elapsed(), target.as_ref());
+                        stream.offset_commit().map_err(|err| anyhow::anyhow!(err))?;
+                        stream.offset_flush().await.map_err(|err| anyhow::anyhow!(err))?;
+                        tracing::info!("Periodic offset commit completed for topic {}", target.as_ref());
+                        count.store(0, std::sync::atomic::Ordering::SeqCst);
+                    }
+
+                    if subsys.is_shutdown_requested() && !is_processing.load(Ordering::SeqCst) {
+                        tracing::info!("Consumer for {} cancelled by external request. Breaking the loop", target.as_ref());
+                        break Ok(());
+                    }
+                },
+                record = stream.next() => {
+                    count.fetch_add(1, Ordering::Relaxed);
+
+                    match record {
+                        Some(Ok(record)) => {
+                            let event: EventEntity = serde_json::from_slice(record.get_value()).context("Could not deserialize event")?;
+                            is_processing.store(true, Ordering::SeqCst);
+                            self.process(ctx, target, &event).await?;
+                            is_processing.store(false, Ordering::SeqCst);
+                        },
+                        Some(Err(err)) => return Err(InternalError::io_err(&format!("Error consuming record: {err}"), None)),
+                        None => {
+                            tracing::info!("Consumer stream closed");
+                            subsys.request_shutdown();
+                        }
+                    }
+
+                    if count.load(std::sync::atomic::Ordering::SeqCst) >= consumer.app.consumer_batch_size as u64 {
+                        count.store(0, Ordering::SeqCst);
+                        stream.offset_commit().map_err(|err| anyhow::anyhow!(err))?;
+                        stream.offset_flush().await.map_err(|err| anyhow::anyhow!(err))?;
+                    }
+
+                    if subsys.is_shutdown_requested() {
+                        tracing::info!("Consumer for {} cancelled by external request. Breaking the loop", target.as_ref());
+                        break Ok(());
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[async_trait]
 impl EventStreamExt for FluvioDriverImpl {
+    /**
+     * Publishes an event to the specified topic
+     * @param event - The event to publish
+     * @param target - The target topic of the event
+     *
+     * It serializes the event using serde_json and sends it to the specified topic.
+     */
     async fn publish(
         &self,
         event: EventEntity,
@@ -175,7 +251,7 @@ impl EventStreamExt for FluvioDriverImpl {
         match target {
             EventStreamTopic::Target => {
                 self.tgt_producer
-                    .send(event.partition_key(), payload)
+                    .send(event.entity_id.to_string(), payload)
                     .await
                     .map_err(|e| {
                         InternalError::io_err(&format!("Could not send event to fluvio: {e}"), None)
@@ -183,7 +259,7 @@ impl EventStreamExt for FluvioDriverImpl {
             }
             EventStreamTopic::Dlq => {
                 self.dlq_producer
-                    .send(event.partition_key(), payload)
+                    .send(event.entity_id.to_string(), payload)
                     .await
                     .map_err(|e| {
                         InternalError::io_err(&format!("Could not send event to fluvio: {e}"), None)
@@ -194,6 +270,15 @@ impl EventStreamExt for FluvioDriverImpl {
         Ok(event.entity_id)
     }
 
+    /**
+     * Consumes events from the specified topic
+     * @param target - The target topic of the event
+     * @param subsys - The subsystem handle
+     * @param ctx - The application state
+     *
+     * It consumes events from the specified topic using the consumer stream.
+     * It processes each event and updates the event outcome in the events collection.
+     */
     async fn consume(
         &self,
         target: EventStreamTopic,
@@ -210,63 +295,9 @@ impl EventStreamExt for FluvioDriverImpl {
             .consumer_with_config(consumer.ext.clone())
             .await?;
 
-        let mut count = 0;
-        let mut interval =
-            tokio::time::interval(Duration::from_millis(consumer.app.consumer_linger_time));
-        interval.tick().await;
-
-        loop {
-            tokio::select! {
-                timeout = interval.tick() => {
-
-                    if count > 0 || subsys.is_shutdown_requested() {
-                        tracing::info!("Committing offsets after {timeout:?}");
-                        stream.offset_commit().map_err(|err| anyhow::anyhow!(err))?;
-                        stream.offset_flush().await.map_err(|err| anyhow::anyhow!(err))?;
-                        tracing::info!("Periodic offset commit completed.");
-                        count = 0; // Reset count after Committing
-
-                    }
-
-                    if subsys.is_shutdown_requested() {
-                        tracing::info!("Consumer cancelled, gracefully shutting down. Committing pending offsets");
-                        return Ok(());
-                    }
-
-                },
-                record = stream.next() => {
-                    count += 1;
-
-                    match record {
-                        Some(Ok(record)) => {
-                            self.process(ctx, target, &record).await?;
-                        },
-                        Some(Err(err)) => return Err(InternalError::io_err(&format!("Error consuming record: {err}"), None)),
-                        None => {
-                            tracing::info!("Consumer stream closed");
-                            return Ok(());
-                        }
-                    }
-
-                    if count >= consumer.app.consumer_batch_size || subsys.is_shutdown_requested() {
-                        count = 0;
-                        stream.offset_commit().map_err(|err| anyhow::anyhow!(err))?;
-                        stream.offset_flush().await.map_err(|err| anyhow::anyhow!(err))?;
-                    }
-
-                    if subsys.is_shutdown_requested() {
-                        tracing::info!("Consumer cancelled, gracefully shutting down. Committing pending offsets");
-                        return Ok(());
-                    }
-                }
-                _ = subsys.on_shutdown_requested() => {
-                        tracing::info!("Consumer cancelled, gracefully shutting down. Committing pending offsets");
-                        stream.offset_commit().map_err(|err| anyhow::anyhow!(err))?;
-                        stream.offset_flush().await.map_err(|err| anyhow::anyhow!(err))?;
-                        return Ok(());
-                    },
-            }
-        }
+        // match
+        self.consume_topic(target, &subsys, ctx, consumer, &mut stream)
+            .await
     }
 
     /**
@@ -284,11 +315,8 @@ impl EventStreamExt for FluvioDriverImpl {
         &self,
         ctx: &AppState,
         target: EventStreamTopic,
-        event: &Record,
+        event: &EventEntity,
     ) -> Result<Unit, IntegrationOSError> {
-        let event: EventEntity =
-            serde_json::from_slice(event.get_value()).context("Could not deserialize event")?;
-
         let is_processed = ctx
             .app_stores
             .deduplication
@@ -319,24 +347,31 @@ impl EventStreamExt for FluvioDriverImpl {
 
         match target {
             EventStreamTopic::Target => {
-                ctx.app_stores
-                    .events
-                    .create_one(&event)
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("Could not create event record: {e}");
-                        InternalError::unknown("Could not create event record", None)
-                    })?;
+                ctx.app_stores.events.create_one(event).await.map_err(|e| {
+                    tracing::error!("Could not create event record: {e}");
+                    InternalError::unknown("Could not create event record", None)
+                })?;
 
                 tracing::info!("Event with id {} is ready to be processed", event.entity_id);
-                let result = event.side_effect(ctx).await;
+                let result = event
+                    .side_effect(ctx)
+                    .timed(|_, elapsed| {
+                        tracing::info!(
+                            "Side effect for entity id {} took {}ms",
+                            event.entity_id,
+                            elapsed.as_millis()
+                        )
+                    })
+                    .await;
+
+                update_event_outcome(ctx, event, EventStatus::executed()).await?;
 
                 if let Err(e) = result {
                     tracing::error!("Error processing event: {e}, removing deduplication record");
-                    delete_deduplication_record(ctx, &event).await?;
+                    delete_deduplication_record(ctx, event).await?;
 
-                    let outcome = EventOutcome::error(e.to_string(), 1);
-                    let event = event.with_outcome(Some(outcome.clone()));
+                    let outcome = EventStatus::errored(e.to_string(), 1);
+                    let event = event.with_outcome(outcome.clone());
 
                     self.publish(event.clone(), EventStreamTopic::Dlq).await?;
 
@@ -345,7 +380,7 @@ impl EventStreamExt for FluvioDriverImpl {
                     return Ok(());
                 }
 
-                update_event_outcome(ctx, &event, EventOutcome::success()).await?;
+                update_event_outcome(ctx, event, EventStatus::succeded(event.retries())).await?;
             }
             EventStreamTopic::Dlq => {
                 tracing::info!("Event with id {} is in DLQ", event.entity_id);
@@ -356,10 +391,10 @@ impl EventStreamExt for FluvioDriverImpl {
                         tracing::error!(
                             "Error processing event: {e}, removing deduplication record"
                         );
-                        delete_deduplication_record(ctx, &event).await?;
+                        delete_deduplication_record(ctx, event).await?;
 
-                        let outcome = EventOutcome::error(e.to_string(), event.retries() + 1);
-                        let event = event.with_outcome(Some(outcome.clone()));
+                        let outcome = EventStatus::errored(e.to_string(), event.retries() + 1);
+                        let event = event.with_outcome(outcome.clone());
 
                         self.publish(event.clone(), EventStreamTopic::Dlq).await?;
 
@@ -368,7 +403,8 @@ impl EventStreamExt for FluvioDriverImpl {
                         return Ok(());
                     }
 
-                    update_event_outcome(ctx, &event, EventOutcome::success()).await?;
+                    update_event_outcome(ctx, event, EventStatus::succeded(event.retries()))
+                        .await?;
                 } else {
                     tracing::info!("Giving up on event with id {}", event.entity_id);
                     // this is the case where we exhausted the retries, now
@@ -376,7 +412,7 @@ impl EventStreamExt for FluvioDriverImpl {
                     let error = event.error().unwrap_or_default()
                         + ".\n Exhausted retries, cannot process event";
 
-                    update_event_outcome(ctx, &event, EventOutcome::error(error, event.retries()))
+                    update_event_outcome(ctx, event, EventStatus::errored(error, event.retries()))
                         .await?;
 
                     // TODO: create an alert on grafana
@@ -395,12 +431,9 @@ async fn delete_deduplication_record(
     ctx.app_stores
         .deduplication
         .collection
-        .delete_one(
-            doc! {
-                "_id": event.entity_id.to_string()
-            },
-            None,
-        )
+        .delete_one(doc! {
+            "_id": event.entity_id.to_string()
+        })
         .await?;
 
     Ok(())
@@ -409,7 +442,7 @@ async fn delete_deduplication_record(
 async fn update_event_outcome(
     ctx: &AppState,
     event: &EventEntity,
-    outcome: EventOutcome,
+    outcome: EventStatus,
 ) -> Result<Unit, IntegrationOSError> {
     let outcome = mongodb::bson::to_bson(&outcome).context("Could not serialize event")?;
 

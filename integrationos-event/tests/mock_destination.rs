@@ -88,7 +88,6 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
         .insert_one(
             bson::to_bson_with_options(&stripe_model_config, Default::default())
                 .expect("Unable to serialize connection model definition"),
-            None,
         )
         .await
         .unwrap();
@@ -122,7 +121,6 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
         .insert_one(
             bson::to_bson_with_options(&conn, Default::default())
                 .expect("Unable to serialize connection"),
-            None,
         )
         .await
         .unwrap();

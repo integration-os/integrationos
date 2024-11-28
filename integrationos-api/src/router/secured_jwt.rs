@@ -2,7 +2,8 @@ use crate::{
     logic::{
         common_enum, common_model, connection_definition,
         connection_model_definition::{self},
-        connection_model_schema, connection_oauth_definition, openapi, platform, platform_page,
+        connection_model_schema, connection_oauth_definition, event_callback, openapi, platform,
+        platform_page,
     },
     middleware::jwt_auth::{self, JwtState},
     server::AppState,
@@ -38,12 +39,13 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         .nest("/platforms", platform::get_router())
         .nest("/platform-pages", platform_page::get_router())
         .nest("/common-models", common_model::get_router())
-        .nest("/common-enums", common_enum::get_router());
+        .nest("/common-enums", common_enum::get_router())
+        .nest("/event-callbacks", event_callback::get_router());
 
     routes
         .layer(from_fn_with_state(
-            Arc::new(JwtState::new(state)),
-            jwt_auth::jwt_auth,
+            Arc::new(JwtState::from_state(state)),
+            jwt_auth::jwt_auth_middleware,
         ))
         .layer(from_fn(log_request_middleware))
         .layer(TraceLayer::new_for_http())

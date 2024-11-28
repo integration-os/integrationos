@@ -29,6 +29,7 @@ pub mod connection_model_definition;
 pub mod connection_model_schema;
 pub mod connection_oauth_definition;
 pub mod event_access;
+pub mod event_callback;
 pub mod events;
 pub mod metrics;
 pub mod oauth;
@@ -354,7 +355,7 @@ async fn get_connection(
             })
             .build();
 
-        let sparse_connection = match collection.find_one(filter, options).await {
+        let sparse_connection = match collection.find_one(filter).with_options(options).await {
             Ok(Some(data)) => data,
             Ok(None) => return Err(ApplicationError::not_found("Connection", None)),
             Err(e) => {

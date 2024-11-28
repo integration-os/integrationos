@@ -184,7 +184,7 @@ pub async fn get_common_models_projections(
         .projection(doc! { "_id": 1, "name": 1 })
         .build();
 
-    let mut cursor = collection.find(filter, options).await?;
+    let mut cursor = collection.find(filter).with_options(options).await?;
     let mut common_models: Vec<Document> = Vec::new();
 
     while let Some(result) = cursor.next().await {

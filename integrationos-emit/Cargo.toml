@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
-axum.workspace = true
 async-trait.workspace = true
+axum.workspace = true
 chrono.workspace = true
 dotenvy.workspace = true
 envconfig.workspace = true
@@ -26,13 +26,12 @@ serde = { workspace = true , features = ["derive"] }
 serde_json.workspace = true
 strum.workspace = true
 tokio = { workspace = true, features = ["full"] }
+tokio-graceful-shutdown = "0.15.2"
 tower-http.workspace = true
 tracing.workspace = true
-log = "0.4.22"
-ctrlc = { version = "3.4.5", features = ["termination"] }
-tokio-graceful-shutdown = "0.15.2"
 
 [dev-dependencies]
+mockito.workspace = true
 testcontainers-modules = { workspace = true, features = ["mongo"] }
 tracing-subscriber.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }

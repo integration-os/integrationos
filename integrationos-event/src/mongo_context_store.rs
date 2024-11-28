@@ -32,7 +32,7 @@ impl ContextStore for MongoContextStore {
     ) -> Result<T> {
         let coll = self.db.collection(&self.collection_name);
         let context = coll
-            .find_one(doc! { "id": context_key.to_string() }, None)
+            .find_one(doc! { "id": context_key.to_string() })
             .await?;
         Ok(context.ok_or_else(|| anyhow!("No context found"))?)
     }
@@ -40,7 +40,7 @@ impl ContextStore for MongoContextStore {
     async fn set<T: PipelineExt + Clone + Serialize>(&self, context: T) -> Result<()> {
         let instant = Instant::now();
         let coll = self.db.collection(&self.collection_name);
-        if let Err(e) = coll.insert_one(context, None).await {
+        if let Err(e) = coll.insert_one(context).await {
             error!("PipelineExt insertion error {e}");
         }
         trace!(

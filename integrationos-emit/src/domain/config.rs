@@ -30,14 +30,32 @@ pub struct EmitterConfig {
     pub event_stream_provider: EventStreamProvider,
     #[envconfig(from = "EVENT_PROCESSING_MAX_RETRIES", default = "5")]
     pub event_processing_max_retries: u32,
+    #[envconfig(from = "EVENT_MAX_SPAN_FOR_RETRY_SECS", default = "86400")]
+    pub event_max_span_for_retry_secs: i64,
     #[envconfig(from = "SCHEDULED_MAX_CONCURRENT_TASKS", default = "10")]
     pub scheduled_max_concurrent_tasks: usize,
     #[envconfig(from = "SCHEDULED_SLEEP_DURATION_IN_MILLIS", default = "1000")]
     pub scheduled_sleep_duration_millis: u64,
     #[envconfig(from = "SCHEDULED_MAX_CHUNK_SIZE", default = "100")]
     pub scheduled_max_chunk_size: usize,
-    #[envconfig(from = "SHUTDOWN_TIMEOUT_SECS", default = "10")]
-    pub shutdown_timeout_secs: u64,
+    #[envconfig(from = "PUSHER_MAX_CONCURRENT_TASKS", default = "10")]
+    pub pusher_max_concurrent_tasks: usize,
+    #[envconfig(from = "PUSHER_SLEEP_DURATION_IN_MILLIS", default = "1000")]
+    pub pusher_sleep_duration_millis: u64,
+    #[envconfig(from = "PUSHER_MAX_CHUNK_SIZE", default = "100")]
+    pub pusher_max_chunk_size: usize,
+    #[envconfig(from = "SHUTDOWN_TIMEOUT_MILLIS", default = "20000")]
+    pub shutdown_timeout_millis: u64,
+    #[envconfig(
+        from = "JWT_SECRET",
+        default = "2thZ2UiOnsibmFtZSI6IlN0YXJ0dXBsa3NoamRma3NqZGhma3NqZGhma3NqZG5jhYtggfaP9ubmVjdGlvbnMiOjUwMDAwMCwibW9kdWxlcyI6NSwiZW5kcG9pbnRzIjo3b4e05e2-f050-401f-9822-44f43f71753c"
+    )]
+    pub jwt_secret: String,
+    #[envconfig(
+        from = "EVENT_CALLBACK_URL",
+        default = "http://localhost:3005/v1/event-callbacks"
+    )]
+    pub event_callback_url: String,
     #[envconfig(nested = true)]
     pub fluvio: EventStreamConfig,
     #[envconfig(nested = true)]
@@ -65,10 +83,28 @@ impl Display for EmitterConfig {
         writeln!(f, "EVENT_STREAM_PROVIDER: {}", self.event_stream_provider)?;
         writeln!(
             f,
+            "EVENT_MAX_SPAN_FOR_RETRY_DAYS: {}",
+            self.event_max_span_for_retry_secs
+        )?;
+        writeln!(
+            f,
+            "PUSHER_MAX_CONCURRENT_TASKS: {}",
+            self.pusher_max_concurrent_tasks
+        )?;
+        writeln!(
+            f,
+            "PUSHER_SLEEP_DURATION_IN_MILLIS: {}",
+            self.pusher_sleep_duration_millis
+        )?;
+        writeln!(f, "PUSHER_MAX_CHUNK_SIZE: {}", self.pusher_max_chunk_size)?;
+        writeln!(f, "JWT_SECRET: ****")?;
+        writeln!(f, "EVENT_CALLBACK_URL: {}", self.event_callback_url)?;
+        writeln!(
+            f,
             "EVENT_PROCESSING_MAX_RETRIES: {}",
             self.event_processing_max_retries
         )?;
-        writeln!(f, "SHUTDOWN_TIMEOUT_SECS: {}", self.shutdown_timeout_secs)?;
+        writeln!(f, "SHUTDOWN_TIMEOUT_SECS: {}", self.shutdown_timeout_millis)?;
         writeln!(f, "{}", self.fluvio)?;
         writeln!(f, "{}", self.cache)?;
         writeln!(f, "{}", self.db_config)

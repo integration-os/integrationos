@@ -1,7 +1,10 @@
 use crate::server::AppState;
 use axum::{body::Body, extract::State, middleware::Next, response::Response};
 use http::Request;
-use integrationos_domain::{ApplicationError, Claims, IntegrationOSError};
+use integrationos_domain::{
+    ApplicationError, Claims, IntegrationOSError, DEFAULT_AUDIENCE, DEFAULT_ISSUER,
+    FALLBACK_AUDIENCE, FALLBACK_ISSUER,
+};
 use jsonwebtoken::{DecodingKey, Validation};
 use std::sync::Arc;
 use tracing::info;
@@ -15,10 +18,10 @@ pub struct JwtState {
 }
 
 impl JwtState {
-    pub fn new(state: &Arc<AppState>) -> Self {
+    pub fn from_state(state: &Arc<AppState>) -> Self {
         let mut validation = Validation::default();
-        validation.set_audience(&["integrationos-users", "buildable-users"]);
-        validation.set_issuer(&["integrationos", "buildable"]);
+        validation.set_audience(&[DEFAULT_AUDIENCE, FALLBACK_AUDIENCE]);
+        validation.set_issuer(&[DEFAULT_ISSUER, FALLBACK_ISSUER]);
         Self {
             validation,
             decoding_key: DecodingKey::from_secret(state.config.jwt_secret.as_ref()),
@@ -26,7 +29,7 @@ impl JwtState {
     }
 }
 
-pub async fn jwt_auth(
+pub async fn jwt_auth_middleware(
     State(state): State<Arc<JwtState>>,
     mut req: Request<Body>,
     next: Next,

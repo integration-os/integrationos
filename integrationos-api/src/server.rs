@@ -230,7 +230,7 @@ impl Server {
                     );
                     let events = events.clone();
                     tokio::spawn(async move {
-                        if let Err(e) = events.insert_many(to_save, None).await {
+                        if let Err(e) = events.insert_many(to_save).await {
                             error!("Could not save buffer of events: {e}");
                         }
                     });
@@ -262,20 +262,22 @@ impl Server {
                 .await;
                 if let Ok(Some(metric)) = res {
                     let doc = metric.update_doc();
-                    let client = metrics.update_one(
-                        bson::doc! {
-                            "clientId": &metric.ownership().client_id,
-                        },
-                        doc.clone(),
-                        options.clone(),
-                    );
-                    let system = metrics.update_one(
-                        bson::doc! {
-                            "clientId": metric_system_id.as_str(),
-                        },
-                        doc,
-                        options.clone(),
-                    );
+                    let client = metrics
+                        .update_one(
+                            bson::doc! {
+                                "clientId": &metric.ownership().client_id,
+                            },
+                            doc.clone(),
+                        )
+                        .with_options(options.clone());
+                    let system = metrics
+                        .update_one(
+                            bson::doc! {
+                                "clientId": metric_system_id.as_str(),
+                            },
+                            doc,
+                        )
+                        .with_options(options.clone());
                     if let Err(e) = try_join!(client, system) {
                         error!("Could not upsert metric: {e}");
                     }

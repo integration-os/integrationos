@@ -5,6 +5,7 @@ use futures::{StreamExt, TryStreamExt};
 use integrationos_domain::{IntegrationOSError, InternalError, MongoStore, Unit};
 use mongodb::bson::doc;
 use std::{sync::Arc, time::Duration};
+use tokio_graceful_shutdown::{FutureExt, SubsystemHandle};
 
 // Simple scheduler. Heavily relies on the database for scheduling events
 #[derive(Clone)]
@@ -17,7 +18,23 @@ pub struct PublishScheduler {
 }
 
 impl PublishScheduler {
-    pub async fn start(&self) -> Result<Unit, IntegrationOSError> {
+    pub async fn start(&self, subsys: SubsystemHandle) -> Result<Unit, IntegrationOSError> {
+        match self.process().cancel_on_shutdown(&subsys).await {
+            Ok(result) => {
+                tracing::info!("Scheduled event publisher finished");
+                subsys.on_shutdown_requested().await;
+
+                result
+            }
+            Err(_) => {
+                tracing::warn!("PublishScheduler was cancelled due to shutdown");
+                subsys.on_shutdown_requested().await;
+                Ok(())
+            }
+        }
+    }
+
+    async fn process(&self) -> Result<Unit, IntegrationOSError> {
         let scheduled = self.scheduled.clone();
         let event_stream = Arc::clone(&self.event_stream);
 
@@ -31,12 +48,13 @@ impl PublishScheduler {
                 "Polling for scheduled events at {}",
                 Utc::now().timestamp_millis()
             );
+
             let events = scheduled
                 .collection
-                .find(
-                    doc! { "scheduleOn": { "$lte": Utc::now().timestamp_millis() } },
-                    None,
-                )
+                .find(doc! {
+                            "scheduleOn": { "$lte": Utc::now().timestamp_millis() }
+
+                })
                 .await;
 
             if let Ok(events) = events {
@@ -47,7 +65,7 @@ impl PublishScheduler {
                     .map(|result| {
                         let event_stream = Arc::clone(&event_stream);
                         let scheduled = scheduled.clone();
-                        //
+
                         let result =
                             result.map_err(|e| InternalError::io_err(&e.to_string(), None));
                         async move { process_chunk(result, &event_stream, &scheduled).await }
@@ -88,7 +106,7 @@ async fn process_chunk(
                     tracing::info!("Event with id {} is published", entity_id);
                     scheduled
                         .collection
-                        .delete_one(doc! { "_id": id.to_string() }, None)
+                        .delete_one(doc! { "_id": id.to_string() })
                         .await?;
                 }
             }

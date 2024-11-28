@@ -26,6 +26,21 @@ pub enum NamespaceScope {
     Production,
 }
 
+impl TryFrom<&str> for NamespaceScope {
+    type Error = IntegrationOSError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "development-db-conns" => Ok(NamespaceScope::Development),
+            "production-db-conns" => Ok(NamespaceScope::Production),
+            _ => Err(InternalError::invalid_argument(
+                &format!("Invalid namespace scope: {}", value),
+                None,
+            )),
+        }
+    }
+}
+
 impl AsRef<str> for NamespaceScope {
     fn as_ref(&self) -> &str {
         match self {
@@ -367,6 +382,40 @@ pub async fn coordinator_impl(
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ServiceName(String);
 
+impl ServiceName {
+    pub fn from_id(connection_id: Id) -> Result<Self, IntegrationOSError> {
+        let connection_id = connection_id.to_string();
+        // Sanitize the connection id by removing underscores
+        let connection_id = connection_id.replace('_', "");
+
+        // Create regex to match non-alphanumeric characters
+        let regex = regex::Regex::new(r"[^a-zA-Z0-9]+").map_err(|e| {
+            tracing::error!("Failed to create regex for connection id: {}", e);
+            InternalError::invalid_argument("Invalid connection id", None)
+        })?;
+
+        // Convert connection_id to lowercase and replace special characters with '-'
+        let mut service_name = regex
+            .replace_all(&connection_id.to_lowercase(), "-")
+            .to_string();
+
+        // Trim leading/trailing '-' and ensure it starts with a letter
+        service_name = service_name.trim_matches('-').to_string();
+
+        // Ensure it starts with a letter
+        if !service_name.chars().next().unwrap_or(' ').is_alphabetic() {
+            service_name.insert(0, 'a'); // Prepend 'a' if it doesn't start with a letter
+        }
+
+        // Truncate to meet Kubernetes' max DNS-1035 label length (63 characters)
+        if service_name.len() > 63 {
+            service_name = service_name[..63].to_string();
+        }
+
+        Ok(ServiceName(service_name))
+    }
+}
+
 impl AsRef<str> for ServiceName {
     fn as_ref(&self) -> &str {
         &self.0
@@ -377,33 +426,4 @@ impl Display for ServiceName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_ref())
     }
-}
-
-pub fn generate_service_name(connection_id: &Id) -> Result<ServiceName, IntegrationOSError> {
-    let connection_id = connection_id.to_string();
-    // Create regex to match non-alphanumeric characters
-    let regex = regex::Regex::new(r"[^a-zA-Z0-9]+").map_err(|e| {
-        tracing::error!("Failed to create regex for connection id: {}", e);
-        InternalError::invalid_argument("Invalid connection id", None)
-    })?;
-
-    // Convert connection_id to lowercase and replace special characters with '-'
-    let mut service_name = regex
-        .replace_all(&connection_id.to_lowercase(), "-")
-        .to_string();
-
-    // Trim leading/trailing '-' and ensure it starts with a letter
-    service_name = service_name.trim_matches('-').to_string();
-
-    // Ensure it starts with a letter
-    if !service_name.chars().next().unwrap_or(' ').is_alphabetic() {
-        service_name.insert(0, 'a'); // Prepend 'a' if it doesn't start with a letter
-    }
-
-    // Truncate to meet Kubernetes' max DNS-1035 label length (63 characters)
-    if service_name.len() > 63 {
-        service_name = service_name[..63].to_string();
-    }
-
-    Ok(ServiceName(service_name))
 }

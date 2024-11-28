@@ -72,6 +72,22 @@ impl RecordMetadata {
         self.change_log.insert(log_entry, now);
     }
 
+    // Mark record as inactive
+    pub fn mark_inactive(&mut self, modifier: &str) {
+        let now = Utc::now().timestamp_millis();
+        self.active = false;
+        let log_entry = format!("Marked as inactive by {}", modifier);
+        self.change_log.insert(log_entry, now);
+    }
+
+    // Mark record as deprecated
+    pub fn mark_deprecated(&mut self, modifier: &str) {
+        let now = Utc::now().timestamp_millis();
+        self.deprecated = true;
+        let log_entry = format!("Marked as deprecated by {}", modifier);
+        self.change_log.insert(log_entry, now);
+    }
+
     // Add tag to record
     pub fn add_tag(&mut self, tag: &str) {
         self.tags.push(tag.to_string());
