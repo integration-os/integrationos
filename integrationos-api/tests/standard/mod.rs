@@ -102,10 +102,6 @@ fn test_json_connection_model_schema() {
         record_metadata: RecordMetadata::test(),
     };
 
-    assert!(
-        checker.check::<ConnectionModelSchema>(&connection_model_schema, CheckType::Json)
-    );
-    assert!(
-        checker.check::<ConnectionModelSchema>(&connection_model_schema, CheckType::Bson)
-    );
+    assert!(checker.check::<ConnectionModelSchema>(&connection_model_schema, CheckType::Json));
+    assert!(checker.check::<ConnectionModelSchema>(&connection_model_schema, CheckType::Bson));
 }
