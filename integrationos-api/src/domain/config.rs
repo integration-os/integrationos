@@ -7,9 +7,6 @@ use std::{
 };
 use strum::{AsRefStr, EnumString};
 
-/// This is used to keep the CLI and the API in sync
-pub const API_VERSION: &str = "1.0.0";
-
 #[derive(Envconfig, Clone)]
 pub struct ConnectionsConfig {
     #[envconfig(from = "WORKER_THREADS")]

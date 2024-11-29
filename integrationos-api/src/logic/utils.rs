@@ -1,4 +1,3 @@
-use crate::domain::API_VERSION;
 use axum::{extract::Path, response::IntoResponse, Json};
 use http::StatusCode;
 use integrationos_domain::{prefix::IdPrefix, Id, IntegrationOSError};
@@ -26,5 +25,8 @@ pub async fn generate_id(
 }
 
 pub async fn get_version() -> impl IntoResponse {
-    (StatusCode::OK, Json(json!({"version": API_VERSION})))
+    (
+        StatusCode::OK,
+        Json(json!({"version": env!("CARGO_PKG_VERSION")})),
+    )
 }
