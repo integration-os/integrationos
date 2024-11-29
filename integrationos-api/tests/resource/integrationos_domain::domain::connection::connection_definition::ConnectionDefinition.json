@@ -1,0 +1,72 @@
+{
+  "_id": "conn_def::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "platformVersion": "platform-version",
+  "platform": "platform",
+  "status": "Alpha",
+  "key": "key",
+  "type": "api",
+  "name": "name",
+  "authSecrets": [
+    {
+      "name": "name"
+    }
+  ],
+  "authMethod": {
+    "type": "BasicAuth",
+    "username": "username",
+    "password": "password"
+  },
+  "multiEnv": true,
+  "frontend": {
+    "spec": {
+      "title": "title",
+      "description": "description",
+      "platform": "platform",
+      "category": "category",
+      "image": "image",
+      "tags": [
+        "tag1",
+        "tag2"
+      ],
+      "helperLink": "helper-link",
+      "markdown": "markdown"
+    },
+    "connectionForm": {
+      "name": "name",
+      "description": "description",
+      "formData": [
+        {
+          "name": "name",
+          "type": "type",
+          "label": "label",
+          "placeholder": "placeholder"
+        }
+      ]
+    }
+  },
+  "paths": {
+    "id": "id",
+    "event": "event",
+    "payload": "payload",
+    "timestamp": "timestamp",
+    "secret": "secret",
+    "signature": "signature",
+    "cursor": "cursor"
+  },
+  "settings": {
+    "parseWebhookBody": true,
+    "showSecret": false,
+    "allowCustomEvents": false,
+    "oauth": false
+  },
+  "hidden": true,
+  "testConnection": "conn::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "createdAt": 0,
+  "updatedAt": 0,
+  "updated": false,
+  "version": "1.0.0",
+  "lastModifiedBy": "system",
+  "deleted": false,
+  "active": true,
+  "deprecated": false
+}

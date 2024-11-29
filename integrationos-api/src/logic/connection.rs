@@ -75,6 +75,7 @@ pub struct DatabaseConnectionSecret {
     pub value: DatabaseConnectionConfig,
     pub namespace: String,
     pub service_name: String,
+    pub connection_id: Id,
 }
 
 async fn test_connection(
@@ -373,6 +374,7 @@ async fn generate_k8s_specs_and_secret(
     connection_config: &ConnectionDefinition,
     payload: &CreateConnectionPayload,
     auth_form_data: &Value,
+    // emit_url: &str,
 ) -> Result<
     (
         Value,
@@ -391,6 +393,8 @@ async fn generate_k8s_specs_and_secret(
                 .chain(vec![
                     ("WORKER_THREADS".into(), "1".into()),
                     ("INTERNAL_SERVER_ADDRESS".into(), "0.0.0.0:5005".into()),
+                    ("CONNECTION_ID".into(), connection_id.to_string()),
+                    ("EMIT_URL".into(), state.config.emit_url.clone()),
                     (
                         "DATABASE_CONNECTION_TYPE".into(),
                         connection_config.platform.clone(),
@@ -419,6 +423,7 @@ async fn generate_k8s_specs_and_secret(
                 value: database_connection_config,
                 service_name: service_name.to_string(),
                 namespace: namespace.to_string(),
+                connection_id: *connection_id,
             };
 
             let service = ServiceSpecParams {

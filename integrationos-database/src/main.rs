@@ -26,7 +26,23 @@ fn main() -> Result<()> {
         .block_on(async move {
             match config.database_connection_type {
                 DatabaseConnectionType::PostgreSql => {
-                    PostgresDatabaseConnection::init(&config).await?.run().await
+                    match PostgresDatabaseConnection::init(&config).await {
+                        Ok(server) => {
+                            if let Err(e) = server.run().await {
+                                PostgresDatabaseConnection::kill(&config).await?;
+                                return Err(anyhow::anyhow!("Could not run server: {e}"));
+                            }
+
+                            Ok(())
+                        }
+                        Err(e) => {
+                            tracing::error!("Could not initialize storage: {e}");
+
+                            PostgresDatabaseConnection::kill(&config).await?;
+
+                            Err(anyhow::anyhow!("Could not initialize storage: {e}"))
+                        }
+                    }
                 }
             }
         })

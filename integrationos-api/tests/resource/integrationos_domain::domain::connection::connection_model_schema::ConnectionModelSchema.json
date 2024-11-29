@@ -1,0 +1,42 @@
+{
+  "_id": "conn_mod_sch::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "platformId": "plf::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "platformPageId": "plf_pg::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "connectionPlatform": "connection-platform",
+  "connectionDefinitionId": "conn_def::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "platformVersion": "platform-version",
+  "key": "key",
+  "modelName": "model-name",
+  "sample": null,
+  "schema": {
+    "type": "",
+    "properties": {},
+    "required": null,
+    "path": null
+  },
+  "paths": {
+    "id": "id",
+    "createdAt": "createdAt",
+    "updatedAt": "updatedAt"
+  },
+  "mapping": {
+    "fromCommonModel": "from-common-model",
+    "toCommonModel": "to-common-model",
+    "commonModelName": "common-model-name",
+    "commonModelId": "cm::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+    "unmappedFields": {
+      "type": "",
+      "properties": {},
+      "required": null,
+      "path": null
+    }
+  },
+  "createdAt": 0,
+  "updatedAt": 0,
+  "updated": false,
+  "version": "1.0.0",
+  "lastModifiedBy": "system",
+  "deleted": false,
+  "active": true,
+  "deprecated": false
+}

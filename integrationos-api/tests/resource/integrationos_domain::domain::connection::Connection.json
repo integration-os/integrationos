@@ -1,0 +1,50 @@
+{
+  "_id": "conn::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "platformVersion": "platform-version",
+  "connectionDefinitionId": "conn_def::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "type": {
+    "api": {}
+  },
+  "key": "key",
+  "group": "group",
+  "name": "name",
+  "environment": "live",
+  "platform": "platform",
+  "secretsServiceId": "secrets-service-id",
+  "eventAccessId": "evt_ac::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "accessKey": "access-key",
+  "identity": "identity",
+  "identityType": "user",
+  "settings": {
+    "parseWebhookBody": true,
+    "showSecret": false,
+    "allowCustomEvents": false,
+    "oauth": false
+  },
+  "throughput": {
+    "key": "throughput-key",
+    "limit": 100
+  },
+  "ownership": {
+    "buildableId": "owner-id",
+    "clientId": "client-id",
+    "organizationId": "organization-id",
+    "projectId": "project-id",
+    "userId": "user-id"
+  },
+  "oauth": {
+    "enabled": {
+      "connection_oauth_definition_id": "conn_oauth_def::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+      "expires_in": 100,
+      "expires_at": 100
+    }
+  },
+  "createdAt": 0,
+  "updatedAt": 0,
+  "updated": false,
+  "version": "1.0.0",
+  "lastModifiedBy": "system",
+  "deleted": false,
+  "active": true,
+  "deprecated": false
+}

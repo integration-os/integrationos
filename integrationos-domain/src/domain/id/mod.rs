@@ -39,6 +39,17 @@ impl Id {
     pub fn new_with_uuid(prefix: IdPrefix, time: DateTime<Utc>, uuid: Uuid) -> Self {
         Self { prefix, time, uuid }
     }
+
+    pub fn test(prefix: IdPrefix) -> Self {
+        Self {
+            prefix,
+            time: Utc
+                .timestamp_opt(0, 0)
+                .single()
+                .expect("Failed to get UTC time"),
+            uuid: Uuid::nil(),
+        }
+    }
 }
 
 impl Display for Id {
