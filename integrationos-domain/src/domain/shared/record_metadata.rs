@@ -94,7 +94,10 @@ impl RecordMetadata {
     }
 
     pub fn test() -> Self {
-        let epoch = Utc.timestamp_opt(0, 0).single().expect("Failed to get UTC time");
+        let epoch = Utc
+            .timestamp_opt(0, 0)
+            .single()
+            .expect("Failed to get UTC time");
         Self {
             created_at: epoch.timestamp_millis(),
             updated_at: epoch.timestamp_millis(),
