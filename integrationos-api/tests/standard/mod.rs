@@ -134,7 +134,7 @@ fn test_json_common_enum() {
 
 #[test]
 fn test_json_common_model() {
-    let checker = JsonCheckerImpl::default().r#override();
+    let checker = JsonCheckerImpl::default();
 
     let common_model = CommonModel {
         id: Id::test(IdPrefix::CommonModel),
