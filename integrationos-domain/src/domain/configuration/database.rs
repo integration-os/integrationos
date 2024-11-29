@@ -85,6 +85,8 @@ pub struct DatabaseConnectionConfig {
     pub postgres_config: PostgresConfig,
     #[envconfig(from = "DATABASE_CONNECTION_TYPE", default = "postgres")]
     pub database_connection_type: DatabaseConnectionType,
+    #[envconfig(from = "CONNECTION_ID")]
+    pub connection_id: String,
 }
 
 impl DatabaseConnectionConfig {
@@ -106,10 +108,18 @@ impl DatabaseConnectionConfig {
             })?);
         }
 
+        if let Some(connection_id) = other.get("CONNECTION_ID") {
+            self.connection_id = connection_id.to_string();
+        }
+
         if let Some(address) = other.get("INTERNAL_SERVER_ADDRESS") {
             self.address = address.parse::<SocketAddr>().map_err(|e| {
                 ApplicationError::bad_request(&format!("Invalid address: {}", e), None)
             })?;
+        }
+
+        if let Some(emit_url) = other.get("EMIT_URL") {
+            self.emit_url = emit_url.to_string();
         }
 
         if let Some(environment) = other.get("ENVIRONMENT") {
@@ -213,6 +223,7 @@ impl Default for DatabaseConnectionConfig {
             environment: Environment::Development,
             postgres_config: PostgresConfig::default(),
             database_connection_type: DatabaseConnectionType::PostgreSql,
+            connection_id: "connection-id".to_string(),
         }
     }
 }
