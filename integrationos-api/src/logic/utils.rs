@@ -1,7 +1,9 @@
-use axum::{extract::Path, Json};
+use crate::domain::API_VERSION;
+use axum::{extract::Path, response::IntoResponse, Json};
 use http::StatusCode;
 use integrationos_domain::{prefix::IdPrefix, Id, IntegrationOSError};
 use serde::Serialize;
+use serde_json::json;
 
 #[derive(Serialize)]
 pub struct GenerateIdResponse {
@@ -21,4 +23,8 @@ pub async fn generate_id(
         StatusCode::OK,
         Json(GenerateIdResponse { id: id.to_string() }),
     ))
+}
+
+pub async fn get_version() -> impl IntoResponse {
+    (StatusCode::OK, Json(json!({"version": API_VERSION})))
 }
