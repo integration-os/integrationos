@@ -1,0 +1,33 @@
+{
+  "_id": "cm::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "name": "common-model-name",
+  "fields": [
+    {
+      "name": "field-name",
+      "datatype": "String",
+      "description": "field-description",
+      "required": true
+    },
+    {
+      "name": "field-name-2",
+      "datatype": "Number",
+      "description": "field-description-2",
+      "required": false
+    }
+  ],
+  "sample": {
+    "field-name": "field-value",
+    "field-name-2": 123
+  },
+  "primary": true,
+  "category": "category",
+  "interface": {},
+  "createdAt": 0,
+  "updatedAt": 0,
+  "updated": false,
+  "version": "1.0.0",
+  "lastModifiedBy": "system",
+  "deleted": false,
+  "active": true,
+  "deprecated": false
+}

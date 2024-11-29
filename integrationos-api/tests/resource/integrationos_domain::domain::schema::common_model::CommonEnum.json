@@ -1,0 +1,16 @@
+{
+  "_id": "ce::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "name": "common-enum-name",
+  "options": [
+    "option1",
+    "option2"
+  ],
+  "createdAt": 0,
+  "updatedAt": 0,
+  "updated": false,
+  "version": "1.0.0",
+  "lastModifiedBy": "system",
+  "deleted": false,
+  "active": true,
+  "deprecated": false
+}
