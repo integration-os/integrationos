@@ -1,0 +1,50 @@
+{
+  "_id": "conn_mod_def::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "connectionPlatform": "connection-platform",
+  "connectionDefinitionId": "conn_def::AAAAAAAAAAA::AAAAAAAAAAAAAAAAAAAAAA",
+  "platformVersion": "platform-version",
+  "key": "key",
+  "title": "title",
+  "name": "name",
+  "modelName": "model-name",
+  "action": "GET",
+  "actionName": "getOne",
+  "baseUrl": "base-url",
+  "path": "path",
+  "authMethod": {
+    "type": "OAuth"
+  },
+  "content": "json",
+  "schemas": {
+    "headers": null,
+    "queryParams": null,
+    "pathParams": null,
+    "body": null
+  },
+  "samples": {
+    "queryParams": null,
+    "pathParams": null
+  },
+  "responses": [],
+  "testConnectionStatus": {
+    "lastTestedAt": 0,
+    "state": "untested"
+  },
+  "testConnectionPayload": null,
+  "isDefaultCrudMapping": true,
+  "mapping": {
+    "action": "getOne",
+    "commonModelName": "common-model-name",
+    "fromCommonModel": "from-common-model",
+    "toCommonModel": "to-common-model"
+  },
+  "createdAt": 0,
+  "updatedAt": 0,
+  "updated": false,
+  "version": "1.0.0",
+  "lastModifiedBy": "system",
+  "deleted": false,
+  "active": true,
+  "deprecated": false,
+  "supported": false
+}

@@ -92,4 +92,17 @@ impl RecordMetadata {
     pub fn add_tag(&mut self, tag: &str) {
         self.tags.push(tag.to_string());
     }
+
+    pub fn test() -> Self {
+        let epoch = Utc.timestamp_opt(0, 0).single().expect("Failed to get UTC time");
+        Self {
+            created_at: epoch.timestamp_millis(),
+            updated_at: epoch.timestamp_millis(),
+            updated: false,
+            version: Version::new(1, 0, 0),
+            last_modified_by: "system".to_string(),
+            deleted: false,
+            ..Default::default()
+        }
+    }
 }
