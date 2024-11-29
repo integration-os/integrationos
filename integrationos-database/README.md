@@ -45,6 +45,8 @@ pub struct DatabaseConnectionConfig {
     pub postgres_config: PostgresConfig,
     #[envconfig(from = "DATABASE_CONNECTION_TYPE", default = "postgres")]
     pub database_connection_type: DatabaseConnectionType,
+    #[envconfig(from = "CONNECTION_ID")]
+    pub connection_id: String
 }
 ```
 

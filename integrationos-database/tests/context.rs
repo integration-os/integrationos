@@ -3,6 +3,8 @@ use http::{Method, StatusCode};
 use integrationos_database::{
     domain::postgres::PostgresDatabaseConnection, service::init::Initializer,
 };
+use integrationos_domain::prefix::IdPrefix;
+use integrationos_domain::Id;
 use integrationos_domain::{database::DatabaseConnectionConfig, IntegrationOSError, InternalError};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
@@ -60,6 +62,7 @@ impl TestServer {
                 "DATABASE_CONNECTION_TYPE".to_string(),
                 "postgresql".to_string(),
             ),
+            ("CONNECTION_ID", Id::now(IdPrefix::Connection).to_string())
             ("POSTGRES_USERNAME".to_string(), "postgres".to_string()),
             ("POSTGRES_PASSWORD".to_string(), "postgres".to_string()),
             ("POSTGRES_HOST".to_string(), "localhost".to_string()),
