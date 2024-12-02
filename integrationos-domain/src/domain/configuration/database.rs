@@ -71,7 +71,7 @@ impl Display for DatabaseConfig {
     }
 }
 
-#[derive(Envconfig, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Envconfig, Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct DatabaseConnectionConfig {
     #[envconfig(from = "WORKER_THREADS")]
     pub worker_threads: Option<usize>,
@@ -173,6 +173,12 @@ impl DatabaseConnectionConfig {
             self.address.to_string(),
         );
         map.insert("ENVIRONMENT".to_string(), self.environment.to_string());
+        map.insert(
+            "DATABASE_CONNECTION_TYPE".to_string(),
+            self.database_connection_type.as_ref().into(),
+        );
+        map.insert("EMIT_URL".to_string(), self.emit_url.clone());
+        map.insert("CONNECTION_ID".to_string(), self.connection_id.clone());
         map.insert(
             "POSTGRES_USERNAME".to_string(),
             self.postgres_config.postgres_username.clone(),
