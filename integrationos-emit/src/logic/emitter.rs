@@ -8,6 +8,7 @@ use crate::{
     stream::EventStreamTopic,
 };
 use axum::{extract::State, middleware::from_fn, routing::post, Extension, Json, Router};
+use chrono::Utc;
 use http::HeaderName;
 use integrationos_domain::{
     prefix::IdPrefix, record_metadata::RecordMetadata, ApplicationError, Id, IntegrationOSError,
@@ -57,6 +58,7 @@ pub async fn emit(
     } else {
         let idempotency = Idempotency {
             key: idempotency_key.clone(),
+            date: Utc::now(),
             metadata: RecordMetadata::default(),
         };
 

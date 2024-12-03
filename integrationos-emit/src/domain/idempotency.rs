@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use integrationos_domain::{record_metadata::RecordMetadata, Id};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -29,6 +30,9 @@ pub struct Idempotency {
     /// the box and we can use it as a conflict generation key
     #[serde(rename = "_id")]
     pub key: IdempotencyKey,
+    /// Used for the TTL index, MongoDB uses BSON DateTime
+    /// hence millisecond (number) can't be used
+    pub date: DateTime<Utc>,
     #[serde(flatten)]
     pub metadata: RecordMetadata,
 }
