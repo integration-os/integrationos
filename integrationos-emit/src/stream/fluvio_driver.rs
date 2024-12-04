@@ -110,7 +110,13 @@ impl FluvioDriverImpl {
                     )
                 })?;
 
-                let ext = ConsumerConfigExtBuilder::default()
+                let mut ext = ConsumerConfigExtBuilder::default();
+
+                if let Some(partition) = config.partition() {
+                    ext = ext.partition(partition).to_owned();
+                }
+
+                let ext = ext
                     .topic(consumer_topic)
                     .offset_start(offset)
                     .offset_consumer(consumer_id)
@@ -142,7 +148,13 @@ impl FluvioDriverImpl {
 
             let consumer_id = format!("{consumer_id}-dlq");
 
-            let ext = ConsumerConfigExtBuilder::default()
+            let mut ext = ConsumerConfigExtBuilder::default();
+
+            if let Some(partition) = config.partition() {
+                ext = ext.partition(partition).to_owned();
+            }
+
+            let ext = ext
                 .topic(&topic)
                 .offset_start(Offset::beginning())
                 .offset_consumer(consumer_id)
@@ -179,6 +191,20 @@ impl FluvioDriverImpl {
         // We don't really need it but we may use a different approach if something comes out of https://github.com/infinyon/fluvio/issues/4267#issuecomment-2489354987
         let count = AtomicU64::new(0);
         let is_processing = AtomicBool::new(true);
+
+        if !consumer.ext.partition.is_empty() {
+            tracing::info!(
+                "Consuming events from topic {} partition {}",
+                target.as_ref(),
+                consumer
+                    .ext
+                    .partition
+                    .iter()
+                    .map(u32::to_string)
+                    .collect::<Vec<_>>()
+                    .join("-")
+            );
+        }
 
         loop {
             is_processing.store(false, Ordering::SeqCst);
@@ -333,17 +359,23 @@ impl EventStreamExt for FluvioDriverImpl {
             return Ok(());
         }
 
-        ctx.app_stores
+        let insert_result = ctx
+            .app_stores
             .deduplication
             .create_one(&Deduplication {
                 entity_id: event.entity_id,
                 metadata: event.metadata.clone(),
             })
-            .await
-            .map_err(|e| {
-                tracing::error!("Could not create deduplication record: {e}");
-                InternalError::unknown("Could not create deduplication record", None)
-            })?;
+            .await;
+
+        if let Err(e) = insert_result {
+            tracing::error!("Could not create deduplication record: {e}");
+            if e.is_unique_error() {
+                return Ok(());
+            } else {
+                return Err(e);
+            }
+        }
 
         match target {
             EventStreamTopic::Target => {
