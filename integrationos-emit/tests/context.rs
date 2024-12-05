@@ -71,6 +71,11 @@ impl TestServer {
             ("CONTEXT_DATABASE_NAME".to_string(), database_name.clone()),
             ("EVENT_DATABASE_URL".to_string(), database_uri.clone()),
             ("EVENT_DATABASE_NAME".to_string(), database_name.clone()),
+            (
+                "STATEFULSET_POD_NAME".to_string(),
+                "event-emit-0".to_string(),
+            ),
+            ("PARTITION_COUNT".to_string(), "1".to_string()),
         ];
 
         let mock_server = MockServer::new_async().await;
