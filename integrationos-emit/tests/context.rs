@@ -76,6 +76,7 @@ impl TestServer {
                 "event-emit-0".to_string(),
             ),
             ("PARTITION_COUNT".to_string(), "1".to_string()),
+            ("ENVIRONMENT".to_string(), "test".to_string()),
         ];
 
         let mock_server = MockServer::new_async().await;
@@ -106,7 +107,7 @@ impl TestServer {
         let config = EmitterConfig::init_from_hashmap(&HashMap::from_iter(config))
             .expect("Failed to initialize storage config");
 
-        let metric = Arc::new(MetricsLayer::default());
+        let metric = Arc::new(MetricsLayer::noop());
 
         let server = Server::init(config.clone(), metric)
             .await

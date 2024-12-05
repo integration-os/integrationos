@@ -29,6 +29,20 @@ pub struct MetricsRegistry {
     dlq_success: Counter,
 }
 
+impl MetricsRegistry {
+    pub fn noop() -> Self {
+        Self {
+            event_count: Counter::noop(),
+            event_errors: Counter::noop(),
+            event_success: Counter::noop(),
+            event_duration: Histogram::noop(),
+            dlq_count: Counter::noop(),
+            dlq_errors: Counter::noop(),
+            dlq_success: Counter::noop(),
+        }
+    }
+}
+
 impl Default for MetricsRegistry {
     fn default() -> Self {
         Self {
