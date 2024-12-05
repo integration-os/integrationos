@@ -4,6 +4,7 @@ use crate::{
         deduplication::Deduplication,
         event::{EventEntity, ScheduledEvent},
         idempotency::Idempotency,
+        metrics::MetricsLayer,
     },
     router,
     stream::{
@@ -35,6 +36,7 @@ pub struct AppState {
     pub config: EmitterConfig,
     pub app_stores: AppStores,
     pub http_client: ClientWithMiddleware,
+    pub metrics: Arc<MetricsLayer>,
     pub event_stream: Arc<dyn EventStreamExt + Sync + Send>,
 }
 
@@ -47,7 +49,7 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn init(config: EmitterConfig) -> AnyhowResult<Self> {
+    pub async fn init(config: EmitterConfig, metric: Arc<MetricsLayer>) -> AnyhowResult<Self> {
         let client = Client::with_uri_str(&config.db_config.event_db_url).await?;
         let database = client.database(&config.db_config.event_db_name);
 
@@ -94,6 +96,7 @@ impl Server {
         let state = Arc::new(AppState {
             config: config.clone(),
             app_stores,
+            metrics: metric,
             http_client,
             event_stream: Arc::clone(&event_stream),
         });

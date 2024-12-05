@@ -7,6 +7,7 @@ edition = "2021"
 anyhow.workspace = true
 async-trait.workspace = true
 axum.workspace = true
+axum-prometheus = "0.7"
 chrono.workspace = true
 dotenvy.workspace = true
 envconfig.workspace = true

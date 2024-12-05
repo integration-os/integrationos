@@ -2,12 +2,14 @@ use envconfig::Envconfig;
 use http::{Method, StatusCode};
 use integrationos_domain::{IntegrationOSError, InternalError, Unit};
 use integrationos_emit::domain::config::EmitterConfig;
+use integrationos_emit::domain::metrics::MetricsLayer;
 use integrationos_emit::server::Server;
 use mockito::{Server as MockServer, ServerGuard};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::error::Error;
 use std::fmt::Debug;
+use std::sync::Arc;
 use std::{collections::HashMap, sync::OnceLock, time::Duration};
 use testcontainers_modules::{
     mongo::Mongo,
@@ -99,7 +101,9 @@ impl TestServer {
         let config = EmitterConfig::init_from_hashmap(&HashMap::from_iter(config))
             .expect("Failed to initialize storage config");
 
-        let server = Server::init(config.clone())
+        let metric = Arc::new(MetricsLayer::default());
+
+        let server = Server::init(config.clone(), metric)
             .await
             .expect("Failed to initialize storage");
 

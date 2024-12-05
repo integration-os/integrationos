@@ -1,5 +1,6 @@
 use super::{EventStreamExt, EventStreamTopic};
 use crate::{
+    algebra::metrics::{MetricExt, MetricsRegistry},
     domain::{
         config::{EmitterConfig, EventStreamConfig},
         deduplication::Deduplication,
@@ -44,6 +45,7 @@ pub struct FluvioDriverImpl {
     pub dlq_consumer: ConsumerConfig,
     pub tgt_producer: TargetProducer,
     pub dlq_producer: DlqProducer,
+    metrics: MetricsRegistry,
 }
 
 impl FluvioDriverImpl {
@@ -110,14 +112,9 @@ impl FluvioDriverImpl {
                     )
                 })?;
 
-                let mut ext = ConsumerConfigExtBuilder::default();
-
-                if let Some(partition) = config.partition() {
-                    ext = ext.partition(partition).to_owned();
-                }
-
-                let ext = ext
+                let ext = ConsumerConfigExtBuilder::default()
                     .topic(consumer_topic)
+                    .partition(config.partition()?)
                     .offset_start(offset)
                     .offset_consumer(consumer_id)
                     .offset_strategy(OffsetManagementStrategy::Manual)
@@ -148,14 +145,9 @@ impl FluvioDriverImpl {
 
             let consumer_id = format!("{consumer_id}-dlq");
 
-            let mut ext = ConsumerConfigExtBuilder::default();
-
-            if let Some(partition) = config.partition() {
-                ext = ext.partition(partition).to_owned();
-            }
-
-            let ext = ext
+            let ext = ConsumerConfigExtBuilder::default()
                 .topic(&topic)
+                .partition(config.partition()?)
                 .offset_start(Offset::beginning())
                 .offset_consumer(consumer_id)
                 .offset_strategy(OffsetManagementStrategy::Manual)
@@ -174,6 +166,7 @@ impl FluvioDriverImpl {
             dlq_consumer,
             tgt_producer,
             dlq_producer,
+            metrics: MetricsRegistry::default(),
         })
     }
 
@@ -230,7 +223,9 @@ impl FluvioDriverImpl {
                         Some(Ok(record)) => {
                             let event: EventEntity = serde_json::from_slice(record.get_value()).context("Could not deserialize event")?;
                             is_processing.store(true, Ordering::SeqCst);
-                            self.process(ctx, target, &event).await?;
+                            self.process(ctx, target, &event).await.inspect_err(|_| {
+                                // ctx.metrics.errored(1);
+                            })?;
                             is_processing.store(false, Ordering::SeqCst);
                         },
                         Some(Err(err)) => return Err(InternalError::io_err(&format!("Error consuming record: {err}"), None)),
@@ -258,13 +253,26 @@ impl FluvioDriverImpl {
 
 #[async_trait]
 impl EventStreamExt for FluvioDriverImpl {
-    /**
-     * Publishes an event to the specified topic
-     * @param event - The event to publish
-     * @param target - The target topic of the event
-     *
-     * It serializes the event using serde_json and sends it to the specified topic.
-     */
+    /// Publishes an event to the specified topic.
+    ///
+    /// # Parameters
+    /// - `event`: The event to publish, containing its metadata, payload, and associated data.
+    /// - `target`: The target topic to which the event should be published, either `Target` or `Dlq`.
+    ///
+    /// # Behavior
+    /// This method performs the following steps:
+    /// 1. Serializes the event into a binary payload using `serde_json`.
+    /// 2. Sends the serialized payload to the specified topic (`Target` or `DLQ`) using the appropriate producer.
+    ///
+    /// The method ensures proper error handling for serialization and publishing, logging relevant errors and returning an appropriate result.
+    ///
+    /// # Returns
+    /// - `Ok(Id)`: The `entity_id` of the published event, indicating successful publication.
+    /// - `Err(IntegrationOSError)`: If an error occurs during serialization or while sending the event to the target.
+    ///
+    /// # Errors
+    /// - **Serialization Error**: If the event cannot be serialized into a JSON payload.
+    /// - **Publishing Error**: If the Fluvio producer fails to send the event to the target topic.
     async fn publish(
         &self,
         event: EventEntity,
@@ -296,15 +304,26 @@ impl EventStreamExt for FluvioDriverImpl {
         Ok(event.entity_id)
     }
 
-    /**
-     * Consumes events from the specified topic
-     * @param target - The target topic of the event
-     * @param subsys - The subsystem handle
-     * @param ctx - The application state
-     *
-     * It consumes events from the specified topic using the consumer stream.
-     * It processes each event and updates the event outcome in the events collection.
-     */
+    /// Consumes events from the specified topic and processes them.
+    ///
+    /// # Parameters
+    /// - `target`: The target event stream topic to consume from, either the main target or the dead-letter queue (DLQ).
+    /// - `subsys`: A handle to the subsystem used for inter-process communication or coordination.
+    /// - `ctx`: A reference to the application state, providing access to shared resources and configurations.
+    ///
+    /// # Behavior
+    /// This method creates a consumer stream for the specified topic using the appropriate consumer configuration.
+    /// It processes each event from the stream and updates the event outcome in the events collection. The processing
+    /// logic is delegated to the `consume_topic` method, which handles event-specific tasks.
+    ///
+    /// # Returns
+    /// - `Ok(Unit)`: If the events are consumed and processed successfully.
+    /// - `Err(IntegrationOSError)`: If an error occurs during stream consumption or processing.
+    ///
+    /// # Errors
+    /// This method returns an error if:
+    /// - There is an issue initializing the consumer stream.
+    /// - An error occurs while processing events in the topic.
     async fn consume(
         &self,
         target: EventStreamTopic,
@@ -321,103 +340,100 @@ impl EventStreamExt for FluvioDriverImpl {
             .consumer_with_config(consumer.ext.clone())
             .await?;
 
-        // match
         self.consume_topic(target, &subsys, ctx, consumer, &mut stream)
             .await
     }
 
-    /**
-     * Processes an event from the consumer stream
-     * @param ctx - The application state
-     * @param target - The target topic of the event
-     * @param event - The event to process
-     *
-     * It first checks if the event is already processed, if so, it returns without processing it.
-     * If the event is not processed, it executes the side effect and updates the event outcome.
-     *
-     * Finally, it updates the event outcome in the events collection if the side effect was executed at least once.
-     */
+    /// Processes an individual event from the consumer stream.
+    ///
+    /// # Parameters
+    /// - `ctx`: A reference to the application state, which provides access to shared resources, configurations, and storage.
+    /// - `target`: The event stream topic that the event belongs to, either `Target` or `Dlq`.
+    /// - `event`: The event to be processed, containing its metadata, status, and logic for side effects.
+    ///
+    /// # Behavior
+    /// This method performs the following steps:
+    /// 1. **Deduplication Check**: Verifies if the event has already been processed by checking the deduplication store. If so, the method returns early.
+    /// 2. **Deduplication Record Creation**: If the event is not processed, it creates a deduplication record to prevent re-processing.
+    /// 3. **Event Processing**:
+    ///     - Executes the event's side effect logic.
+    ///     - Updates the event's outcome in the events store based on the success or failure of the side effect.
+    /// 4. **Error Handling**:
+    ///     - If processing fails, the deduplication record is removed, and the event is published to the DLQ with updated retry metadata.
+    ///     - If the event is in the DLQ and has exceeded the maximum allowed retries, it marks the event as permanently failed.
+    ///
+    /// The method distinguishes between events in the main `Target` topic and the `DLQ` (Dead Letter Queue), handling them differently based on their context and retry state.
+    ///
+    /// # Returns
+    /// - `Ok(Unit)`: If the event is successfully processed or deemed complete (even if moved to the DLQ).
+    /// - `Err(IntegrationOSError)`: If a critical error occurs during processing or storage operations.
+    ///
+    /// # Errors
+    /// - Returns an error if there are issues interacting with the deduplication store or the events store.
+    /// - Errors may also occur if publishing to the DLQ or executing side effects fails critically.
     async fn process(
         &self,
         ctx: &AppState,
         target: EventStreamTopic,
         event: &EventEntity,
     ) -> Result<Unit, IntegrationOSError> {
-        let is_processed = ctx
-            .app_stores
-            .deduplication
-            .get_one_by_id(&event.entity_id.to_string())
-            .await
-            .map_err(|e| {
-                tracing::error!("Could not fetch deduplication record: {e}");
-                InternalError::unknown("Could not fetch deduplication record", None)
-            })?
-            .is_some();
+        let task = {
+            let is_processed = ctx
+                .app_stores
+                .deduplication
+                .get_one_by_id(&event.entity_id.to_string())
+                .await
+                .map_err(|e| {
+                    tracing::error!("Could not fetch deduplication record: {e}");
+                    InternalError::unknown("Could not fetch deduplication record", None)
+                })?
+                .is_some();
 
-        if is_processed {
-            tracing::info!("Event with id {} is already processed", event.entity_id);
-            return Ok(());
-        }
-
-        let insert_result = ctx
-            .app_stores
-            .deduplication
-            .create_one(&Deduplication {
-                entity_id: event.entity_id,
-                metadata: event.metadata.clone(),
-            })
-            .await;
-
-        if let Err(e) = insert_result {
-            tracing::error!("Could not create deduplication record: {e}");
-            if e.is_unique_error() {
+            if is_processed {
+                tracing::info!("Event with id {} is already processed", event.entity_id);
                 return Ok(());
-            } else {
-                return Err(e);
             }
-        }
 
-        match target {
-            EventStreamTopic::Target => {
-                ctx.app_stores.events.create_one(event).await.map_err(|e| {
-                    tracing::error!("Could not create event record: {e}");
-                    InternalError::unknown("Could not create event record", None)
-                })?;
+            let insert_result = ctx
+                .app_stores
+                .deduplication
+                .create_one(&Deduplication {
+                    entity_id: event.entity_id,
+                    metadata: event.metadata.clone(),
+                })
+                .await;
 
-                tracing::info!("Event with id {} is ready to be processed", event.entity_id);
-                let result = event
-                    .side_effect(ctx)
-                    .timed(|_, elapsed| {
-                        tracing::info!(
-                            "Side effect for entity id {} took {}ms",
-                            event.entity_id,
-                            elapsed.as_millis()
-                        )
-                    })
-                    .await;
-
-                update_event_outcome(ctx, event, EventStatus::executed()).await?;
-
-                if let Err(e) = result {
-                    tracing::error!("Error processing event: {e}, removing deduplication record");
-                    delete_deduplication_record(ctx, event).await?;
-
-                    let outcome = EventStatus::errored(e.to_string(), 1);
-                    let event = event.with_outcome(outcome.clone());
-
-                    self.publish(event.clone(), EventStreamTopic::Dlq).await?;
-
-                    update_event_outcome(ctx, &event, outcome).await?;
-
+            if let Err(e) = insert_result {
+                tracing::error!("Could not create deduplication record: {e}");
+                if e.is_unique_error() {
                     return Ok(());
+                } else {
+                    return Err(e);
                 }
-
-                update_event_outcome(ctx, event, EventStatus::succeded(event.retries())).await?;
             }
-            EventStreamTopic::Dlq => {
-                tracing::info!("Event with id {} is in DLQ", event.entity_id);
-                if event.retries() <= ctx.config.event_processing_max_retries {
-                    let result = event.side_effect(ctx).await;
+
+            match target {
+                EventStreamTopic::Target => {
+                    ctx.app_stores.events.create_one(event).await.map_err(|e| {
+                        tracing::error!("Could not create event record: {e}");
+                        InternalError::unknown("Could not create event record", None)
+                    })?;
+
+                    tracing::info!("Event with id {} is ready to be processed", event.entity_id);
+                    let result = event
+                        .side_effect(ctx)
+                        .timed(|_, elapsed| {
+                            self.metrics.duration(elapsed);
+
+                            tracing::info!(
+                                "Side effect for entity id {} took {}ms",
+                                event.entity_id,
+                                elapsed.as_millis()
+                            )
+                        })
+                        .await;
+
+                    update_event_outcome(ctx, event, EventStatus::executed()).await?;
 
                     if let Err(e) = result {
                         tracing::error!(
@@ -425,7 +441,7 @@ impl EventStreamExt for FluvioDriverImpl {
                         );
                         delete_deduplication_record(ctx, event).await?;
 
-                        let outcome = EventStatus::errored(e.to_string(), event.retries() + 1);
+                        let outcome = EventStatus::errored(e.to_string(), 1);
                         let event = event.with_outcome(outcome.clone());
 
                         self.publish(event.clone(), EventStreamTopic::Dlq).await?;
@@ -437,22 +453,63 @@ impl EventStreamExt for FluvioDriverImpl {
 
                     update_event_outcome(ctx, event, EventStatus::succeded(event.retries()))
                         .await?;
-                } else {
-                    tracing::info!("Giving up on event with id {}", event.entity_id);
-                    // this is the case where we exhausted the retries, now
-                    // the error is updated and not sent to the target topic
-                    let error = event.error().unwrap_or_default()
-                        + ".\n Exhausted retries, cannot process event";
+                }
+                EventStreamTopic::Dlq => {
+                    tracing::info!("Event with id {} is in DLQ", event.entity_id);
+                    if event.retries() <= ctx.config.event_processing_max_retries {
+                        let result = event.side_effect(ctx).await;
 
-                    update_event_outcome(ctx, event, EventStatus::errored(error, event.retries()))
+                        if let Err(e) = result {
+                            tracing::error!(
+                                "Error processing event: {e}, removing deduplication record"
+                            );
+                            delete_deduplication_record(ctx, event).await?;
+
+                            let outcome = EventStatus::errored(e.to_string(), event.retries() + 1);
+                            let event = event.with_outcome(outcome.clone());
+
+                            self.publish(event.clone(), EventStreamTopic::Dlq).await?;
+
+                            update_event_outcome(ctx, &event, outcome).await?;
+
+                            return Ok(());
+                        }
+
+                        update_event_outcome(ctx, event, EventStatus::succeded(event.retries()))
+                            .await?;
+                    } else {
+                        tracing::info!("Giving up on event with id {}", event.entity_id);
+                        // this is the case where we exhausted the retries, now
+                        // the error is updated and not sent to the target topic
+                        let error = event.error().unwrap_or_default()
+                            + ".\n Exhausted retries, cannot process event";
+
+                        update_event_outcome(
+                            ctx,
+                            event,
+                            EventStatus::errored(error, event.retries()),
+                        )
                         .await?;
 
-                    // TODO: create an alert on grafana
+                        // TODO: create an alert on grafana
+                    }
                 }
             }
-        }
 
-        Ok(())
+            // ctx.metrics.succeeded(1);
+            Ok(())
+        };
+
+        match task {
+            Ok(_) => {
+                self.metrics.succeeded(1, target);
+                Ok(())
+            }
+            Err(e) => {
+                self.metrics.errored(1, target);
+                Err(e)
+            }
+        }
     }
 }
 
