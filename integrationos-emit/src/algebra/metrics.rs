@@ -20,7 +20,7 @@ pub trait MetricExt<Exporter> {
 }
 
 pub struct MetricsRegistry {
-    event_count: Counter, // Replace `Counter` with the appropriate type from your metrics library
+    event_count: Counter,
     event_errors: Counter,
     event_success: Counter,
     event_duration: Histogram,
