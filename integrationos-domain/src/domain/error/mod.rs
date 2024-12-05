@@ -1139,6 +1139,13 @@ impl IntegrationOSError {
         StatusCode::from(self).as_u16()
     }
 
+    pub fn is_unique_error(&self) -> bool {
+        match self {
+            IntegrationOSError::Internal(InternalError::UniqueFieldViolation { .. }) => true,
+            _ => false,
+        }
+    }
+
     fn internal(internal: InternalError) -> Self {
         IntegrationOSError::Internal(internal)
     }

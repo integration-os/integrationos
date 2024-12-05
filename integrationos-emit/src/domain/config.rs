@@ -1,5 +1,6 @@
 use crate::stream::EventStreamProvider;
 use envconfig::Envconfig;
+use fluvio::dataplane::types::PartitionId;
 use integrationos_domain::{
     cache::CacheConfig,
     {database::DatabaseConfig, environment::Environment},
@@ -51,6 +52,8 @@ pub struct EmitterConfig {
         default = "2thZ2UiOnsibmFtZSI6IlN0YXJ0dXBsa3NoamRma3NqZGhma3NqZGhma3NqZG5jhYtggfaP9ubmVjdGlvbnMiOjUwMDAwMCwibW9kdWxlcyI6NSwiZW5kcG9pbnRzIjo3b4e05e2-f050-401f-9822-44f43f71753c"
     )]
     pub jwt_secret: String,
+    #[envconfig(from = "STATEFUL_SET_POD_NAME")]
+    pub stateful_set_pod_name: Option<String>,
     #[envconfig(
         from = "EVENT_CALLBACK_URL",
         default = "http://localhost:3005/v1/event-callbacks"
@@ -62,6 +65,28 @@ pub struct EmitterConfig {
     pub cache: CacheConfig,
     #[envconfig(nested = true)]
     pub db_config: DatabaseConfig,
+}
+
+impl EmitterConfig {
+    /// Returns the partition id to consume from, beware that this assumes several things:
+    /// 1. The pod name is in the format of `topic-partition-id` (for example in a statefulset)
+    /// 2. Each pod will now have a 1-1 mapping to a partition
+    /// 3. It'll read the same partition for the DLQ and the main topic, which means that the DLQ
+    ///    and main topic will have the same amount of partitions.
+    ///
+    /// ## Warning
+    /// This is a very brittle assumption, and should be revisited if we ever have a more complex
+    /// setup or until this gets resolved: https://github.com/infinyon/fluvio/issues/760
+    pub fn partition(&self) -> Option<PartitionId> {
+        let pod_name = self.stateful_set_pod_name.as_ref()?;
+
+        if let Some((_, partition_id)) = pod_name.rsplit_once('-') {
+            let partition_id = PartitionId::from_str(partition_id).ok()?;
+            Some(partition_id)
+        } else {
+            None
+        }
+    }
 }
 
 impl Display for EmitterConfig {
@@ -96,6 +121,7 @@ impl Display for EmitterConfig {
             "PUSHER_SLEEP_DURATION_IN_MILLIS: {}",
             self.pusher_sleep_duration_millis
         )?;
+        writeln!(f, "STATEFUL_SET_POD_NAME: {:?}", self.stateful_set_pod_name)?;
         writeln!(f, "PUSHER_MAX_CHUNK_SIZE: {}", self.pusher_max_chunk_size)?;
         writeln!(f, "JWT_SECRET: ****")?;
         writeln!(f, "EVENT_CALLBACK_URL: {}", self.event_callback_url)?;
