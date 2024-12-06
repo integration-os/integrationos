@@ -57,7 +57,7 @@ jobs:
       - name: Install fluvio CLI
         run: curl -fsS https://hub.infinyon.cloud/install/install.sh | bash
       - name: Create fluvio topic
-        run: ~/.fluvio/bin/fluvio profile add docker 127.0.0.1:9103 docker && ~/.fluvio/bin/fluvio topic create -p 2 events && ~/.fluvio/bin/fluvio topic create -p 2 dlq
+        run: ~/.fluvio/bin/fluvio profile add docker 127.0.0.1:9103 docker && ~/.fluvio/bin/fluvio topic create events && ~/.fluvio/bin/fluvio topic create dlq
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - uses: dtolnay/rust-toolchain@stable
