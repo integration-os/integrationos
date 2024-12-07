@@ -8,18 +8,15 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let path = format!("/{}", state.config.api_version);
-    let routes = Router::new()
+    let metrics_layer = state.metrics.as_ref().0.clone();
+    Router::new()
         .nest(&path, emitter::get_router())
         .route("/", get(get_root))
         .fallback(not_found_handler)
         .layer(CorsLayer::permissive())
         .layer(from_fn(log_request_middleware))
-        .layer(TraceLayer::new_for_http());
-
-    match state.metrics.as_ref().clone() {
-        Some((prometheus_layer, _)) => routes.layer(prometheus_layer),
-        None => routes,
-    }
+        .layer(metrics_layer)
+        .layer(TraceLayer::new_for_http())
 }
 
 pub async fn get_root() -> impl IntoResponse {

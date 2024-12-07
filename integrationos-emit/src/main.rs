@@ -26,9 +26,9 @@ fn main() -> Result<Unit> {
         .build()?
         .block_on(async move {
             Toplevel::new(|subsys: SubsystemHandle| async move {
-                let metric = Arc::new(MetricsRegistry::from_config(&config));
+                let metrics = Arc::new(MetricsRegistry::handle());
 
-                let server = Server::init(config.clone(), metric)
+                let server = Server::init(config.clone(), &metrics)
                     .await
                     .expect("Failed to initialize server");
 

@@ -1,4 +1,3 @@
-use crate::domain::config::EmitterConfig;
 use axum_prometheus::metrics::{counter, histogram, Counter, Histogram};
 use axum_prometheus::{
     metrics_exporter_prometheus::{Matcher, PrometheusBuilder, PrometheusHandle},
@@ -18,10 +17,10 @@ pub const DLQ_COUNT_KEY: &str = "dlq_count";
 pub const DLQ_ERRORS_KEY: &str = "dlq_errors";
 pub const DLQ_SUCCESS_KEY: &str = "dlq_success";
 
-pub type MetricHandle = Option<(
+pub type MetricHandle = (
     GenericMetricLayer<'static, PrometheusHandle, Handle>,
     PrometheusHandle,
-)>;
+);
 
 pub trait MetricExt<Exporter> {
     fn succeeded(&self, value: u64) -> Unit;
@@ -46,36 +45,30 @@ impl MetricsRegistry {
         }
     }
 
-    pub fn from_config(config: &EmitterConfig) -> MetricHandle {
-        if !config.enable_metrics {
-            return None;
-        }
-
-        Some(
-            PrometheusMetricLayerBuilder::new()
-                .with_metrics_from_fn(|| {
-                    PrometheusBuilder::new()
-                        .set_buckets_for_metric(
-                            Matcher::Full(AXUM_HTTP_REQUESTS_DURATION_SECONDS.to_string()),
-                            SECONDS_DURATION_BUCKETS,
-                        )
-                        .expect("Unable to install request matcher")
-                        .set_buckets_for_metric(
-                            Matcher::Full(EVENT_DURATION_KEY.to_string()),
-                            SECONDS_DURATION_BUCKETS,
-                        )
-                        .expect("Unable to install event recorder matcher")
-                        .set_buckets_for_metric(
-                            Matcher::Full(DLQ_DURATION_KEY.to_string()),
-                            SECONDS_DURATION_BUCKETS,
-                        )
-                        .expect("Unable to install dlq recorder matcher")
-                        .install_recorder()
-                        .expect("Unable to setup metrics")
-                })
-                .with_ignore_pattern("/metrics")
-                .build_pair(),
-        )
+    pub fn handle() -> MetricHandle {
+        PrometheusMetricLayerBuilder::new()
+            .with_metrics_from_fn(|| {
+                PrometheusBuilder::new()
+                    .set_buckets_for_metric(
+                        Matcher::Full(AXUM_HTTP_REQUESTS_DURATION_SECONDS.to_string()),
+                        SECONDS_DURATION_BUCKETS,
+                    )
+                    .expect("Unable to install request matcher")
+                    .set_buckets_for_metric(
+                        Matcher::Full(EVENT_DURATION_KEY.to_string()),
+                        SECONDS_DURATION_BUCKETS,
+                    )
+                    .expect("Unable to install event recorder matcher")
+                    .set_buckets_for_metric(
+                        Matcher::Full(DLQ_DURATION_KEY.to_string()),
+                        SECONDS_DURATION_BUCKETS,
+                    )
+                    .expect("Unable to install dlq recorder matcher")
+                    .install_recorder()
+                    .expect("Unable to setup metrics")
+            })
+            .with_ignore_pattern("/metrics")
+            .build_pair()
     }
 }
 

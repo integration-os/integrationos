@@ -21,9 +21,7 @@ use fluvio::{
     TopicProducerConfigBuilder,
 };
 use futures::StreamExt;
-use integrationos_domain::{
-    environment::Environment, Id, IntegrationOSError, InternalError, TimedExt, Unit,
-};
+use integrationos_domain::{Id, IntegrationOSError, InternalError, TimedExt, Unit};
 use mongodb::bson::doc;
 use std::boxed::Box;
 use std::{
@@ -168,10 +166,7 @@ impl FluvioDriverImpl {
             dlq_consumer,
             tgt_producer,
             dlq_producer,
-            metrics: match config.environment {
-                Environment::Test => MetricsRegistry::noop(),
-                _ => MetricsRegistry::default(),
-            },
+            metrics: MetricsRegistry::default(),
         })
     }
 

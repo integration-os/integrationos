@@ -1,6 +1,7 @@
 use envconfig::Envconfig;
 use http::{Method, StatusCode};
 use integrationos_domain::{IntegrationOSError, InternalError, Unit};
+use integrationos_emit::algebra::metrics::{MetricHandle, MetricsRegistry};
 use integrationos_emit::domain::config::EmitterConfig;
 use integrationos_emit::server::Server;
 use mockito::{Server as MockServer, ServerGuard};
@@ -23,6 +24,7 @@ use uuid::Uuid;
 static DOCKER: OnceLock<Docker> = OnceLock::new();
 static MONGO: OnceLock<Container<'static, Mongo>> = OnceLock::new();
 static TRACING: OnceLock<Unit> = OnceLock::new();
+static METRICS: OnceLock<Arc<MetricHandle>> = OnceLock::new();
 
 pub struct TestServer {
     pub port: u16,
@@ -45,6 +47,7 @@ impl TestServer {
 
             tracing_subscriber::fmt().with_env_filter(filter).init();
         });
+        let metrics = METRICS.get_or_init(|| Arc::new(MetricsRegistry::handle()));
         let docker = DOCKER.get_or_init(Default::default);
         let mongo = MONGO.get_or_init(|| docker.run(Mongo));
         let port = mongo.get_host_port_ipv4(27017);
@@ -52,7 +55,14 @@ impl TestServer {
         let database_uri = format!("mongodb://127.0.0.1:{port}/?directConnection=true");
         let database_name = Uuid::new_v4().to_string();
 
-        let port = TcpListener::bind("127.0.0.1:0")
+        let server_port = TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("Failed to bind to port")
+            .local_addr()
+            .expect("Failed to get local address")
+            .port();
+
+        let metrics_port = TcpListener::bind("127.0.0.1:0")
             .await
             .expect("Failed to bind to port")
             .local_addr()
@@ -62,7 +72,11 @@ impl TestServer {
         let mut config = vec![
             (
                 "INTERNAL_SERVER_ADDRESS".to_string(),
-                format!("0.0.0.0:{port}"),
+                format!("0.0.0.0:{server_port}"),
+            ),
+            (
+                "METRICS_SERVER_ADDRESS".to_string(),
+                format!("0.0.0.0:{metrics_port}"),
             ),
             ("CONTROL_DATABASE_URL".to_string(), database_uri.clone()),
             ("CONTROL_DATABASE_NAME".to_string(), database_name.clone()),
@@ -76,7 +90,6 @@ impl TestServer {
             ),
             ("PARTITION_COUNT".to_string(), "1".to_string()),
             ("ENVIRONMENT".to_string(), "test".to_string()),
-            ("ENABLE_METRICS".to_string(), "false".to_string()),
         ];
 
         let mock_server = MockServer::new_async().await;
@@ -107,7 +120,7 @@ impl TestServer {
         let config = EmitterConfig::init_from_hashmap(&HashMap::from_iter(config))
             .expect("Failed to initialize storage config");
 
-        let server = Server::init(config.clone(), Arc::new(None))
+        let server = Server::init(config.clone(), metrics)
             .await
             .expect("Failed to initialize storage");
 
@@ -125,7 +138,7 @@ impl TestServer {
         let client = reqwest::Client::new();
 
         Ok(Self {
-            port,
+            port: server_port,
             client,
             mock_server,
         })

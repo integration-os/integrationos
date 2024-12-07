@@ -49,7 +49,7 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn init(config: EmitterConfig, metric: Arc<MetricHandle>) -> AnyhowResult<Self> {
+    pub async fn init(config: EmitterConfig, metrics: &Arc<MetricHandle>) -> AnyhowResult<Self> {
         let client = Client::with_uri_str(&config.db_config.event_db_url).await?;
         let database = client.database(&config.db_config.event_db_name);
 
@@ -96,7 +96,7 @@ impl Server {
         let state = Arc::new(AppState {
             config: config.clone(),
             app_stores,
-            metrics: metric,
+            metrics: metrics.clone(),
             http_client,
             event_stream: Arc::clone(&event_stream),
         });

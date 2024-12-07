@@ -19,10 +19,8 @@ pub struct EmitterConfig {
     pub worker_threads: Option<usize>,
     #[envconfig(from = "INTERNAL_SERVER_ADDRESS", default = "0.0.0.0:3001")]
     pub address: SocketAddr,
-    #[envconfig(from = "METRICS_SERVER_ADDRESS", default = "0.0.0.0:9003")]
+    #[envconfig(from = "METRICS_SERVER_ADDRESS", default = "0.0.0.0:9004")]
     pub metrics_address: SocketAddr,
-    #[envconfig(from = "ENABLE_METRICS", default = "true")]
-    pub enable_metrics: bool,
     #[envconfig(from = "CACHE_SIZE", default = "10000")]
     pub cache_size: u64,
     #[envconfig(from = "ENVIRONMENT", default = "development")]
@@ -157,7 +155,6 @@ impl Display for EmitterConfig {
             "PUSHER_SLEEP_DURATION_IN_MILLIS: {}",
             self.pusher_sleep_duration_millis
         )?;
-        writeln!(f, "ENABLE_METRICS: {}", self.enable_metrics)?;
         writeln!(f, "STATEFUL_SET_POD_NAME: {:?}", self.statefulset_pod_name)?;
         writeln!(f, "PUSHER_MAX_CHUNK_SIZE: {}", self.pusher_max_chunk_size)?;
         writeln!(f, "JWT_SECRET: ****")?;
