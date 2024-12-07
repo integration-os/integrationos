@@ -19,6 +19,8 @@ pub struct EmitterConfig {
     pub worker_threads: Option<usize>,
     #[envconfig(from = "INTERNAL_SERVER_ADDRESS", default = "0.0.0.0:3001")]
     pub address: SocketAddr,
+    #[envconfig(from = "METRICS_SERVER_ADDRESS", default = "0.0.0.0:9003")]
+    pub metrics_address: SocketAddr,
     #[envconfig(from = "CACHE_SIZE", default = "10000")]
     pub cache_size: u64,
     #[envconfig(from = "ENVIRONMENT", default = "development")]
@@ -123,6 +125,7 @@ impl EmitterConfig {
 impl Display for EmitterConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "SERVER_ADDRESS: {}", self.address)?;
+        writeln!(f, "METRICS_SERVER_ADDRESS: {}", self.metrics_address)?;
         writeln!(f, "CACHE_SIZE: {}", self.cache_size)?;
         writeln!(f, "SECRET: ****")?;
         writeln!(f, "ENVIRONMENT: {}", self.environment)?;
@@ -152,6 +155,7 @@ impl Display for EmitterConfig {
             "PUSHER_SLEEP_DURATION_IN_MILLIS: {}",
             self.pusher_sleep_duration_millis
         )?;
+        writeln!(f, "ENABLE_METRICS: {}", self.enable_metrics)?;
         writeln!(f, "STATEFUL_SET_POD_NAME: {:?}", self.statefulset_pod_name)?;
         writeln!(f, "PUSHER_MAX_CHUNK_SIZE: {}", self.pusher_max_chunk_size)?;
         writeln!(f, "JWT_SECRET: ****")?;

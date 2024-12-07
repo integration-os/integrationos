@@ -228,9 +228,7 @@ impl FluvioDriverImpl {
                         Some(Ok(record)) => {
                             let event: EventEntity = serde_json::from_slice(record.get_value()).context("Could not deserialize event")?;
                             is_processing.store(true, Ordering::SeqCst);
-                            self.process(ctx, target, &event).await.inspect_err(|_| {
-                                // ctx.metrics.errored(1);
-                            })?;
+                            self.process(ctx, target, &event).await?;
                             is_processing.store(false, Ordering::SeqCst);
                         },
                         Some(Err(err)) => return Err(InternalError::io_err(&format!("Error consuming record: {err}"), None)),
@@ -441,6 +439,7 @@ impl EventStreamExt for FluvioDriverImpl {
                     update_event_outcome(ctx, event, EventStatus::executed()).await?;
 
                     if let Err(e) = result {
+                        self.metrics.errored(1);
                         tracing::error!(
                             "Error processing event: {e}, removing deduplication record"
                         );
@@ -501,17 +500,16 @@ impl EventStreamExt for FluvioDriverImpl {
                 }
             }
 
-            // ctx.metrics.succeeded(1);
             Ok(())
         };
 
         match task {
             Ok(_) => {
-                self.metrics.succeeded(1, target);
+                self.metrics.succeeded(1);
                 Ok(())
             }
             Err(e) => {
-                self.metrics.errored(1, target);
+                self.metrics.errored(1);
                 Err(e)
             }
         }

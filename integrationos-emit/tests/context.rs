@@ -2,7 +2,6 @@ use envconfig::Envconfig;
 use http::{Method, StatusCode};
 use integrationos_domain::{IntegrationOSError, InternalError, Unit};
 use integrationos_emit::domain::config::EmitterConfig;
-use integrationos_emit::domain::metrics::MetricsLayer;
 use integrationos_emit::server::Server;
 use mockito::{Server as MockServer, ServerGuard};
 use serde::{de::DeserializeOwned, Serialize};
@@ -77,6 +76,7 @@ impl TestServer {
             ),
             ("PARTITION_COUNT".to_string(), "1".to_string()),
             ("ENVIRONMENT".to_string(), "test".to_string()),
+            ("ENABLE_METRICS".to_string(), "false".to_string()),
         ];
 
         let mock_server = MockServer::new_async().await;
@@ -107,9 +107,7 @@ impl TestServer {
         let config = EmitterConfig::init_from_hashmap(&HashMap::from_iter(config))
             .expect("Failed to initialize storage config");
 
-        let metric = Arc::new(MetricsLayer::noop());
-
-        let server = Server::init(config.clone(), metric)
+        let server = Server::init(config.clone(), Arc::new(None))
             .await
             .expect("Failed to initialize storage");
 

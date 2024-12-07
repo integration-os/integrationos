@@ -6,8 +6,7 @@ use integrationos_domain::{
     Unit,
 };
 use integrationos_emit::{
-    domain::{config::EmitterConfig, metrics::MetricsLayer},
-    server::Server,
+    algebra::metrics::MetricsRegistry, domain::config::EmitterConfig, server::Server,
 };
 use std::{sync::Arc, time::Duration};
 use tokio_graceful_shutdown::{SubsystemHandle, Toplevel};
@@ -27,7 +26,7 @@ fn main() -> Result<Unit> {
         .build()?
         .block_on(async move {
             Toplevel::new(|subsys: SubsystemHandle| async move {
-                let metric = Arc::new(MetricsLayer::default());
+                let metric = Arc::new(MetricsRegistry::from_config(&config));
 
                 let server = Server::init(config.clone(), metric)
                     .await
