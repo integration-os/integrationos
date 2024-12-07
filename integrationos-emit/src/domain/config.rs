@@ -21,6 +21,8 @@ pub struct EmitterConfig {
     pub address: SocketAddr,
     #[envconfig(from = "METRICS_SERVER_ADDRESS", default = "0.0.0.0:9003")]
     pub metrics_address: SocketAddr,
+    #[envconfig(from = "ENABLE_METRICS", default = "true")]
+    pub enable_metrics: bool,
     #[envconfig(from = "CACHE_SIZE", default = "10000")]
     pub cache_size: u64,
     #[envconfig(from = "ENVIRONMENT", default = "development")]
