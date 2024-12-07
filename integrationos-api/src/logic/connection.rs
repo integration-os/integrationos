@@ -321,6 +321,8 @@ pub async fn create_connection(
         group,
         identity: Some(identity.to_owned()),
         name: payload.name,
+        has_error: false,
+        error: None,
         identity_type: payload.identity_type,
         platform: connection_config.platform.into(),
         environment: event_access.environment,

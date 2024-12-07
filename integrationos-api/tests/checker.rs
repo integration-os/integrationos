@@ -4,7 +4,6 @@ use std::{
 };
 
 use serde::{de::DeserializeOwned, Serialize};
-use serde_json::Value;
 
 pub enum CheckType {
     Json,
@@ -87,10 +86,10 @@ impl JsonChecker for JsonCheckerImpl {
                 file.read_to_string(&mut contents)
                     .expect("Failed to read file contents");
 
-                let expected = serde_json::from_str::<Value>(&contents)
+                let expected = serde_json::from_str::<T>(&contents)
                     .expect("Failed to deserialize expect value");
 
-                let actual = serde_json::from_str::<Value>(&serialized)
+                let actual = serde_json::from_str::<T>(&serialized)
                     .expect("Failed to deserialize actual value");
 
                 expected == actual

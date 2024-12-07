@@ -255,6 +255,8 @@ async fn oauth_handler(
         identity: Some(identity),
         identity_type: payload.identity_type,
         settings: conn_definition.settings,
+        has_error: false,
+        error: None,
         throughput: Throughput {
             key,
             limit: throughput,

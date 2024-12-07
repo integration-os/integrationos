@@ -2,8 +2,8 @@ use crate::stream::EventStreamProvider;
 use envconfig::Envconfig;
 use fluvio::dataplane::types::PartitionId;
 use integrationos_domain::{
-    cache::CacheConfig,
-    {database::DatabaseConfig, environment::Environment},
+    cache::CacheConfig, database::DatabaseConfig, environment::Environment, IntegrationOSError,
+    InternalError,
 };
 use std::{
     fmt::{Display, Formatter},
@@ -19,6 +19,8 @@ pub struct EmitterConfig {
     pub worker_threads: Option<usize>,
     #[envconfig(from = "INTERNAL_SERVER_ADDRESS", default = "0.0.0.0:3001")]
     pub address: SocketAddr,
+    #[envconfig(from = "METRICS_SERVER_ADDRESS", default = "0.0.0.0:9004")]
+    pub metrics_address: SocketAddr,
     #[envconfig(from = "CACHE_SIZE", default = "10000")]
     pub cache_size: u64,
     #[envconfig(from = "ENVIRONMENT", default = "development")]
@@ -52,8 +54,10 @@ pub struct EmitterConfig {
         default = "2thZ2UiOnsibmFtZSI6IlN0YXJ0dXBsa3NoamRma3NqZGhma3NqZGhma3NqZG5jhYtggfaP9ubmVjdGlvbnMiOjUwMDAwMCwibW9kdWxlcyI6NSwiZW5kcG9pbnRzIjo3b4e05e2-f050-401f-9822-44f43f71753c"
     )]
     pub jwt_secret: String,
-    #[envconfig(from = "STATEFUL_SET_POD_NAME")]
-    pub stateful_set_pod_name: Option<String>,
+    #[envconfig(from = "STATEFULSET_POD_NAME")]
+    pub statefulset_pod_name: String,
+    #[envconfig(from = "PARTITION_COUNT")]
+    pub partition_count: u32,
     #[envconfig(
         from = "EVENT_CALLBACK_URL",
         default = "http://localhost:3005/v1/event-callbacks"
@@ -68,23 +72,52 @@ pub struct EmitterConfig {
 }
 
 impl EmitterConfig {
-    /// Returns the partition id to consume from, beware that this assumes several things:
-    /// 1. The pod name is in the format of `topic-partition-id` (for example in a statefulset)
-    /// 2. Each pod will now have a 1-1 mapping to a partition
-    /// 3. It'll read the same partition for the DLQ and the main topic, which means that the DLQ
-    ///    and main topic will have the same amount of partitions.
+    /// Determines the partition ID that this pod should consume from.
     ///
-    /// ## Warning
-    /// This is a very brittle assumption, and should be revisited if we ever have a more complex
-    /// setup or until this gets resolved: https://github.com/infinyon/fluvio/issues/760
-    pub fn partition(&self) -> Option<PartitionId> {
-        let pod_name = self.stateful_set_pod_name.as_ref()?;
+    /// This method relies on the pod's name to derive the partition ID. It assumes the following:
+    ///
+    /// 1. **Pod Naming Convention**: The pod name must follow the format `topic-partition-id`,
+    ///    such as `example-topic-0` or `example-topic-1`. This is typical for StatefulSet pods.
+    /// 2. **1:1 Mapping**: Each pod has a one-to-one mapping with a specific partition.
+    /// 3. **Consistent Partition Counts**: The number of partitions in the main topic and
+    ///    any associated Dead Letter Queue (DLQ) must be the same. This ensures consistent
+    ///    partition-to-pod assignments for both topics.
+    ///
+    /// ### Behavior
+    /// - Extracts the partition ID from the pod name using the last hyphen-delimited segment.
+    /// - Computes the resulting partition by taking the modulus of the extracted ID with the
+    ///   total number of partitions (`partition_count`).
+    ///
+    /// ### Assumptions & Limitations
+    /// - The method is **fragile** and depends on strict adherence to the pod naming convention.
+    /// - This approach will break in more complex setups or if pod naming conventions change.
+    /// - Any modifications to the partitioning or naming logic should revisit this method.
+    ///
+    /// ### Error Handling
+    /// Returns an error in the following cases:
+    /// - The pod name does not match the expected format.
+    /// - The partition ID cannot be parsed as a valid integer.
+    ///
+    /// ### Related Issue
+    /// For future improvements and a more robust solution, see:
+    /// [Fluvio Issue #760](https://github.com/infinyon/fluvio/issues/760)
+    pub fn partition(&self) -> Result<PartitionId, IntegrationOSError> {
+        let pod_name = self.statefulset_pod_name.clone();
+        let partition_count = self.partition_count;
 
         if let Some((_, partition_id)) = pod_name.rsplit_once('-') {
-            let partition_id = PartitionId::from_str(partition_id).ok()?;
-            Some(partition_id)
+            let partition_id = PartitionId::from_str(partition_id).ok().ok_or({
+                InternalError::configuration_error(
+                    &format!("Could not parse partition from pod name: {}", pod_name),
+                    None,
+                )
+            })?;
+            Ok(partition_id % partition_count)
         } else {
-            None
+            Err(InternalError::configuration_error(
+                &format!("Could not parse partition from pod name: {}", pod_name),
+                None,
+            ))
         }
     }
 }
@@ -92,6 +125,7 @@ impl EmitterConfig {
 impl Display for EmitterConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "SERVER_ADDRESS: {}", self.address)?;
+        writeln!(f, "METRICS_SERVER_ADDRESS: {}", self.metrics_address)?;
         writeln!(f, "CACHE_SIZE: {}", self.cache_size)?;
         writeln!(f, "SECRET: ****")?;
         writeln!(f, "ENVIRONMENT: {}", self.environment)?;
@@ -121,7 +155,7 @@ impl Display for EmitterConfig {
             "PUSHER_SLEEP_DURATION_IN_MILLIS: {}",
             self.pusher_sleep_duration_millis
         )?;
-        writeln!(f, "STATEFUL_SET_POD_NAME: {:?}", self.stateful_set_pod_name)?;
+        writeln!(f, "STATEFUL_SET_POD_NAME: {:?}", self.statefulset_pod_name)?;
         writeln!(f, "PUSHER_MAX_CHUNK_SIZE: {}", self.pusher_max_chunk_size)?;
         writeln!(f, "JWT_SECRET: ****")?;
         writeln!(f, "EVENT_CALLBACK_URL: {}", self.event_callback_url)?;

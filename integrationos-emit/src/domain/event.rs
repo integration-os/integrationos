@@ -1,7 +1,8 @@
 use crate::{algebra::event::EventExt, server::AppState};
 use chrono::Utc;
 use integrationos_domain::{
-    prefix::IdPrefix, record_metadata::RecordMetadata, Id, IntegrationOSError, Unit,
+    emitted_events::DatabaseConnectionLost, prefix::IdPrefix, record_metadata::RecordMetadata, Id,
+    IntegrationOSError, Unit,
 };
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumString};
@@ -9,11 +10,7 @@ use strum::{AsRefStr, EnumString};
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "PascalCase", tag = "type")]
 pub enum Event {
-    #[serde(rename_all = "camelCase")]
-    DatabaseConnectionLost {
-        connection_id: Id,
-        schedule_on: Option<i64>,
-    },
+    DatabaseConnectionLost(DatabaseConnectionLost),
 }
 
 impl Event {
@@ -28,7 +25,9 @@ impl Event {
 
     pub fn scheduled_on(&self) -> Option<i64> {
         match self {
-            Event::DatabaseConnectionLost { schedule_on, .. } => *schedule_on,
+            Event::DatabaseConnectionLost(DatabaseConnectionLost { schedule_on, .. }) => {
+                *schedule_on
+            }
         }
     }
 }

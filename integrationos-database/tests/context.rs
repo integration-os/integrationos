@@ -25,6 +25,7 @@ static TRACING: OnceLock<()> = OnceLock::new();
 pub struct TestServer {
     pub port: u16,
     pub client: reqwest::Client,
+    // pub mock_server: ServerGuard,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -34,7 +35,7 @@ pub struct ApiResponse<T: DeserializeOwned = Value> {
 }
 
 impl TestServer {
-    pub async fn new() -> Result<Self, IntegrationOSError> {
+    pub async fn new(r#override: HashMap<String, String>) -> Result<Self, IntegrationOSError> {
         TRACING.get_or_init(|| {
             let filter = EnvFilter::builder()
                 .with_default_directive(LevelFilter::INFO.into())
@@ -53,7 +54,7 @@ impl TestServer {
             .expect("Failed to get local address")
             .port();
 
-        let config = DatabaseConnectionConfig::init_from_hashmap(&HashMap::from([
+        let config_map: HashMap<String, String> = HashMap::from([
             (
                 "INTERNAL_SERVER_ADDRESS".to_string(),
                 format!("0.0.0.0:{server_port}"),
@@ -71,12 +72,15 @@ impl TestServer {
             ("POSTGRES_HOST".to_string(), "localhost".to_string()),
             ("POSTGRES_PORT".to_string(), port.to_string()),
             ("POSTGRES_NAME".to_string(), "postgres".to_string()),
-        ]))
-        .expect("Failed to initialize storage config");
+        ])
+        .into_iter()
+        .chain(r#override.into_iter())
+        .collect::<HashMap<String, String>>();
 
-        let server = PostgresDatabaseConnection::init(&config)
-            .await
-            .expect("Failed to initialize storage");
+        let config = DatabaseConnectionConfig::init_from_hashmap(&config_map)
+            .expect("Failed to initialize storage config");
+
+        let server = PostgresDatabaseConnection::init(&config).await?;
 
         tokio::task::spawn(async move { server.run().await });
 
@@ -87,6 +91,7 @@ impl TestServer {
         Ok(Self {
             port: server_port,
             client,
+            // mock_server,
         })
     }
 

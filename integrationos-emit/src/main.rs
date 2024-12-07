@@ -5,8 +5,10 @@ use integrationos_domain::{
     telemetry::{get_subscriber, init_subscriber},
     Unit,
 };
-use integrationos_emit::{domain::config::EmitterConfig, server::Server};
-use std::time::Duration;
+use integrationos_emit::{
+    algebra::metrics::MetricsRegistry, domain::config::EmitterConfig, server::Server,
+};
+use std::{sync::Arc, time::Duration};
 use tokio_graceful_shutdown::{SubsystemHandle, Toplevel};
 
 fn main() -> Result<Unit> {
@@ -24,7 +26,9 @@ fn main() -> Result<Unit> {
         .build()?
         .block_on(async move {
             Toplevel::new(|subsys: SubsystemHandle| async move {
-                let server = Server::init(config.clone())
+                let metrics = Arc::new(MetricsRegistry::handle());
+
+                let server = Server::init(config.clone(), &metrics)
                     .await
                     .expect("Failed to initialize server");
 
