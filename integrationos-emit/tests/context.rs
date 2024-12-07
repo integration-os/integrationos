@@ -39,7 +39,7 @@ pub struct ApiResponse<T: DeserializeOwned = Value> {
 }
 
 impl TestServer {
-    pub async fn new(stream: bool) -> Result<Self, IntegrationOSError> {
+    pub async fn new() -> Result<Self, IntegrationOSError> {
         TRACING.get_or_init(|| {
             let filter = EnvFilter::builder()
                 .with_default_directive(LevelFilter::INFO.into())
@@ -69,7 +69,9 @@ impl TestServer {
             .expect("Failed to get local address")
             .port();
 
-        let mut config = vec![
+        let mock_server = MockServer::new_async().await;
+        let mock_uri = mock_server.url();
+        let config = vec![
             (
                 "INTERNAL_SERVER_ADDRESS".to_string(),
                 format!("0.0.0.0:{server_port}"),
@@ -90,32 +92,25 @@ impl TestServer {
             ),
             ("PARTITION_COUNT".to_string(), "1".to_string()),
             ("ENVIRONMENT".to_string(), "test".to_string()),
-        ];
-
-        let mock_server = MockServer::new_async().await;
-
-        if stream {
-            let uri = mock_server.url();
-
-            config.push(("EVENT_STREAM_PROVIDER".to_string(), "fluvio".to_string()));
-            config.push(("EVENT_STREAM_PORT".to_string(), "9103".to_string()));
-            config.push((
+            ("EVENT_STREAM_PROVIDER".to_string(), "fluvio".to_string()),
+            ("EVENT_STREAM_PORT".to_string(), "9103".to_string()),
+            (
                 "EVENT_STREAM_PRODUCER_TOPIC".to_string(),
                 "events".to_string(),
-            ));
-            config.push((
+            ),
+            (
                 "EVENT_STREAM_CONSUMER_TOPIC".to_string(),
                 "events".to_string(),
-            ));
-            config.push((
+            ),
+            (
                 "EVENT_STREAM_CONSUMER_GROUP".to_string(),
                 "event-all-partitions-consumer".to_string(),
-            ));
-            config.push((
+            ),
+            (
                 "EVENT_CALLBACK_URL".to_string(),
-                format!("{uri}/v1/event-callbacks"),
-            ));
-        }
+                format!("{mock_uri}/v1/event-callbacks"),
+            ),
+        ];
 
         let config = EmitterConfig::init_from_hashmap(&HashMap::from_iter(config))
             .expect("Failed to initialize storage config");

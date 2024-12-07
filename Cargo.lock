@@ -3120,6 +3120,7 @@ dependencies = [
  "integrationos-cache",
  "integrationos-domain",
  "integrationos-unified",
+ "mockito",
  "mongodb",
  "num_cpus",
  "rand",

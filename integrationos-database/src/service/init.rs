@@ -20,15 +20,24 @@ pub trait Initializer {
 #[async_trait]
 impl Initializer for PostgresDatabaseConnection {
     async fn init(config: &DatabaseConnectionConfig) -> Result<Server, anyhow::Error> {
-        let postgres: PostgresDatabaseConnection = PostgresDatabaseConnection::new(config).await?;
-        let storage: Arc<dyn Storage> = Arc::new(postgres);
+        let postgres = PostgresDatabaseConnection::new(config).await;
 
-        Ok(Server {
-            state: Arc::new(AppState {
-                config: config.clone(),
-                storage,
-            }),
-        })
+        match postgres {
+            Ok(postgres) => {
+                let storage: Arc<dyn Storage> = Arc::new(postgres);
+
+                Ok(Server {
+                    state: Arc::new(AppState {
+                        config: config.clone(),
+                        storage,
+                    }),
+                })
+            }
+            Err(e) => {
+                PostgresDatabaseConnection::kill(config, e.to_string()).await?;
+                Err(e)
+            }
+        }
     }
 
     async fn kill(
@@ -50,9 +59,11 @@ impl Initializer for PostgresDatabaseConnection {
         client
             .post(format!("{}/v1/emit", emit_url))
             .header("content-type", "application/json")
-            .body(value.to_string())
+            .json(&value)
             .send()
             .await?;
+
+        tracing::info!("Event for dispose of connection {connection_id} emitted");
 
         Ok(())
     }
