@@ -4,15 +4,17 @@ use crate::{
     server::{AppState, Server},
 };
 use axum::async_trait;
-use integrationos_domain::{database::DatabaseConnectionConfig, Unit};
+use integrationos_domain::{
+    database::DatabaseConnectionConfig, emitted_events::DatabaseConnectionLost, Id, Unit,
+};
 use reqwest::Client;
-use serde_json::json;
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 #[async_trait]
 pub trait Initializer {
     async fn init(config: &DatabaseConnectionConfig) -> Result<Server, anyhow::Error>;
-    async fn kill(config: &DatabaseConnectionConfig) -> Result<Unit, anyhow::Error>;
+    async fn kill(config: &DatabaseConnectionConfig, reason: String)
+        -> Result<Unit, anyhow::Error>;
 }
 
 #[async_trait]
@@ -29,14 +31,19 @@ impl Initializer for PostgresDatabaseConnection {
         })
     }
 
-    async fn kill(config: &DatabaseConnectionConfig) -> Result<Unit, anyhow::Error> {
+    async fn kill(
+        config: &DatabaseConnectionConfig,
+        reason: String,
+    ) -> Result<Unit, anyhow::Error> {
         let emit_url = config.emit_url.clone();
-        let connection_id = config.connection_id.clone();
+        let connection_id = Id::from_str(&config.connection_id)?;
         let client = Client::new();
-        let value = json!({
-            "type": "DatabaseConnectionLost",
-            "connectionId": connection_id
-        });
+        let value = DatabaseConnectionLost {
+            connection_id,
+            reason: Some(reason),
+            schedule_on: None,
+        }
+        .as_event();
 
         tracing::info!("Emitting event {value:?} to dispose of connection {connection_id}");
 

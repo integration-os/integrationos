@@ -42,8 +42,19 @@ pub struct Connection {
     pub ownership: Ownership,
     #[serde(default)]
     pub oauth: Option<OAuth>,
+    #[serde(default)]
+    pub has_error: bool,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub error: Option<String>,
     #[serde(flatten, default)]
     pub record_metadata: RecordMetadata,
+}
+
+impl Connection {
+    pub fn mark_error(&mut self, error: &str) {
+        self.has_error = true;
+        self.error = Some(error.to_string());
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

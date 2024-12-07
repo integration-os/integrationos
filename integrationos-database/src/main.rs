@@ -29,7 +29,7 @@ fn main() -> Result<()> {
                     match PostgresDatabaseConnection::init(&config).await {
                         Ok(server) => {
                             if let Err(e) = server.run().await {
-                                PostgresDatabaseConnection::kill(&config).await?;
+                                PostgresDatabaseConnection::kill(&config, e.to_string()).await?;
                                 return Err(anyhow::anyhow!("Could not run server: {e}"));
                             }
 
@@ -38,7 +38,7 @@ fn main() -> Result<()> {
                         Err(e) => {
                             tracing::error!("Could not initialize storage: {e}");
 
-                            PostgresDatabaseConnection::kill(&config).await?;
+                            PostgresDatabaseConnection::kill(&config, e.to_string()).await?;
 
                             Err(anyhow::anyhow!("Could not initialize storage: {e}"))
                         }
