@@ -443,9 +443,19 @@ impl EventStreamExt for FluvioDriverImpl {
                         let outcome = EventStatus::errored(e.to_string(), 1);
                         let event = event.with_outcome(outcome.clone());
 
+                        tracing::debug!(
+                            "Event with id {} is in DLQ, with number of retries {}",
+                            event.entity_id,
+                            event.retries()
+                        );
+
                         self.publish(event.clone(), EventStreamTopic::Dlq).await?;
 
+                        tracing::debug!("Event with id {} is published to DLQ", event.entity_id);
+
                         update_event_outcome(ctx, &event, outcome).await?;
+
+                        tracing::debug!("Event with id {} is updated to DLQ", event.entity_id);
 
                         return Ok(());
                     }
@@ -465,11 +475,25 @@ impl EventStreamExt for FluvioDriverImpl {
                             delete_deduplication_record(ctx, event).await?;
 
                             let outcome = EventStatus::errored(e.to_string(), event.retries() + 1);
+
+                            tracing::debug!(
+                                "Event with id {} is in DLQ, with number of retries {}",
+                                event.entity_id,
+                                event.retries()
+                            );
+
                             let event = event.with_outcome(outcome.clone());
 
                             self.publish(event.clone(), EventStreamTopic::Dlq).await?;
 
+                            tracing::debug!(
+                                "Event with id {} is published to DLQ",
+                                event.entity_id
+                            );
+
                             update_event_outcome(ctx, &event, outcome).await?;
+
+                            tracing::debug!("Event with id {} is updated to DLQ", event.entity_id);
 
                             return Ok(());
                         }
