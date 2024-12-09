@@ -1,5 +1,8 @@
-use super::EventStreamExt;
-use crate::{domain::event::ScheduledEvent, stream::EventStreamTopic};
+use super::{EventStreamExt, SINGLETON_ID};
+use crate::{
+    domain::{config::EmitterConfig, event::ScheduledEvent},
+    stream::EventStreamTopic,
+};
 use chrono::Utc;
 use futures::{StreamExt, TryStreamExt};
 use integrationos_domain::{IntegrationOSError, InternalError, MongoStore, Unit};
@@ -18,7 +21,19 @@ pub struct PublishScheduler {
 }
 
 impl PublishScheduler {
-    pub async fn start(&self, subsys: SubsystemHandle) -> Result<Unit, IntegrationOSError> {
+    pub async fn start(
+        &self,
+        config: &EmitterConfig,
+        subsys: SubsystemHandle,
+    ) -> Result<Unit, IntegrationOSError> {
+        if config.partition()? != SINGLETON_ID {
+            tracing::info!(
+                "Limiting events to singleton id {}. Scheduling proccessing finished.",
+                SINGLETON_ID
+            );
+            return Ok(());
+        }
+
         match self.process().cancel_on_shutdown(&subsys).await {
             Ok(result) => {
                 tracing::info!("Scheduled event publisher finished");

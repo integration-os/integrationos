@@ -9,6 +9,8 @@ use integrationos_domain::{Id, IntegrationOSError, Unit};
 use strum::{AsRefStr, Display, EnumIter, EnumString};
 use tokio_graceful_shutdown::SubsystemHandle;
 
+pub const SINGLETON_ID: u32 = 0;
+
 #[async_trait]
 pub trait EventStreamExt<T = EventEntity> {
     async fn publish(

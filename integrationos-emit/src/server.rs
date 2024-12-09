@@ -193,9 +193,10 @@ impl Server {
             pusher.start(&config, s).await
         }));
 
+        let config = server.state.config.clone();
         subsys.start(SubsystemBuilder::new(
             "SchedulerSubsystem",
-            |s| async move { scheduler.start(s).await },
+            |s| async move { scheduler.start(&config, s).await },
         ));
 
         subsys.start(SubsystemBuilder::new("ServerSubsystem", |s| async move {
