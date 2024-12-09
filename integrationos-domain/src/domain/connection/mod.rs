@@ -104,6 +104,10 @@ pub struct SanitizedConnection {
     pub ownership: Ownership,
     #[serde(default)]
     pub oauth: Option<OAuth>,
+    #[serde(default)]
+    pub has_error: bool,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub error: Option<String>,
     #[serde(flatten, default)]
     pub record_metadata: RecordMetadata,
 }
