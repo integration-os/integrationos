@@ -1,4 +1,4 @@
-use super::EventStreamExt;
+use super::{EventStreamExt, SINGLETON_ID};
 use crate::{
     domain::{config::EmitterConfig, deduplication::Deduplication, event::EventEntity},
     stream::EventStreamTopic,
@@ -26,6 +26,11 @@ impl EventPusher {
         config: &EmitterConfig,
         subsys: SubsystemHandle,
     ) -> Result<Unit, IntegrationOSError> {
+        if config.partition()? != SINGLETON_ID {
+            tracing::info!("Limiting events to singleton id {}. Publisher proccessing finished.", SINGLETON_ID);
+            return Ok(());
+        }
+
         match self.process(config).cancel_on_shutdown(&subsys).await {
             Ok(result) => {
                 tracing::info!("Scheduled event publisher finished");
