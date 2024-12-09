@@ -104,9 +104,9 @@ impl SecretExt for MockSecretsClient {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct ApiResponse<T: DeserializeOwned = Value> {
+pub struct ApiResponse<Data: DeserializeOwned = Value> {
     pub code: StatusCode,
-    pub data: T,
+    pub data: Data,
 }
 
 impl TestServer {
@@ -268,13 +268,13 @@ impl TestServer {
         }
     }
 
-    pub async fn send_request<T: Serialize, U: DeserializeOwned>(
+    pub async fn send_request<Payload: Serialize, Response: DeserializeOwned>(
         &self,
         path: &str,
         method: http::Method,
         key: Option<&str>,
-        payload: Option<&T>,
-    ) -> Result<ApiResponse<U>> {
+        payload: Option<&Payload>,
+    ) -> Result<ApiResponse<Response>> {
         self.send_request_with_auth_headers(
             path,
             method,
@@ -288,14 +288,14 @@ impl TestServer {
         .await
     }
 
-    pub async fn send_request_with_headers<T: Serialize, U: DeserializeOwned>(
+    pub async fn send_request_with_headers<Payload: Serialize, Response: DeserializeOwned>(
         &self,
         path: &str,
         method: http::Method,
         key: Option<&str>,
-        payload: Option<&T>,
+        payload: Option<&Payload>,
         headers: Option<BTreeMap<String, String>>,
-    ) -> Result<ApiResponse<U>> {
+    ) -> Result<ApiResponse<Response>> {
         let mut req = self
             .client
             .request(method, format!("http://localhost:{}/{path}", self.port));
@@ -319,14 +319,14 @@ impl TestServer {
         })
     }
 
-    async fn send_request_with_auth_headers<T: Serialize, U: DeserializeOwned>(
+    async fn send_request_with_auth_headers<Payload: Serialize, Response: DeserializeOwned>(
         &self,
         path: &str,
         method: http::Method,
         key: Option<&str>,
-        payload: Option<&T>,
+        payload: Option<&Payload>,
         headers: Option<BTreeMap<String, String>>,
-    ) -> Result<ApiResponse<U>> {
+    ) -> Result<ApiResponse<Response>> {
         let headers = match headers {
             Some(h) => h
                 .into_iter()

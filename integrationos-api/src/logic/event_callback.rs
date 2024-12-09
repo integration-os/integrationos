@@ -9,7 +9,9 @@ use axum::{
     Json, Router,
 };
 use bson::doc;
-use integrationos_domain::{ApplicationError, Connection, Id, IntegrationOSError};
+use integrationos_domain::{
+    emitted_events::ConnectionLostReason, ApplicationError, Connection, Id, IntegrationOSError,
+};
 use std::sync::Arc;
 
 pub fn get_router() -> Router<Arc<AppState>> {
@@ -19,10 +21,10 @@ pub fn get_router() -> Router<Arc<AppState>> {
     )
 }
 
-// TODO: Write tests for this endpoint
 async fn database_connection_lost_callback(
     State(state): State<Arc<AppState>>,
     Path(connection_id): Path<Id>,
+    Json(reason): Json<ConnectionLostReason>,
 ) -> Result<Json<Connection>, IntegrationOSError> {
     // Instead of direcly updating we're getting the record first so that we can
     // modify the active and deprecated fields from the record metadata
@@ -41,6 +43,7 @@ async fn database_connection_lost_callback(
         )),
         Some(mut conn) => {
             if conn.record_metadata.active {
+                conn.mark_error(reason.reason.as_str());
                 conn.record_metadata.mark_deprecated("system");
                 conn.record_metadata.mark_inactive("system");
                 conn.record_metadata.mark_updated("system");

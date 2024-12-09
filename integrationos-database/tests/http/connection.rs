@@ -1,11 +1,12 @@
 use crate::context::TestServer;
 use http::{Method, StatusCode};
-use integrationos_domain::IntegrationOSError;
+use integrationos_domain::{IntegrationOSError, Unit};
 use serde_json::Value;
+use std::collections::HashMap;
 
 #[tokio::test]
-async fn test_execute_probe() -> Result<(), IntegrationOSError> {
-    let server = TestServer::new().await?;
+async fn test_execute_probe() -> Result<Unit, IntegrationOSError> {
+    let server = TestServer::new(HashMap::new()).await?;
     let result = server
         .send_request::<Value, Value>("database/probe", Method::GET, None)
         .await?;
@@ -18,8 +19,8 @@ async fn test_execute_probe() -> Result<(), IntegrationOSError> {
 }
 
 #[tokio::test]
-async fn test_execute_raw() -> Result<(), IntegrationOSError> {
-    let server = TestServer::new().await?;
+async fn test_execute_raw() -> Result<Unit, IntegrationOSError> {
+    let server = TestServer::new(HashMap::new()).await?;
 
     let create_query =
         "CREATE TABLE IF NOT EXISTS users (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL);";

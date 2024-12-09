@@ -1,4 +1,5 @@
 use crate::{
+    algebra::metrics::MetricHandle,
     domain::{
         config::EmitterConfig,
         deduplication::Deduplication,
@@ -35,6 +36,7 @@ pub struct AppState {
     pub config: EmitterConfig,
     pub app_stores: AppStores,
     pub http_client: ClientWithMiddleware,
+    pub metrics: Arc<MetricHandle>,
     pub event_stream: Arc<dyn EventStreamExt + Sync + Send>,
 }
 
@@ -47,7 +49,7 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn init(config: EmitterConfig) -> AnyhowResult<Self> {
+    pub async fn init(config: EmitterConfig, metrics: &Arc<MetricHandle>) -> AnyhowResult<Self> {
         let client = Client::with_uri_str(&config.db_config.event_db_url).await?;
         let database = client.database(&config.db_config.event_db_name);
 
@@ -94,6 +96,7 @@ impl Server {
         let state = Arc::new(AppState {
             config: config.clone(),
             app_stores,
+            metrics: metrics.clone(),
             http_client,
             event_stream: Arc::clone(&event_stream),
         });
@@ -107,18 +110,29 @@ impl Server {
     }
 
     pub async fn run(&self, subsys: SubsystemHandle) -> AnyhowResult<Unit> {
-        let app = router::get_router(&self.state).await;
+        let server_app = router::emitter::get_router(&self.state).await;
+        let metrics_app = router::metrics::get_router(&self.state).await;
 
-        let app: Router<Unit> = app.with_state(self.state.clone());
+        let server_app: Router<Unit> = server_app.with_state(self.state.clone());
+        let metrics_app: Router<Unit> = metrics_app.with_state(self.state.clone());
 
         tracing::info!("Emitter server listening on {}", self.state.config.address);
+        tracing::info!(
+            "Metrics server listening on {}",
+            self.state.config.metrics_address
+        );
 
-        let tcp_listener = TcpListener::bind(&self.state.config.address).await?;
+        let server_tcp_listener = TcpListener::bind(&self.state.config.address).await?;
+        let metrics_tcp_listener = TcpListener::bind(&self.state.config.metrics_address).await?;
 
-        axum::serve(tcp_listener, app)
-            .with_graceful_shutdown(Self::shutdown(subsys))
-            .await
-            .map_err(|e| anyhow::anyhow!("Server error: {}", e))
+        let server_handle = axum::serve(server_tcp_listener, server_app)
+            .with_graceful_shutdown(Self::shutdown(subsys));
+
+        let metrics_handle = axum::serve(metrics_tcp_listener, metrics_app);
+
+        let (_, _) = tokio::join!(server_handle, metrics_handle);
+
+        Ok(())
     }
 
     async fn shutdown(subsys: SubsystemHandle) {

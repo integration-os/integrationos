@@ -100,6 +100,8 @@ pub async fn seed_db(config: &EventCoreConfig, base_url: String) -> Id {
         key: "key".into(),
         name: None,
         group: "group".to_string(),
+        has_error: false,
+        error: None,
         platform: "platform".to_string().into(),
         environment: Environment::Live,
         secrets_service_id: "secrets_service_id".to_string(),

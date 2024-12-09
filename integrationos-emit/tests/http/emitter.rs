@@ -14,7 +14,7 @@ const PARALLEL_REQUESTS: usize = 10;
 
 #[tokio::test]
 async fn test_concurrent_requests() -> Result<Unit, IntegrationOSError> {
-    let server = TestServer::new(true).await?;
+    let server = TestServer::new().await?;
     let payload = json!({
         "type": "DatabaseConnectionLost",
         "connectionId": "conn::GAL2svWJp9k::MtmXaau5Qf6R5n3Y-L9ejQ"
@@ -76,7 +76,7 @@ async fn test_concurrent_requests() -> Result<Unit, IntegrationOSError> {
 
 #[tokio::test]
 async fn test_event_processed() -> Result<Unit, IntegrationOSError> {
-    let mut server = TestServer::new(true).await?;
+    let mut server = TestServer::new().await?;
 
     let id = Id::now(IdPrefix::Connection).to_string();
     let payload = json!({

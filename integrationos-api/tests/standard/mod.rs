@@ -196,6 +196,8 @@ fn test_json_connection() {
             key: "throughput-key".to_string(),
             limit: 100,
         },
+        has_error: false,
+        error: None,
         ownership: Ownership {
             id: "owner-id".to_string().into(),
             client_id: "client-id".to_string(),
