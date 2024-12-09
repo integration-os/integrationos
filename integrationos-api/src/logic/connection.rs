@@ -162,6 +162,8 @@ impl PublicExt<Connection> for CreateConnectionPayload {
             settings: input.settings,
             throughput: input.throughput,
             ownership: input.ownership,
+            error: input.error,
+            has_error: input.has_error,
             oauth: input.oauth,
             record_metadata: input.record_metadata,
         }
@@ -365,6 +367,8 @@ pub async fn create_connection(
         settings: connection.settings,
         throughput: connection.throughput,
         ownership: connection.ownership,
+        has_error: connection.has_error,
+        error: connection.error,
         oauth: connection.oauth,
         record_metadata: connection.record_metadata,
     }))
