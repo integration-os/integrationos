@@ -27,7 +27,10 @@ impl EventPusher {
         subsys: SubsystemHandle,
     ) -> Result<Unit, IntegrationOSError> {
         if config.partition()? != SINGLETON_ID {
-            tracing::info!("Limiting events to singleton id {}. Publisher proccessing finished.", SINGLETON_ID);
+            tracing::info!(
+                "Limiting events to singleton id {}. Publisher proccessing finished.",
+                SINGLETON_ID
+            );
             return Ok(());
         }
 
