@@ -226,7 +226,7 @@ impl FluvioDriverImpl {
                         Some(Ok(record)) => {
                             let event: EventEntity = serde_json::from_slice(record.get_value()).context("Could not deserialize event")?;
                             is_processing.store(true, Ordering::SeqCst);
-                            self.process(ctx, target, &event).await?;
+                            self.process(ctx, target, &event.with_claimed_by(self.partition)).await?;
                             is_processing.store(false, Ordering::SeqCst);
                         },
                         Some(Err(err)) => return Err(InternalError::io_err(&format!("Error consuming record: {err}"), None)),
@@ -414,7 +414,6 @@ impl EventStreamExt for FluvioDriverImpl {
                 }
             }
 
-            update_claimed_by(ctx, event, self.partition).await?;
             tracing::info!(
                 "Event with id {} is claimed by {}",
                 event.entity_id,
@@ -549,22 +548,6 @@ async fn unset_claimed_by(ctx: &AppState, claimer: u32) -> Result<Unit, Integrat
         .update_many(
             doc! { "claimedBy": claimer },
             doc! { "$unset": { "claimedBy": "" } },
-        )
-        .await?;
-
-    Ok(())
-}
-
-async fn update_claimed_by(
-    ctx: &AppState,
-    event: &EventEntity,
-    claimer: u32,
-) -> Result<Unit, IntegrationOSError> {
-    ctx.app_stores
-        .events
-        .update_one(
-            &event.entity_id.to_string(),
-            doc! { "$set": { "claimedBy": claimer } },
         )
         .await?;
 

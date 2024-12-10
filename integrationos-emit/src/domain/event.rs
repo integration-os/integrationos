@@ -60,6 +60,13 @@ impl EventEntity {
         }
     }
 
+    pub fn with_claimed_by(&self, claimed_by: u32) -> Self {
+        Self {
+            claimed_by: Some(claimed_by),
+            ..self.clone()
+        }
+    }
+
     pub async fn side_effect(&self, ctx: &AppState) -> Result<Unit, IntegrationOSError> {
         self.entity.side_effect(ctx, self.entity_id).await
     }
