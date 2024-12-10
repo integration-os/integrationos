@@ -28,7 +28,7 @@ impl PublishScheduler {
     ) -> Result<Unit, IntegrationOSError> {
         if config.partition()? != SINGLETON_ID {
             tracing::info!(
-                "Limiting events to singleton id {}. Scheduling proccessing finished.",
+                "Limiting event scheduler to single partition {}",
                 SINGLETON_ID
             );
             return Ok(());

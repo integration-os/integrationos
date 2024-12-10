@@ -28,7 +28,7 @@ impl EventPusher {
     ) -> Result<Unit, IntegrationOSError> {
         if config.partition()? != SINGLETON_ID {
             tracing::info!(
-                "Limiting events to singleton id {}. Publisher proccessing finished.",
+                "Limiting event publisher to single partition {}",
                 SINGLETON_ID
             );
             return Ok(());
