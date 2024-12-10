@@ -19,6 +19,7 @@ impl Event {
             entity: self.clone(),
             entity_id: Id::now(IdPrefix::PipelineEvent),
             outcome: EventStatus::Created,
+            claimed_by: None,
             metadata: RecordMetadata::default(),
         }
     }
@@ -39,17 +40,21 @@ pub struct EventEntity {
     pub entity_id: Id,
     pub entity: Event,
     pub outcome: EventStatus,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    // TODO: Index this field
+    pub claimed_by: Option<u32>,
     #[serde(flatten, default)]
     pub metadata: RecordMetadata,
 }
 
 impl EventEntity {
-    pub fn with_outcome(&self, outcome: EventStatus) -> Self {
+    pub fn with_status(&self, outcome: EventStatus) -> Self {
         let mut metadata = self.metadata.clone();
         metadata.mark_updated("system");
         Self {
             entity_id: self.entity_id,
             entity: self.entity.clone(),
+            claimed_by: self.claimed_by,
             outcome,
             metadata,
         }
@@ -65,10 +70,6 @@ impl EventEntity {
 
     pub fn error(&self) -> Option<String> {
         self.outcome.error()
-    }
-
-    pub fn is_created(&self) -> bool {
-        matches!(self.outcome, EventStatus::Created)
     }
 }
 

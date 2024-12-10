@@ -53,6 +53,7 @@ impl EventPusher {
         let events_store = self.events.clone();
         let deduplication_store = self.deduplication.clone();
         let event_stream = Arc::clone(&self.event_stream);
+        let claimer = config.partition()?;
 
         let max_concurrent_tasks = self.max_concurrent_tasks;
         let max_chunk_size = self.max_chunk_size;
@@ -77,6 +78,9 @@ impl EventPusher {
                         {
                             "createdAt": { "$lt": before.timestamp_millis() }
                         },
+                        {
+                            "claimedBy": { "$exists": false }
+                        }
                     ]},
                     {"$and": [
                         {
@@ -84,6 +88,9 @@ impl EventPusher {
                         },
                         {
                             "createdAt": { "$lt": before.timestamp_millis() }
+                        },
+                        {
+                            "claimedBy": { "$exists": false }
                         }
                     ]},
                     {"$and": [
@@ -92,6 +99,9 @@ impl EventPusher {
                         },
                         {
                             "createdAt": { "$lt": before.timestamp_millis() }
+                        },
+                        {
+                            "claimedBy": { "$exists": false }
                         }
                     ]}
                 ]
@@ -102,25 +112,33 @@ impl EventPusher {
             if let Ok(events) = events {
                 let event_stream = Arc::clone(&event_stream);
                 let deduplication_store = deduplication_store.clone();
+                let events_store = events_store.clone();
 
-                let result =
-                    events
-                        .try_chunks(max_chunk_size)
-                        .map(|result| {
-                            let event_stream = Arc::clone(&event_stream);
-                            let deduplication_store = deduplication_store.clone();
+                let result = events
+                    .try_chunks(max_chunk_size)
+                    .map(|result| {
+                        let event_stream = Arc::clone(&event_stream);
+                        let deduplication_store = deduplication_store.clone();
+                        let events_store = events_store.clone();
 
-                            let result =
-                                result.map_err(|e| InternalError::io_err(&e.to_string(), None));
-                            async move {
-                                process_chunk(result, &event_stream, &deduplication_store).await
-                            }
-                        })
-                        .buffer_unordered(max_concurrent_tasks)
-                        .collect::<Vec<_>>()
-                        .await
-                        .into_iter()
-                        .collect::<Result<Vec<Unit>, IntegrationOSError>>();
+                        let result =
+                            result.map_err(|e| InternalError::io_err(&e.to_string(), None));
+                        async move {
+                            process_chunk(
+                                result,
+                                &event_stream,
+                                &deduplication_store,
+                                &events_store,
+                                claimer,
+                            )
+                            .await
+                        }
+                    })
+                    .buffer_unordered(max_concurrent_tasks)
+                    .collect::<Vec<_>>()
+                    .await
+                    .into_iter()
+                    .collect::<Result<Vec<Unit>, IntegrationOSError>>();
 
                 if let Err(e) = result {
                     tracing::error!("Failed to publish one or more event chunks: {e}");
@@ -138,17 +156,32 @@ async fn process_chunk(
     result: Result<Vec<EventEntity>, IntegrationOSError>,
     event_stream: &Arc<dyn EventStreamExt + Sync + Send>,
     deduplication_store: &MongoStore<Deduplication>,
+    events_store: &MongoStore<EventEntity>,
+    claimer: u32,
 ) -> Result<Unit, IntegrationOSError> {
     match result {
         Ok(chunk) => {
             tracing::info!("Publishing {} event(s)", chunk.len());
             for event in chunk {
+                // Double check mechanism to prevent duplicated events
+                if events_store
+                    .get_one_by_id(&event.entity_id.to_string())
+                    .await?
+                    .map(|e| e.claimed_by.is_some())
+                    .unwrap_or(false)
+                {
+                    tracing::warn!("Event with id {} is already published", event.entity_id);
+                    continue;
+                }
+
+                events_store
+                    .update_one(
+                        &event.entity_id.to_string(),
+                        doc! { "$set": { "claimedBy": claimer } },
+                    )
+                    .await?;
+
                 let entity_id = event.entity_id;
-                let topic = if event.is_created() {
-                    EventStreamTopic::Target
-                } else {
-                    EventStreamTopic::Dlq
-                };
 
                 let deleted = deduplication_store
                     .collection
@@ -161,7 +194,7 @@ async fn process_chunk(
                 );
 
                 event_stream
-                    .publish(event, topic)
+                    .publish(event, EventStreamTopic::Dlq)
                     .await
                     .inspect(|_| {
                         tracing::info!("Event with id {} is published", entity_id);
