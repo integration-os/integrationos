@@ -45,13 +45,15 @@ pub struct FluvioDriverImpl {
     pub dlq_consumer: ConsumerConfig,
     pub tgt_producer: TargetProducer,
     pub dlq_producer: DlqProducer,
-    metrics: MetricsRegistry,
+    pub partition: u32,
+    pub metrics: MetricsRegistry,
 }
 
 impl FluvioDriverImpl {
     pub async fn new(config: &EmitterConfig) -> Result<Self, IntegrationOSError> {
         let fluvio_config = FluvioConfig::new(config.fluvio.endpoint());
         let fluvio_client = Fluvio::connect_with_config(&fluvio_config).await?;
+        let partition = config.partition()?;
 
         let tgt_producer = match &config.fluvio.producer_topic {
             Some(producer_topic) => {
@@ -114,7 +116,7 @@ impl FluvioDriverImpl {
 
                 let ext = ConsumerConfigExtBuilder::default()
                     .topic(consumer_topic)
-                    .partition(config.partition()?)
+                    .partition(partition)
                     .offset_start(offset)
                     .offset_consumer(consumer_id)
                     .offset_strategy(OffsetManagementStrategy::Manual)
@@ -147,7 +149,7 @@ impl FluvioDriverImpl {
 
             let ext = ConsumerConfigExtBuilder::default()
                 .topic(&topic)
-                .partition(config.partition()?)
+                .partition(partition)
                 .offset_start(Offset::beginning())
                 .offset_consumer(consumer_id)
                 .offset_strategy(OffsetManagementStrategy::Manual)
@@ -166,6 +168,7 @@ impl FluvioDriverImpl {
             dlq_consumer,
             tgt_producer,
             dlq_producer,
+            partition,
             metrics: MetricsRegistry::default(),
         })
     }
@@ -223,7 +226,7 @@ impl FluvioDriverImpl {
                         Some(Ok(record)) => {
                             let event: EventEntity = serde_json::from_slice(record.get_value()).context("Could not deserialize event")?;
                             is_processing.store(true, Ordering::SeqCst);
-                            self.process(ctx, target, &event).await?;
+                            self.process(ctx, target, &event.with_claimed_by(self.partition)).await?;
                             is_processing.store(false, Ordering::SeqCst);
                         },
                         Some(Err(err)) => return Err(InternalError::io_err(&format!("Error consuming record: {err}"), None)),
@@ -241,6 +244,7 @@ impl FluvioDriverImpl {
 
                     if subsys.is_shutdown_requested() {
                         tracing::info!("Consumer for {} cancelled by external request. Breaking the loop", target.as_ref());
+                        unset_claimed_by(ctx, self.partition).await?;
                         break Ok(());
                     }
                 }
@@ -410,6 +414,12 @@ impl EventStreamExt for FluvioDriverImpl {
                 }
             }
 
+            tracing::info!(
+                "Event with id {} is claimed by {}",
+                event.entity_id,
+                self.partition
+            );
+
             match target {
                 EventStreamTopic::Target => {
                     ctx.app_stores.events.create_one(event).await.map_err(|e| {
@@ -431,7 +441,7 @@ impl EventStreamExt for FluvioDriverImpl {
                         })
                         .await;
 
-                    update_event_outcome(ctx, event, EventStatus::executed()).await?;
+                    update_event_status(ctx, event, EventStatus::executed()).await?;
 
                     if let Err(e) = result {
                         self.metrics.errored(1);
@@ -440,8 +450,8 @@ impl EventStreamExt for FluvioDriverImpl {
                         );
                         delete_deduplication_record(ctx, event).await?;
 
-                        let outcome = EventStatus::errored(e.to_string(), 1);
-                        let event = event.with_outcome(outcome.clone());
+                        let status = EventStatus::errored(e.to_string(), 1);
+                        let event = event.with_status(status.clone());
 
                         tracing::debug!(
                             "Event with id {} is in DLQ, with number of retries {}",
@@ -453,15 +463,14 @@ impl EventStreamExt for FluvioDriverImpl {
 
                         tracing::debug!("Event with id {} is published to DLQ", event.entity_id);
 
-                        update_event_outcome(ctx, &event, outcome).await?;
+                        update_event_status(ctx, &event, status).await?;
 
                         tracing::debug!("Event with id {} is updated to DLQ", event.entity_id);
 
                         return Ok(());
                     }
 
-                    update_event_outcome(ctx, event, EventStatus::succeded(event.retries()))
-                        .await?;
+                    update_event_status(ctx, event, EventStatus::succeded(event.retries())).await?;
                 }
                 EventStreamTopic::Dlq => {
                     tracing::info!("Event with id {} is in DLQ", event.entity_id);
@@ -482,7 +491,7 @@ impl EventStreamExt for FluvioDriverImpl {
                                 event.retries()
                             );
 
-                            let event = event.with_outcome(outcome.clone());
+                            let event = event.with_status(outcome.clone());
 
                             self.publish(event.clone(), EventStreamTopic::Dlq).await?;
 
@@ -491,14 +500,14 @@ impl EventStreamExt for FluvioDriverImpl {
                                 event.entity_id
                             );
 
-                            update_event_outcome(ctx, &event, outcome).await?;
+                            update_event_status(ctx, &event, outcome).await?;
 
                             tracing::debug!("Event with id {} is updated to DLQ", event.entity_id);
 
                             return Ok(());
                         }
 
-                        update_event_outcome(ctx, event, EventStatus::succeded(event.retries()))
+                        update_event_status(ctx, event, EventStatus::succeded(event.retries()))
                             .await?;
                     } else {
                         tracing::info!("Giving up on event with id {}", event.entity_id);
@@ -507,14 +516,12 @@ impl EventStreamExt for FluvioDriverImpl {
                         let error = event.error().unwrap_or_default()
                             + ".\n Exhausted retries, cannot process event";
 
-                        update_event_outcome(
+                        update_event_status(
                             ctx,
                             event,
                             EventStatus::errored(error, event.retries()),
                         )
                         .await?;
-
-                        // TODO: create an alert on grafana
                     }
                 }
             }
@@ -535,6 +542,18 @@ impl EventStreamExt for FluvioDriverImpl {
     }
 }
 
+async fn unset_claimed_by(ctx: &AppState, claimer: u32) -> Result<Unit, IntegrationOSError> {
+    ctx.app_stores
+        .events
+        .update_many(
+            doc! { "claimedBy": claimer },
+            doc! { "$unset": { "claimedBy": "" } },
+        )
+        .await?;
+
+    Ok(())
+}
+
 async fn delete_deduplication_record(
     ctx: &AppState,
     event: &EventEntity,
@@ -550,7 +569,7 @@ async fn delete_deduplication_record(
     Ok(())
 }
 
-async fn update_event_outcome(
+async fn update_event_status(
     ctx: &AppState,
     event: &EventEntity,
     outcome: EventStatus,
