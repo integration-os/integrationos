@@ -396,8 +396,6 @@ impl EventStreamExt for FluvioDriverImpl {
                 return Ok(());
             }
 
-            // TODO: Update claimedBy
-
             let insert_result = ctx
                 .app_stores
                 .deduplication
@@ -415,6 +413,13 @@ impl EventStreamExt for FluvioDriverImpl {
                     return Err(e);
                 }
             }
+
+            update_claimed_by(ctx, event, self.partition).await?;
+            tracing::info!(
+                "Event with id {} is claimed by {}",
+                event.entity_id,
+                self.partition
+            );
 
             match target {
                 EventStreamTopic::Target => {
@@ -544,6 +549,22 @@ async fn unset_claimed_by(ctx: &AppState, claimer: u32) -> Result<Unit, Integrat
         .update_many(
             doc! { "claimedBy": claimer },
             doc! { "$unset": { "claimedBy": "" } },
+        )
+        .await?;
+
+    Ok(())
+}
+
+async fn update_claimed_by(
+    ctx: &AppState,
+    event: &EventEntity,
+    claimer: u32,
+) -> Result<Unit, IntegrationOSError> {
+    ctx.app_stores
+        .events
+        .update_one(
+            &event.entity_id.to_string(),
+            doc! { "$set": { "claimedBy": claimer } },
         )
         .await?;
 
