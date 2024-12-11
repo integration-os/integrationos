@@ -32,16 +32,18 @@ use tracing::warn;
 
 pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
     let routes = Router::new()
+        .layer(TraceLayer::new_for_http())
         .nest("/connections", connection::get_router())
-        .nest("/vault/connections", vault_connection::get_router())
         .nest("/event-access", event_access::get_router())
         .nest("/events", events::get_router())
+        .nest("/metrics", metrics::get_router())
         .nest("/oauth", oauth::get_router())
         .nest("/passthrough", passthrough::get_router())
         .nest("/pipelines", pipeline::get_router())
         .nest("/secrets", secrets::get_router())
         .nest("/transactions", transactions::get_router())
         .nest("/unified", unified::get_router())
+        .nest("/vault/connections", vault_connection::get_router())
         .route(
             "/connection-model-definitions/test/:id",
             post(test_connection_model_definition),
@@ -52,9 +54,7 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
                 PublicGetConnectionModelSchema,
                 PublicConnectionModelSchema,
             >),
-        )
-        .layer(TraceLayer::new_for_http())
-        .nest("/metrics", metrics::get_router());
+        );
 
     let routes = match RateLimiter::from_state(state.clone()).await {
         Ok(rate_limiter) => routes.layer(axum::middleware::from_fn_with_state(

@@ -5,7 +5,7 @@ use integrationos_database::{
 };
 use integrationos_domain::prefix::IdPrefix;
 use integrationos_domain::Id;
-use integrationos_domain::{database::DatabaseConnectionConfig, IntegrationOSError, InternalError};
+use integrationos_domain::{database::DatabasePodConfig, IntegrationOSError, InternalError};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::fmt::Debug;
@@ -77,7 +77,7 @@ impl TestServer {
         .chain(r#override.into_iter())
         .collect::<HashMap<String, String>>();
 
-        let config = DatabaseConnectionConfig::init_from_hashmap(&config_map)
+        let config = DatabasePodConfig::init_from_hashmap(&config_map)
             .expect("Failed to initialize storage config");
 
         let server = PostgresDatabaseConnection::init(&config).await?;

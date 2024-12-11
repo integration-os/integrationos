@@ -138,11 +138,7 @@ impl K8sDriver for K8sDriverLogger {
         &self,
         params: ServiceSpecParams,
     ) -> Result<Service, IntegrationOSError> {
-        tracing::info!(
-            "Creating k8s resource {} in namespace {}",
-            params.name,
-            params.namespace
-        );
+        tracing::info!("Creating k8s service resource with params {:#?}", params);
         Ok(Service::default())
     }
 
@@ -154,11 +150,7 @@ impl K8sDriver for K8sDriverLogger {
         &self,
         params: DeploymentSpecParams,
     ) -> Result<Deployment, IntegrationOSError> {
-        tracing::info!(
-            "Creating k8s resource {} in namespace {}",
-            params.name,
-            params.namespace
-        );
+        tracing::info!("Creating k8s deployment resource with params {:#?}", params);
         Ok(Deployment::default())
     }
 
@@ -192,14 +184,11 @@ impl K8sDriver for K8sDriverLogger {
     /// resources.
     async fn coordinator(
         &self,
-        _service: ServiceSpecParams,
+        service: ServiceSpecParams,
         deployment: DeploymentSpecParams,
     ) -> Result<Unit, IntegrationOSError> {
-        tracing::info!(
-            "Creating k8s resource {} in namespace {}",
-            deployment.name,
-            deployment.namespace
-        );
+        self.create_deployment(deployment).await?;
+        self.create_service(service).await?;
         Ok(())
     }
 }

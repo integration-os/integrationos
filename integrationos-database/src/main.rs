@@ -2,17 +2,18 @@ use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
 use integrationos_database::{
-    domain::postgres::PostgresDatabaseConnection, service::init::Initializer,
+    domain::postgres::PostgresDatabaseConnection,
+    service::{init::Initializer, on_error_callback},
 };
 use integrationos_domain::{
-    database::{DatabaseConnectionConfig, DatabaseConnectionType},
+    database::DatabasePodConfig,
     telemetry::{get_subscriber, init_subscriber},
 };
 use tracing::info;
 
 fn main() -> Result<()> {
     dotenv().ok();
-    let config = DatabaseConnectionConfig::init_from_env()?;
+    let config = DatabasePodConfig::init_from_env()?;
 
     let subscriber = get_subscriber("storage".into(), "info".into(), std::io::stdout, None);
     init_subscriber(subscriber);
@@ -24,17 +25,13 @@ fn main() -> Result<()> {
         .enable_all()
         .build()?
         .block_on(async move {
-            match config.database_connection_type {
-                DatabaseConnectionType::PostgreSql => {
-                    let server = PostgresDatabaseConnection::init(&config).await?;
+            let server = PostgresDatabaseConnection::init(&config).await?;
 
-                    if let Err(e) = server.run().await {
-                        PostgresDatabaseConnection::kill(&config, e.to_string()).await?;
-                        return Err(e);
-                    }
-
-                    Ok(())
-                }
+            if let Err(e) = server.run().await {
+                on_error_callback(&e, &config, None).await?;
+                return Err(e);
             }
+
+            Ok(())
         })
 }

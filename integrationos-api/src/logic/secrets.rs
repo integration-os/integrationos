@@ -5,7 +5,9 @@ use axum::{
     Extension, Json, Router,
 };
 use bson::doc;
-use integrationos_domain::{event_access::EventAccess, secret::Secret, IntegrationOSError};
+use integrationos_domain::{
+    event_access::EventAccess, secret::Secret, ApplicationError, Id, IntegrationOSError,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
@@ -46,4 +48,22 @@ async fn get_secret(
             .get(&id, &event_access.ownership.id)
             .await?,
     ))
+}
+
+pub async fn get_admin_secret(
+    state: State<Arc<AppState>>,
+    Path(connection_id): Path<Id>,
+) -> Result<Json<Secret>, IntegrationOSError> {
+    let (secret_id, owner) = state
+        .app_stores
+        .connection
+        .get_one_by_id(&connection_id.to_string())
+        .await?
+        .map(|c| (c.secrets_service_id, c.ownership.id))
+        .ok_or(ApplicationError::not_found(
+            &format!("connection with id {} not found", connection_id),
+            None,
+        ))?;
+
+    Ok(Json(state.secrets_client.get(&secret_id, &owner).await?))
 }

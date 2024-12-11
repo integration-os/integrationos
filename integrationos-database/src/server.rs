@@ -1,13 +1,13 @@
 use crate::{router, service::storage::Storage};
 use anyhow::Result as AnyhowResult;
 use axum::Router;
-use integrationos_domain::database::DatabaseConnectionConfig;
+use integrationos_domain::database::DatabasePodConfig;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub config: DatabaseConnectionConfig,
+    pub config: DatabasePodConfig,
     pub storage: Arc<dyn Storage>,
 }
 

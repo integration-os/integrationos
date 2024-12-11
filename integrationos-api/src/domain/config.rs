@@ -61,6 +61,11 @@ pub struct ConnectionsConfig {
     pub jwt_secret: String,
     #[envconfig(from = "EMIT_URL", default = "http://localhost:3001")]
     pub emit_url: String,
+    #[envconfig(from = "EMITTER_ENABLED", default = "false")]
+    pub emitter_enabled: bool,
+    #[envconfig(from = "CONNECTIONS_URL", default = "http://localhost:3005")]
+    /// Same as self url, but this may vary in a k8s environment hence it's a separate config
+    pub connections_url: String,
     /// Burst size limit
     #[envconfig(from = "API_VERSION", default = "v1")]
     pub api_version: String,
