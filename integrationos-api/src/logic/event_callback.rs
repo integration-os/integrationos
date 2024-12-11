@@ -1,4 +1,3 @@
-use super::connection::DatabaseConnectionSecret;
 use crate::{
     helper::{NamespaceScope, ServiceName},
     server::AppState,
@@ -10,7 +9,8 @@ use axum::{
 };
 use bson::doc;
 use integrationos_domain::{
-    emitted_events::ConnectionLostReason, ApplicationError, Connection, Id, IntegrationOSError,
+    database_secret::DatabaseConnectionSecret, emitted_events::ConnectionLostReason,
+    ApplicationError, Connection, Id, IntegrationOSError,
 };
 use std::sync::Arc;
 

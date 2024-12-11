@@ -1,3 +1,4 @@
+pub mod database_secret;
 pub mod hashed_secret;
 pub mod oauth_secret;
 

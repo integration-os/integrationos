@@ -1,6 +1,7 @@
 pub mod prefix;
 
 use crate::{id::prefix::IdPrefix, IntegrationOSError, InternalError};
+use base64::{prelude::BASE64_STANDARD, Engine};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::{DateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
