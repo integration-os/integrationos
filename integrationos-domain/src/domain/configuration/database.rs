@@ -34,46 +34,6 @@ impl DatabaseConfig {
     pub fn new() -> Self {
         Self::default()
     }
-
-    pub fn as_hashmap(&self) -> HashMap<String, String> {
-        let mut map = HashMap::new();
-
-        map.insert(
-            "CONTROL_DATABASE_URL".to_string(),
-            self.control_db_url.to_string(),
-        );
-        map.insert(
-            "CONTROL_DATABASE_NAME".to_string(),
-            self.control_db_name.to_string(),
-        );
-        map.insert("UDM_DATABASE_URL".to_string(), self.udm_db_url.to_string());
-        map.insert(
-            "UDM_DATABASE_NAME".to_string(),
-            self.udm_db_name.to_string(),
-        );
-        map.insert(
-            "EVENT_DATABASE_URL".to_string(),
-            self.event_db_url.to_string(),
-        );
-        map.insert(
-            "EVENT_DATABASE_NAME".to_string(),
-            self.event_db_name.to_string(),
-        );
-        map.insert(
-            "CONTEXT_DATABASE_URL".to_string(),
-            self.context_db_url.to_string(),
-        );
-        map.insert(
-            "CONTEXT_DATABASE_NAME".to_string(),
-            self.context_db_name.to_string(),
-        );
-        map.insert(
-            "CONTEXT_COLLECTION_NAME".to_string(),
-            self.context_collection_name.to_string(),
-        );
-
-        map
-    }
 }
 
 impl Default for DatabaseConfig {

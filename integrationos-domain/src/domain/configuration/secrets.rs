@@ -53,34 +53,6 @@ impl SecretsConfig {
         self.provider = provider;
         self
     }
-
-    pub fn as_hashmap(&self) -> HashMap<String, String> {
-        let mut map = HashMap::new();
-
-        map.insert("PROVIDER".to_string(), self.provider.as_ref().to_string());
-        map.insert(
-            "GOOGLE_KMS_PROJECT_ID".to_string(),
-            self.google_kms_project_id.to_string(),
-        );
-        map.insert(
-            "GOOGLE_KMS_LOCATION_ID".to_string(),
-            self.google_kms_location_id.to_string(),
-        );
-        map.insert(
-            "GOOGLE_KMS_KEY_RING_ID".to_string(),
-            self.google_kms_key_ring_id.to_string(),
-        );
-        map.insert(
-            "GOOGLE_KMS_KEY_ID".to_string(),
-            self.google_kms_key_id.to_string(),
-        );
-        map.insert(
-            "IOS_CRYPTO_SECRET".to_string(),
-            self.ios_crypto_secret.expose_secret().as_str().to_string(),
-        );
-
-        map
-    }
 }
 
 impl Default for SecretsConfig {
