@@ -58,7 +58,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
 const APP_LABEL: &str = "app";
 const DATABASE_TYPE_LABEL: &str = "database-type";
 
-const JWT_SECRET_REF_KEY: &str = "jwt_secret";
+const JWT_SECRET_REF_KEY: &str = "jwt-secret";
 const JWT_SECRET_REF_NAME: &str = "database-secrets";
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
@@ -468,7 +468,7 @@ async fn generate_k8s_specs_and_secret(
 
                     // JWT_SECRET
                     env.push(EnvVar {
-                        name: JWT_SECRET_REF_KEY.to_uppercase(),
+                        name: "JWT_SECRET".to_string(),
                         value_from: Some(EnvVarSource {
                             secret_key_ref: Some(SecretKeySelector {
                                 key: JWT_SECRET_REF_KEY.to_string(),
