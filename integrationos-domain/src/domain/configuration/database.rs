@@ -144,7 +144,10 @@ impl DatabasePodConfig {
             "INTERNAL_SERVER_ADDRESS".to_string(),
             self.address.to_string(),
         );
-        map.insert("EMITTER_ENABLED".to_string(), self.emitter_enabled.to_string());
+        map.insert(
+            "EMITTER_ENABLED".to_string(),
+            self.emitter_enabled.to_string(),
+        );
         map.insert("ENVIRONMENT".to_string(), self.environment.to_string());
         map.insert(
             "DATABASE_CONNECTION_TYPE".to_string(),
