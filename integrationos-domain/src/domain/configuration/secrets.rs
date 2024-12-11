@@ -1,9 +1,6 @@
 use envconfig::Envconfig;
-use secrecy::{ExposeSecret, SecretString};
-use std::{
-    collections::HashMap,
-    fmt::{Display, Formatter, Result},
-};
+use secrecy::SecretString;
+use std::fmt::{Display, Formatter, Result};
 use strum::{AsRefStr, EnumString};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, AsRefStr)]
