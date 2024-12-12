@@ -13,18 +13,25 @@ async fn test_kill_signal() -> Result<Unit, IntegrationOSError> {
 
     let connection_id = Id::now(IdPrefix::Connection);
 
+    let path = format!("/v1/admin/connection/{connection_id}");
+    let secret_req = mock_server
+        .mock("GET", path.as_str())
+        .with_status(200)
+        .create_async()
+        .await;
+
     let path = "/v1/emit";
     let body = DatabaseConnectionLost {
         connection_id,
         reason: Some(
-            "error returned from database: password authentication failed for user \"postgres\""
+            "Deserialization error: Failed to deserialize secret: error decoding response body"
                 .to_string(),
         ),
         schedule_on: None,
     }
     .as_event();
 
-    let mock_server = mock_server
+    let emit_req = mock_server
         .mock("POST", path)
         .match_header(CONTENT_TYPE, "application/json")
         .match_header(ACCEPT, "*/*")
@@ -38,11 +45,13 @@ async fn test_kill_signal() -> Result<Unit, IntegrationOSError> {
     let _ = TestServer::new(HashMap::from([
         ("CONNECTION_ID".to_string(), connection_id.to_string()),
         ("POSTGRES_PASSWORD".to_string(), "wrongpass".to_string()),
-        ("EMIT_URL".to_string(), mock_uri),
+        ("EMIT_URL".to_string(), mock_uri.clone()),
+        ("CONNECTIONS_URL".to_string(), mock_uri),
     ]))
     .await;
 
-    mock_server.expect(1).assert_async().await;
+    secret_req.expect(1).assert_async().await;
+    emit_req.expect(1).assert_async().await;
 
     Ok(())
 }

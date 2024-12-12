@@ -70,7 +70,7 @@ impl Display for DatabaseConfig {
     }
 }
 
-#[derive(Envconfig, Clone, Serialize, Deserialize)]
+#[derive(Envconfig, Clone, Serialize, Deserialize, Debug)]
 pub struct DatabasePodConfig {
     #[envconfig(from = "WORKER_THREADS")]
     pub worker_threads: Option<usize>,

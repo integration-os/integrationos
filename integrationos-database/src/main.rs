@@ -1,9 +1,9 @@
 use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
-use integrationos_database::{
-    domain::postgres::PostgresDatabaseConnection,
-    service::{init::Initializer, on_error_callback},
+use integrationos_database::service::{
+    init::{DatabaseInitializer, Initializer},
+    on_error_callback,
 };
 use integrationos_domain::{
     database::DatabasePodConfig,
@@ -25,7 +25,7 @@ fn main() -> Result<()> {
         .enable_all()
         .build()?
         .block_on(async move {
-            let server = PostgresDatabaseConnection::init(&config).await?;
+            let server = DatabaseInitializer::init(&config).await?;
 
             if let Err(e) = server.run().await {
                 on_error_callback(&e, &config, None).await?;

@@ -1,5 +1,4 @@
-use crate::domain::postgres::PostgresDatabaseConnection;
-use init::Initializer;
+use init::{DatabaseInitializer, Initializer};
 use integrationos_domain::{database::DatabasePodConfig, Unit};
 use reqwest::Client;
 
@@ -12,7 +11,7 @@ pub async fn on_error_callback(
     client: Option<Client>,
 ) -> Result<Unit, anyhow::Error> {
     if config.emitter_enabled {
-        PostgresDatabaseConnection::kill(config, e.to_string(), client).await
+        DatabaseInitializer::kill(config, e.to_string(), client).await
     } else {
         Ok(())
     }
