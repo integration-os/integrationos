@@ -9,7 +9,6 @@ use sqlx::{query, Column, PgPool, Row};
 use std::collections::HashMap;
 
 const MAX_LIMIT: usize = 100;
-// const MAX_SIZE: usize = 100;
 
 #[async_trait]
 pub trait Storage: Send + Sync {

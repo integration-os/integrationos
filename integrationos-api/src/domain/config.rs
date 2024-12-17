@@ -61,6 +61,11 @@ pub struct ConnectionsConfig {
     pub jwt_secret: String,
     #[envconfig(from = "EMIT_URL", default = "http://localhost:3001")]
     pub emit_url: String,
+    #[envconfig(from = "EMITTER_ENABLED", default = "false")]
+    pub emitter_enabled: bool,
+    #[envconfig(from = "CONNECTIONS_URL", default = "http://localhost:3005")]
+    /// Same as self url, but this may vary in a k8s environment hence it's a separate config
+    pub connections_url: String,
     /// Burst size limit
     #[envconfig(from = "API_VERSION", default = "v1")]
     pub api_version: String,
@@ -81,6 +86,8 @@ pub struct ConnectionsConfig {
         default = "integrationos-database"
     )]
     pub database_connection_docker_image: String,
+    #[envconfig(from = "NAMESPACE", default = "development")]
+    pub namespace: String,
     #[envconfig(from = "DATABASE_CONNECTION_PROBE_TIMEOUT_SECS", default = "10")]
     pub database_connection_probe_timeout_secs: u64,
     #[envconfig(from = "K8S_MODE", default = "logger")]
@@ -147,7 +154,13 @@ impl Display for ConnectionsConfig {
         writeln!(f, "{}", self.db_config)?;
         writeln!(f, "{}", self.cache_config)?;
         writeln!(f, "RATE_LIMIT_ENABLED: {}", self.rate_limit_enabled)?;
-        writeln!(f, "ENVIRONMENT: {}", self.environment)
+        writeln!(f, "ENVIRONMENT: {}", self.environment)?;
+        writeln!(
+            f,
+            "DATABASE_CONNECTION_DOCKER_IMAGE: {}",
+            self.database_connection_docker_image
+        )?;
+        writeln!(f, "NAMESPACE: {}", self.namespace)
     }
 }
 

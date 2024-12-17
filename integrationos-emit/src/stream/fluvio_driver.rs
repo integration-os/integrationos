@@ -379,157 +379,7 @@ impl EventStreamExt for FluvioDriverImpl {
         target: EventStreamTopic,
         event: &EventEntity,
     ) -> Result<Unit, IntegrationOSError> {
-        let task = {
-            let is_processed = ctx
-                .app_stores
-                .deduplication
-                .get_one_by_id(&event.entity_id.to_string())
-                .await
-                .map_err(|e| {
-                    tracing::error!("Could not fetch deduplication record: {e}");
-                    InternalError::unknown("Could not fetch deduplication record", None)
-                })?
-                .is_some();
-
-            if is_processed {
-                tracing::info!("Event with id {} is already processed", event.entity_id);
-                return Ok(());
-            }
-
-            let insert_result = ctx
-                .app_stores
-                .deduplication
-                .create_one(&Deduplication {
-                    entity_id: event.entity_id,
-                    metadata: event.metadata.clone(),
-                })
-                .await;
-
-            if let Err(e) = insert_result {
-                tracing::error!("Could not create deduplication record: {e}");
-                if e.is_unique_error() {
-                    return Ok(());
-                } else {
-                    return Err(e);
-                }
-            }
-
-            tracing::info!(
-                "Event with id {} is claimed by {}",
-                event.entity_id,
-                self.partition
-            );
-
-            match target {
-                EventStreamTopic::Target => {
-                    ctx.app_stores.events.create_one(event).await.map_err(|e| {
-                        tracing::error!("Could not create event record: {e}");
-                        InternalError::unknown("Could not create event record", None)
-                    })?;
-
-                    tracing::info!("Event with id {} is ready to be processed", event.entity_id);
-                    let result = event
-                        .side_effect(ctx)
-                        .timed(|_, elapsed| {
-                            self.metrics.duration(elapsed);
-
-                            tracing::info!(
-                                "Side effect for entity id {} took {}ms",
-                                event.entity_id,
-                                elapsed.as_millis()
-                            )
-                        })
-                        .await;
-
-                    update_event_status(ctx, event, EventStatus::executed()).await?;
-
-                    if let Err(e) = result {
-                        self.metrics.errored(1);
-                        tracing::error!(
-                            "Error processing event: {e}, removing deduplication record"
-                        );
-                        delete_deduplication_record(ctx, event).await?;
-
-                        let status = EventStatus::errored(e.to_string(), 1);
-                        let event = event.with_status(status.clone());
-
-                        tracing::debug!(
-                            "Event with id {} is in DLQ, with number of retries {}",
-                            event.entity_id,
-                            event.retries()
-                        );
-
-                        self.publish(event.clone(), EventStreamTopic::Dlq).await?;
-
-                        tracing::debug!("Event with id {} is published to DLQ", event.entity_id);
-
-                        update_event_status(ctx, &event, status).await?;
-
-                        tracing::debug!("Event with id {} is updated to DLQ", event.entity_id);
-
-                        return Ok(());
-                    }
-
-                    update_event_status(ctx, event, EventStatus::succeded(event.retries())).await?;
-                }
-                EventStreamTopic::Dlq => {
-                    tracing::info!("Event with id {} is in DLQ", event.entity_id);
-                    if event.retries() <= ctx.config.event_processing_max_retries {
-                        let result = event.side_effect(ctx).await;
-
-                        if let Err(e) = result {
-                            tracing::error!(
-                                "Error processing event: {e}, removing deduplication record"
-                            );
-                            delete_deduplication_record(ctx, event).await?;
-
-                            let outcome = EventStatus::errored(e.to_string(), event.retries() + 1);
-
-                            tracing::debug!(
-                                "Event with id {} is in DLQ, with number of retries {}",
-                                event.entity_id,
-                                event.retries()
-                            );
-
-                            let event = event.with_status(outcome.clone());
-
-                            self.publish(event.clone(), EventStreamTopic::Dlq).await?;
-
-                            tracing::debug!(
-                                "Event with id {} is published to DLQ",
-                                event.entity_id
-                            );
-
-                            update_event_status(ctx, &event, outcome).await?;
-
-                            tracing::debug!("Event with id {} is updated to DLQ", event.entity_id);
-
-                            return Ok(());
-                        }
-
-                        update_event_status(ctx, event, EventStatus::succeded(event.retries()))
-                            .await?;
-                    } else {
-                        tracing::info!("Giving up on event with id {}", event.entity_id);
-                        // this is the case where we exhausted the retries, now
-                        // the error is updated and not sent to the target topic
-                        let error = event.error().unwrap_or_default()
-                            + ".\n Exhausted retries, cannot process event";
-
-                        update_event_status(
-                            ctx,
-                            event,
-                            EventStatus::errored(error, event.retries()),
-                        )
-                        .await?;
-                    }
-                }
-            }
-
-            Ok(())
-        };
-
-        match task {
+        match process_event(self, ctx, target, event).await {
             Ok(_) => {
                 self.metrics.succeeded(1);
                 Ok(())
@@ -583,6 +433,153 @@ async fn update_event_status(
             doc! { "$set": { "outcome": outcome } },
         )
         .await?;
+
+    Ok(())
+}
+
+async fn process_event(
+    fluvio_driver: &FluvioDriverImpl,
+    ctx: &AppState,
+    target: EventStreamTopic,
+    event: &EventEntity,
+) -> Result<Unit, IntegrationOSError> {
+    let is_processed = ctx
+        .app_stores
+        .deduplication
+        .get_one_by_id(&event.entity_id.to_string())
+        .await
+        .map_err(|e| {
+            tracing::error!("Could not fetch deduplication record: {e}");
+            InternalError::unknown("Could not fetch deduplication record", None)
+        })?
+        .is_some();
+
+    if is_processed {
+        tracing::info!("Event with id {} is already processed", event.entity_id);
+        return Ok(());
+    }
+
+    let insert_result = ctx
+        .app_stores
+        .deduplication
+        .create_one(&Deduplication {
+            entity_id: event.entity_id,
+            metadata: event.metadata.clone(),
+        })
+        .await;
+
+    if let Err(e) = insert_result {
+        tracing::error!("Could not create deduplication record: {e}");
+        if e.is_unique_error() {
+            return Ok(());
+        } else {
+            return Err(e);
+        }
+    }
+
+    tracing::info!(
+        "Event with id {} is claimed by {}",
+        event.entity_id,
+        fluvio_driver.partition
+    );
+
+    match target {
+        EventStreamTopic::Target => {
+            ctx.app_stores.events.create_one(event).await.map_err(|e| {
+                tracing::error!("Could not create event record: {e}");
+                InternalError::unknown("Could not create event record", None)
+            })?;
+
+            tracing::info!("Event with id {} is ready to be processed", event.entity_id);
+            let result = event
+                .side_effect(ctx)
+                .timed(|_, elapsed| {
+                    fluvio_driver.metrics.duration(elapsed);
+
+                    tracing::info!(
+                        "Side effect for entity id {} took {}ms",
+                        event.entity_id,
+                        elapsed.as_millis()
+                    )
+                })
+                .await;
+
+            update_event_status(ctx, event, EventStatus::executed()).await?;
+
+            if let Err(e) = result {
+                fluvio_driver.metrics.errored(1);
+                tracing::error!("Error processing event: {e}, removing deduplication record");
+                delete_deduplication_record(ctx, event).await?;
+
+                let status = EventStatus::errored(e.to_string(), 1);
+                let event = event.with_status(status.clone());
+
+                tracing::debug!(
+                    "Event with id {} is in DLQ, with number of retries {}",
+                    event.entity_id,
+                    event.retries()
+                );
+
+                fluvio_driver
+                    .publish(event.clone(), EventStreamTopic::Dlq)
+                    .await?;
+
+                tracing::debug!("Event with id {} is published to DLQ", event.entity_id);
+
+                update_event_status(ctx, &event, status).await?;
+
+                tracing::debug!("Event with id {} is updated to DLQ", event.entity_id);
+
+                return Ok(());
+            }
+
+            update_event_status(ctx, event, EventStatus::succeded(event.retries())).await?;
+        }
+        EventStreamTopic::Dlq => {
+            tracing::info!("Event with id {} is in DLQ", event.entity_id);
+            if event.retries() <= ctx.config.event_processing_max_retries {
+                let result = event.side_effect(ctx).await;
+
+                if let Err(e) = result {
+                    tracing::error!("Error processing event: {e}, removing deduplication record");
+                    delete_deduplication_record(ctx, event).await?;
+
+                    let outcome = EventStatus::errored(e.to_string(), event.retries() + 1);
+
+                    tracing::debug!(
+                        "Event with id {} is in DLQ, with number of retries {}",
+                        event.entity_id,
+                        event.retries()
+                    );
+
+                    let event = event.with_status(outcome.clone());
+
+                    fluvio_driver
+                        .publish(event.clone(), EventStreamTopic::Dlq)
+                        .await?;
+
+                    tracing::debug!("Event with id {} is published to DLQ", event.entity_id);
+
+                    update_event_status(ctx, &event, outcome).await?;
+
+                    tracing::debug!("Event with id {} is updated to DLQ", event.entity_id);
+
+                    return Ok(());
+                }
+
+                update_event_status(ctx, event, EventStatus::succeded(event.retries())).await?;
+            } else {
+                tracing::info!("Giving up on event with id {}", event.entity_id);
+                // this is the case where we exhausted the retries, now
+                // the error is updated and not sent to the target topic
+                let error = event.error().unwrap_or_default()
+                    + ".\n Exhausted retries, cannot process event";
+
+                update_event_status(ctx, event, EventStatus::errored(error, event.retries()))
+                    .await?;
+            }
+        }
+    }
 
     Ok(())
 }

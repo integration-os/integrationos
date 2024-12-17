@@ -1,6 +1,6 @@
 use super::{delete, event_access::DEFAULT_NAMESPACE, read, PublicExt, RequestExt};
 use crate::{
-    helper::{DeploymentSpecParams, NamespaceScope, ServiceName, ServiceSpecParams},
+    helper::{DeploymentSpecParams, ServiceName, ServiceSpecParams},
     logic::event_access::{
         generate_event_access, get_client_throughput, CreateEventAccessPayloadWithOwnership,
     },
@@ -14,13 +14,14 @@ use axum::{
     Extension, Json, Router,
 };
 use chrono::Utc;
+use envconfig::Envconfig;
 use http::HeaderMap;
 use integrationos_domain::{
     algebra::MongoStore,
     connection_definition::{ConnectionDefinition, ConnectionDefinitionType},
-    database::DatabaseConnectionConfig,
+    database::{DatabasePodConfig, PostgresConfig},
+    database_secret::DatabaseConnectionSecret,
     domain::connection::SanitizedConnection,
-    environment::Environment,
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
@@ -29,7 +30,7 @@ use integrationos_domain::{
     InternalError, Throughput,
 };
 use k8s_openapi::{
-    api::core::v1::{ContainerPort, EnvVar, ServicePort},
+    api::core::v1::{ContainerPort, EnvVar, EnvVarSource, SecretKeySelector, ServicePort},
     apimachinery::pkg::util::intstr::IntOrString,
 };
 use mongodb::bson::doc;
@@ -56,6 +57,9 @@ pub fn get_router() -> Router<Arc<AppState>> {
 const APP_LABEL: &str = "app";
 const DATABASE_TYPE_LABEL: &str = "database-type";
 
+const JWT_SECRET_REF_KEY: &str = "jwt-secret";
+const JWT_SECRET_REF_NAME: &str = "database-secrets";
+
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateConnectionPayload {
@@ -66,16 +70,6 @@ pub struct CreateConnectionPayload {
     pub identity_type: Option<ConnectionIdentityType>,
     pub group: Option<String>,
     pub name: Option<String>,
-}
-
-#[derive(Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "UPPERCASE")]
-pub struct DatabaseConnectionSecret {
-    #[serde(flatten)]
-    pub value: DatabaseConnectionConfig,
-    pub namespace: String,
-    pub service_name: String,
-    pub connection_id: Id,
 }
 
 async fn test_connection(
@@ -271,14 +265,9 @@ pub async fn create_connection(
 
     let connection_id = Id::new(IdPrefix::Connection, Utc::now());
 
-    let (secret_value, service, deployment) = generate_k8s_specs_and_secret(
-        &connection_id,
-        &state,
-        &connection_config,
-        &payload,
-        &auth_form_data,
-    )
-    .await?;
+    let (secret_value, service, deployment) =
+        generate_k8s_specs_and_secret(&connection_id, &state, &connection_config, &auth_form_data)
+            .await?;
 
     if let (Some(service), Some(deployment)) = (service.clone(), deployment.clone()) {
         state.k8s_client.coordinator(service, deployment).await?;
@@ -378,9 +367,7 @@ async fn generate_k8s_specs_and_secret(
     connection_id: &Id,
     state: &AppState,
     connection_config: &ConnectionDefinition,
-    payload: &CreateConnectionPayload,
     auth_form_data: &Value,
-    // emit_url: &str,
 ) -> Result<
     (
         Value,
@@ -391,29 +378,8 @@ async fn generate_k8s_specs_and_secret(
 > {
     Ok(match connection_config.to_connection_type() {
         integrationos_domain::ConnectionType::DatabaseSql {} => {
-            // Override for security reasons
-            let auth_form: HashMap<String, String> = payload
-                .auth_form_data
-                .clone()
-                .into_iter()
-                .chain(vec![
-                    ("WORKER_THREADS".into(), "1".into()),
-                    ("INTERNAL_SERVER_ADDRESS".into(), "0.0.0.0:5005".into()),
-                    ("CONNECTION_ID".into(), connection_id.to_string()),
-                    ("EMIT_URL".into(), state.config.emit_url.clone()),
-                    (
-                        "DATABASE_CONNECTION_TYPE".into(),
-                        connection_config.platform.clone(),
-                    ),
-                ])
-                .collect();
-
             let service_name = ServiceName::from_id(*connection_id)?;
-
-            let namespace = match state.config.environment {
-                Environment::Test | Environment::Development => NamespaceScope::Development,
-                Environment::Live | Environment::Production => NamespaceScope::Production,
-            };
+            let namespace = state.config.namespace.clone();
 
             let mut labels: BTreeMap<String, String> = BTreeMap::new();
             labels.insert(APP_LABEL.to_owned(), service_name.as_ref().to_string());
@@ -422,14 +388,44 @@ async fn generate_k8s_specs_and_secret(
                 connection_config.platform.clone(),
             );
 
-            let database_connection_config =
-                DatabaseConnectionConfig::default().merge_unknown(auth_form)?;
+            let payload: HashMap<String, String> = serde_json::from_value(auth_form_data.clone())
+                .map_err(|e| {
+                error!("Error serializing auth form data for connection: {:?}", e);
+
+                ApplicationError::bad_request(&format!("Invalid auth form data: {:?}", e), None)
+            })?;
+
+            let database_pod_config = DatabasePodConfig {
+                worker_threads: Some(1),
+                address: "0.0.0.0:5000".parse().map_err(|_| {
+                    InternalError::serialize_error("Unable to convert address to SocketAddr", None)
+                })?,
+                environment: state.config.environment,
+                emit_url: state.config.emit_url.clone(),
+                connections_url: state.config.connections_url.clone(),
+                database_connection_type: connection_config.platform.parse().map_err(|_| {
+                    InternalError::serialize_error(
+                        "Unable to convert database_connection_type to DatabaseConnectionType",
+                        None,
+                    )
+                })?,
+                connection_id: connection_id.to_string(),
+                emitter_enabled: state.config.emitter_enabled,
+                jwt_secret: None,
+            };
 
             let secret = DatabaseConnectionSecret {
-                value: database_connection_config,
                 service_name: service_name.to_string(),
                 namespace: namespace.to_string(),
                 connection_id: *connection_id,
+                postgres_config: PostgresConfig::init_from_hashmap(&payload).map_err(|e| {
+                    error!("Error initializing postgres config for connection: {:?}", e);
+
+                    InternalError::serialize_error(
+                        &format!("Unable to initialize postgres config: {:?}", e),
+                        None,
+                    )
+                })?,
             };
 
             let service = ServiceSpecParams {
@@ -452,18 +448,34 @@ async fn generate_k8s_specs_and_secret(
                 namespace,
                 image: state.config.database_connection_docker_image.clone(),
                 env: {
-                    secret
-                        .value
-                        .as_hashmap()
-                        .iter()
-                        .fold(vec![], |mut env, (key, value)| {
-                            env.push(EnvVar {
+                    let mut env = database_pod_config.as_hashmap().iter().fold(
+                        vec![],
+                        |mut vars, (key, value)| {
+                            vars.push(EnvVar {
                                 name: key.to_string(),
                                 value: Some(value.to_string()),
                                 ..Default::default()
                             });
-                            env
-                        })
+
+                            vars
+                        },
+                    );
+
+                    // JWT_SECRET
+                    env.push(EnvVar {
+                        name: "JWT_SECRET".to_string(),
+                        value_from: Some(EnvVarSource {
+                            secret_key_ref: Some(SecretKeySelector {
+                                key: JWT_SECRET_REF_KEY.to_string(),
+                                name: JWT_SECRET_REF_NAME.to_owned(),
+                                optional: Some(false),
+                            }),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    });
+
+                    env
                 },
                 ports: vec![ContainerPort {
                     container_port: 5005,
@@ -658,11 +670,8 @@ pub async fn delete_connection(
     .await?;
 
     if let ConnectionType::DatabaseSql { .. } = connection.args.r#type {
-        let namespace = match state.config.environment {
-            Environment::Test | Environment::Development => NamespaceScope::Development,
-            Environment::Live | Environment::Production => NamespaceScope::Production,
-        };
         let service_name = ServiceName::from_id(connection.args.id)?;
+        let namespace = state.config.namespace.clone();
         state.k8s_client.delete_all(namespace, service_name).await?;
     };
 

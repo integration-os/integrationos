@@ -36,6 +36,7 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
                     get(read::<common_enum::GetRequest, CommonEnum>),
                 ),
         )
+        .nest("/schemas", schema_generator::get_router())
         .route(
             "/connection-data",
             get(read::<GetPublicConnectionDetailsRequest, PublicConnectionDetails>),
@@ -52,7 +53,6 @@ pub fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
             "/connection-definitions",
             get(read::<connection_definition::CreateRequest, ConnectionDefinition>),
         )
-        .nest("/schemas", schema_generator::get_router())
         .route(
             "/connection-oauth-definition-schema",
             get(read::<

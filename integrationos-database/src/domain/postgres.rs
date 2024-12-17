@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
-use integrationos_domain::database::DatabaseConnectionConfig;
+use integrationos_domain::database_secret::DatabaseConnectionSecret;
 use serde::ser::Error;
 use serde::Serializer;
 use serde_json::Value;
@@ -19,7 +19,7 @@ pub struct PostgresDatabaseConnection {
 }
 
 impl PostgresDatabaseConnection {
-    pub async fn new(configuration: &DatabaseConnectionConfig) -> Result<Self> {
+    pub async fn new(configuration: &DatabaseConnectionSecret) -> Result<Self> {
         let options = PgConnectOptions::new()
             .username(&configuration.postgres_config.postgres_username)
             .password(&configuration.postgres_config.postgres_password)

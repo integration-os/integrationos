@@ -1,5 +1,4 @@
 use super::environment::Environment;
-use crate::{ApplicationError, IntegrationOSError};
 use envconfig::Envconfig;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -71,8 +70,8 @@ impl Display for DatabaseConfig {
     }
 }
 
-#[derive(Envconfig, Clone, Serialize, Deserialize, PartialEq, Debug)]
-pub struct DatabaseConnectionConfig {
+#[derive(Envconfig, Clone, Serialize, Deserialize, Debug)]
+pub struct DatabasePodConfig {
     #[envconfig(from = "WORKER_THREADS")]
     pub worker_threads: Option<usize>,
     #[envconfig(from = "INTERNAL_SERVER_ADDRESS", default = "0.0.0.0:5005")]
@@ -81,86 +80,19 @@ pub struct DatabaseConnectionConfig {
     pub environment: Environment,
     #[envconfig(from = "EMIT_URL", default = "http://localhost:3001")]
     pub emit_url: String,
-    #[envconfig(nested = true)]
-    pub postgres_config: PostgresConfig,
-    #[envconfig(from = "DATABASE_CONNECTION_TYPE", default = "postgres")]
+    #[envconfig(from = "EMITTER_ENABLED", default = "false")]
+    pub emitter_enabled: bool,
+    #[envconfig(from = "CONNECTIONS_URL", default = "http://localhost:3005")]
+    pub connections_url: String,
+    #[envconfig(from = "DATABASE_CONNECTION_TYPE", default = "postgresql")]
     pub database_connection_type: DatabaseConnectionType,
     #[envconfig(from = "CONNECTION_ID")]
     pub connection_id: String,
+    #[envconfig(from = "JWT_SECRET")]
+    pub jwt_secret: Option<String>,
 }
 
-impl DatabaseConnectionConfig {
-    /// Merges the unknown fields from the environment
-    /// into the current config
-    ///
-    /// # Arguments
-    /// * `other` - The unknown fields from the environment
-    ///
-    /// # Returns
-    /// * `Result<Self, IntegrationOSError>` - The updated config
-    pub fn merge_unknown(
-        mut self,
-        other: HashMap<String, String>,
-    ) -> Result<Self, IntegrationOSError> {
-        if let Some(worker_threads) = other.get("WORKER_THREADS") {
-            self.worker_threads = Some(worker_threads.parse::<usize>().map_err(|e| {
-                ApplicationError::bad_request(&format!("Invalid worker threads: {}", e), None)
-            })?);
-        }
-
-        if let Some(connection_id) = other.get("CONNECTION_ID") {
-            self.connection_id = connection_id.to_string();
-        }
-
-        if let Some(address) = other.get("INTERNAL_SERVER_ADDRESS") {
-            self.address = address.parse::<SocketAddr>().map_err(|e| {
-                ApplicationError::bad_request(&format!("Invalid address: {}", e), None)
-            })?;
-        }
-
-        if let Some(emit_url) = other.get("EMIT_URL") {
-            self.emit_url = emit_url.to_string();
-        }
-
-        if let Some(environment) = other.get("ENVIRONMENT") {
-            self.environment = environment.parse().map_err(|e| {
-                ApplicationError::bad_request(&format!("Invalid environment: {}", e), None)
-            })?;
-        }
-
-        if let Some(database_connection_type) = other.get("DATABASE_CONNECTION_TYPE") {
-            self.database_connection_type = database_connection_type.parse().map_err(|e| {
-                ApplicationError::bad_request(
-                    &format!("Invalid database connection type: {}", e),
-                    None,
-                )
-            })?;
-        };
-
-        // if connection type is postgres, get all the fields for postgres config
-        match self.database_connection_type {
-            DatabaseConnectionType::PostgreSql => {
-                // get all the fields for postgres config
-                let mut postgres_config: HashMap<String, String> = HashMap::new();
-                for (key, value) in other {
-                    if key.starts_with("POSTGRES_") {
-                        postgres_config.insert(key, value.to_string());
-                    }
-                }
-
-                self.postgres_config = PostgresConfig::init_from_hashmap(&postgres_config)
-                    .map_err(|e| {
-                        ApplicationError::bad_request(
-                            &format!("Invalid postgres config: {}", e),
-                            None,
-                        )
-                    })?;
-            }
-        }
-
-        Ok(self)
-    }
-
+impl DatabasePodConfig {
     pub fn as_hashmap(&self) -> HashMap<String, String> {
         let mut map = HashMap::new();
 
@@ -172,6 +104,10 @@ impl DatabaseConnectionConfig {
             "INTERNAL_SERVER_ADDRESS".to_string(),
             self.address.to_string(),
         );
+        map.insert(
+            "EMITTER_ENABLED".to_string(),
+            self.emitter_enabled.to_string(),
+        );
         map.insert("ENVIRONMENT".to_string(), self.environment.to_string());
         map.insert(
             "DATABASE_CONNECTION_TYPE".to_string(),
@@ -179,38 +115,6 @@ impl DatabaseConnectionConfig {
         );
         map.insert("EMIT_URL".to_string(), self.emit_url.clone());
         map.insert("CONNECTION_ID".to_string(), self.connection_id.clone());
-        map.insert(
-            "POSTGRES_USERNAME".to_string(),
-            self.postgres_config.postgres_username.clone(),
-        );
-        map.insert(
-            "POSTGRES_PASSWORD".to_string(),
-            self.postgres_config.postgres_password.clone(),
-        );
-        map.insert(
-            "POSTGRES_PORT".to_string(),
-            self.postgres_config.postgres_port.to_string(),
-        );
-        map.insert(
-            "POSTGRES_NAME".to_string(),
-            self.postgres_config.postgres_name.clone(),
-        );
-        map.insert(
-            "POSTGRES_HOST".to_string(),
-            self.postgres_config.postgres_host.clone(),
-        );
-        map.insert(
-            "POSTGRES_SSL".to_string(),
-            self.postgres_config.postgres_ssl.to_string(),
-        );
-        map.insert(
-            "POSTGRES_WAIT_TIMEOUT_IN_MILLIS".to_string(),
-            self.postgres_config.postgres_timeout.to_string(),
-        );
-        map.insert(
-            "POSTGRES_POOL_SIZE".to_string(),
-            self.postgres_config.postgres_pool_size.to_string(),
-        );
         map.insert(
             "DATABASE_CONNECTION_TYPE".to_string(),
             self.database_connection_type.as_ref().into(),
@@ -220,29 +124,19 @@ impl DatabaseConnectionConfig {
     }
 }
 
-impl Default for DatabaseConnectionConfig {
-    fn default() -> Self {
-        Self {
-            worker_threads: Some(1),
-            emit_url: "http://localhost:3001".to_string(),
-            address: SocketAddr::new("0.0.0.0".parse().expect("Invalid address"), 5005),
-            environment: Environment::Development,
-            postgres_config: PostgresConfig::default(),
-            database_connection_type: DatabaseConnectionType::PostgreSql,
-            connection_id: "connection-id".to_string(),
-        }
-    }
-}
-
-impl Display for DatabaseConnectionConfig {
+impl Display for DatabasePodConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "WORKER_THREADS: {:?}", self.worker_threads)?;
         writeln!(f, "INTERNAL_SERVER_ADDRESS: {}", self.address)?;
         writeln!(f, "EMIT_URL: {}", self.emit_url)?;
-        writeln!(f, "{}", self.environment)?;
-        match self.database_connection_type {
-            DatabaseConnectionType::PostgreSql => writeln!(f, "{}", self.postgres_config),
-        }
+        writeln!(f, "ENVIRONMENT: {}", self.environment)?;
+        writeln!(f, "EMITTER_ENABLED: {}", self.emitter_enabled)?;
+        writeln!(f, "JWT_SECRET: ***")?;
+        writeln!(
+            f,
+            "DATABASE_CONNECTION_TYPE: {:?}",
+            self.database_connection_type.as_ref()
+        )
     }
 }
 

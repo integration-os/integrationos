@@ -1,11 +1,10 @@
 use envconfig::Envconfig;
 use http::{Method, StatusCode};
-use integrationos_database::{
-    domain::postgres::PostgresDatabaseConnection, service::init::Initializer,
-};
+use integrationos_database::service::init::DatabaseInitializer;
+use integrationos_database::service::init::Initializer;
 use integrationos_domain::prefix::IdPrefix;
 use integrationos_domain::Id;
-use integrationos_domain::{database::DatabaseConnectionConfig, IntegrationOSError, InternalError};
+use integrationos_domain::{database::DatabasePodConfig, IntegrationOSError, InternalError};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::fmt::Debug;
@@ -18,14 +17,13 @@ use tokio::net::TcpListener;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 
-static DOCKER: OnceLock<Docker> = OnceLock::new();
-static POSTGRES: OnceLock<Container<'static, Postgres>> = OnceLock::new();
+pub static DOCKER: OnceLock<Docker> = OnceLock::new();
+pub static POSTGRES: OnceLock<Container<'static, Postgres>> = OnceLock::new();
 static TRACING: OnceLock<()> = OnceLock::new();
 
 pub struct TestServer {
     pub port: u16,
     pub client: reqwest::Client,
-    // pub mock_server: ServerGuard,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -43,9 +41,6 @@ impl TestServer {
 
             tracing_subscriber::fmt().with_env_filter(filter).init();
         });
-        let docker = DOCKER.get_or_init(Default::default);
-        let postgres = POSTGRES.get_or_init(|| docker.run(Postgres::default()));
-        let port = postgres.get_host_port_ipv4(5432);
 
         let server_port = TcpListener::bind("127.0.0.1:0")
             .await
@@ -67,20 +62,17 @@ impl TestServer {
                 "CONNECTION_ID".to_string(),
                 Id::now(IdPrefix::Connection).to_string(),
             ),
-            ("POSTGRES_USERNAME".to_string(), "postgres".to_string()),
-            ("POSTGRES_PASSWORD".to_string(), "postgres".to_string()),
-            ("POSTGRES_HOST".to_string(), "localhost".to_string()),
-            ("POSTGRES_PORT".to_string(), port.to_string()),
-            ("POSTGRES_NAME".to_string(), "postgres".to_string()),
+            ("JWT_SECRET".to_string(), "secret".to_string()),
+            ("EMITTER_ENABLED".to_string(), "true".to_string()),
         ])
         .into_iter()
         .chain(r#override.into_iter())
         .collect::<HashMap<String, String>>();
 
-        let config = DatabaseConnectionConfig::init_from_hashmap(&config_map)
+        let config = DatabasePodConfig::init_from_hashmap(&config_map)
             .expect("Failed to initialize storage config");
 
-        let server = PostgresDatabaseConnection::init(&config).await?;
+        let server = DatabaseInitializer::init(&config).await?;
 
         tokio::task::spawn(async move { server.run().await });
 
@@ -91,7 +83,6 @@ impl TestServer {
         Ok(Self {
             port: server_port,
             client,
-            // mock_server,
         })
     }
 
