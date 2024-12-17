@@ -1,6 +1,6 @@
 use super::{delete, event_access::DEFAULT_NAMESPACE, read, PublicExt, RequestExt};
 use crate::{
-    helper::{DeploymentSpecParams, NamespaceScope, ServiceName, ServiceSpecParams},
+    helper::{DeploymentSpecParams, ServiceName, ServiceSpecParams},
     logic::event_access::{
         generate_event_access, get_client_throughput, CreateEventAccessPayloadWithOwnership,
     },
@@ -22,7 +22,6 @@ use integrationos_domain::{
     database::{DatabasePodConfig, PostgresConfig},
     database_secret::DatabaseConnectionSecret,
     domain::connection::SanitizedConnection,
-    environment::Environment,
     event_access::EventAccess,
     id::{prefix::IdPrefix, Id},
     record_metadata::RecordMetadata,
@@ -380,11 +379,7 @@ async fn generate_k8s_specs_and_secret(
     Ok(match connection_config.to_connection_type() {
         integrationos_domain::ConnectionType::DatabaseSql {} => {
             let service_name = ServiceName::from_id(*connection_id)?;
-
-            let namespace = match state.config.environment {
-                Environment::Test | Environment::Development => NamespaceScope::Development,
-                Environment::Live | Environment::Production => NamespaceScope::Production,
-            };
+            let namespace = state.config.namespace.clone();
 
             let mut labels: BTreeMap<String, String> = BTreeMap::new();
             labels.insert(APP_LABEL.to_owned(), service_name.as_ref().to_string());
@@ -675,11 +670,8 @@ pub async fn delete_connection(
     .await?;
 
     if let ConnectionType::DatabaseSql { .. } = connection.args.r#type {
-        let namespace = match state.config.environment {
-            Environment::Test | Environment::Development => NamespaceScope::Development,
-            Environment::Live | Environment::Production => NamespaceScope::Production,
-        };
         let service_name = ServiceName::from_id(connection.args.id)?;
+        let namespace = state.config.namespace.clone();
         state.k8s_client.delete_all(namespace, service_name).await?;
     };
 

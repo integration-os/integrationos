@@ -86,6 +86,8 @@ pub struct ConnectionsConfig {
         default = "integrationos-database"
     )]
     pub database_connection_docker_image: String,
+    #[envconfig(from = "NAMESPACE", default = "development")]
+    pub namespace: String,
     #[envconfig(from = "DATABASE_CONNECTION_PROBE_TIMEOUT_SECS", default = "10")]
     pub database_connection_probe_timeout_secs: u64,
     #[envconfig(from = "K8S_MODE", default = "logger")]
@@ -152,7 +154,13 @@ impl Display for ConnectionsConfig {
         writeln!(f, "{}", self.db_config)?;
         writeln!(f, "{}", self.cache_config)?;
         writeln!(f, "RATE_LIMIT_ENABLED: {}", self.rate_limit_enabled)?;
-        writeln!(f, "ENVIRONMENT: {}", self.environment)
+        writeln!(f, "ENVIRONMENT: {}", self.environment)?;
+        writeln!(
+            f,
+            "DATABASE_CONNECTION_DOCKER_IMAGE: {}",
+            self.database_connection_docker_image
+        )?;
+        writeln!(f, "NAMESPACE: {}", self.namespace)
     }
 }
 

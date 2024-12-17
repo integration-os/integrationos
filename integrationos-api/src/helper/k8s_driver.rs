@@ -19,43 +19,6 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fmt::Debug;
 use std::{collections::BTreeMap, fmt::Display};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum NamespaceScope {
-    Development,
-    Production,
-}
-
-impl TryFrom<&str> for NamespaceScope {
-    type Error = IntegrationOSError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "development-db-conns" => Ok(NamespaceScope::Development),
-            "production-db-conns" => Ok(NamespaceScope::Production),
-            _ => Err(InternalError::invalid_argument(
-                &format!("Invalid namespace scope: {}", value),
-                None,
-            )),
-        }
-    }
-}
-
-impl AsRef<str> for NamespaceScope {
-    fn as_ref(&self) -> &str {
-        match self {
-            NamespaceScope::Development => "development-db-conns",
-            NamespaceScope::Production => "production-db-conns",
-        }
-    }
-}
-
-impl Display for NamespaceScope {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_ref())
-    }
-}
-
 #[async_trait]
 pub trait K8sDriver: Send + Sync {
     async fn create_service(
@@ -68,7 +31,7 @@ pub trait K8sDriver: Send + Sync {
     ) -> Result<Deployment, IntegrationOSError>;
     async fn delete_all(
         &self,
-        namespace: NamespaceScope,
+        namespace: String,
         name: ServiceName,
     ) -> Result<Unit, IntegrationOSError>;
     async fn coordinator(
@@ -110,7 +73,7 @@ impl K8sDriver for K8sDriverImpl {
 
     async fn delete_all(
         &self,
-        namespace: NamespaceScope,
+        namespace: String,
         name: ServiceName,
     ) -> Result<Unit, IntegrationOSError> {
         delete_all_impl(self.client.clone(), namespace, name).await
@@ -161,13 +124,13 @@ impl K8sDriver for K8sDriverLogger {
     /// - `namespace` - Namespace the existing deployment resides in
     async fn delete_all(
         &self,
-        namespace: NamespaceScope,
+        namespace: String,
         name: ServiceName,
     ) -> Result<Unit, IntegrationOSError> {
         tracing::info!(
             "Deleting k8s resource {} in namespace {}",
             name.as_ref(),
-            namespace.as_ref()
+            namespace,
         );
         Ok(())
     }
@@ -204,7 +167,7 @@ pub struct ServiceSpecParams {
     /// Annotations to apply to the service. Has to match with the deployment metadata
     pub name: ServiceName,
     /// Namespace the service should reside in
-    pub namespace: NamespaceScope,
+    pub namespace: String,
 }
 
 async fn create_service_impl(
@@ -215,7 +178,7 @@ async fn create_service_impl(
         metadata: ObjectMeta {
             name: Some(params.name.as_ref().to_string()),
             labels: Some(params.labels.clone()),
-            namespace: Some(params.namespace.as_ref().to_owned()),
+            namespace: Some(params.namespace.clone()),
             ..Default::default()
         },
         spec: Some(ServiceSpec {
@@ -227,7 +190,7 @@ async fn create_service_impl(
         ..Default::default()
     };
 
-    let service_api: Api<Service> = Api::namespaced(client, params.namespace.as_ref());
+    let service_api: Api<Service> = Api::namespaced(client, &params.namespace);
     service_api
         .create(&PostParams::default(), &service)
         .await
@@ -241,7 +204,7 @@ pub struct DeploymentSpecParams {
     /// Labels to apply to the deployment
     pub labels: BTreeMap<String, String>,
     /// Namespace the deployment should reside in
-    pub namespace: NamespaceScope,
+    pub namespace: String,
     /// Image to use for the deployment
     pub image: String,
     /// Environment variables to apply
@@ -260,7 +223,7 @@ async fn create_deployment_impl(
     let deployment: Deployment = Deployment {
         metadata: ObjectMeta {
             name: Some(params.name.as_ref().to_string()),
-            namespace: Some(params.namespace.as_ref().to_owned()),
+            namespace: Some(params.namespace.clone()),
             labels: Some(params.labels.clone()),
             ..ObjectMeta::default()
         },
@@ -317,7 +280,7 @@ where
 
 pub async fn delete_all_impl(
     client: Client,
-    namespace: NamespaceScope,
+    namespace: String,
     name: ServiceName,
 ) -> Result<Unit, IntegrationOSError> {
     delete_resource_impl::<Service>(client.clone(), name.as_ref(), namespace.as_ref()).await?;

@@ -1,7 +1,4 @@
-use crate::{
-    helper::{NamespaceScope, ServiceName},
-    server::AppState,
-};
+use crate::{helper::ServiceName, server::AppState};
 use axum::{
     extract::{Path, State},
     routing::post,
@@ -56,8 +53,8 @@ async fn database_connection_lost_callback(
                 // This means that there's a pod resource that is not running
                 // and we need to delete these resources
                 if let Ok(secret) = secret.decode::<DatabaseConnectionSecret>() {
-                    let namespace: NamespaceScope = secret.namespace.as_str().try_into()?;
                     let service_name = ServiceName::from_id(connection_id)?;
+                    let namespace = secret.namespace;
 
                     tracing::info!(
                         "Deleting all resources for connection {id} in namespace {}",

@@ -21,7 +21,7 @@ async fn test_execute_probe() -> Result<Unit, IntegrationOSError> {
     let port = postgres.get_host_port_ipv4(5432);
 
     let database_secret = DatabaseConnectionSecret {
-        namespace: "development-db-conns".to_string(),
+        namespace: "development".to_string(),
         service_name: "service_name".to_string(),
         connection_id,
         postgres_config: PostgresConfig {
@@ -88,7 +88,7 @@ async fn test_execute_raw() -> Result<Unit, IntegrationOSError> {
     let port = postgres.get_host_port_ipv4(5432);
 
     let database_secret = DatabaseConnectionSecret {
-        namespace: "development-db-conns".to_string(),
+        namespace: "development".to_string(),
         service_name: "service_name".to_string(),
         connection_id,
         postgres_config: PostgresConfig {
