@@ -58,7 +58,7 @@ const APP_LABEL: &str = "app";
 const DATABASE_TYPE_LABEL: &str = "database-type";
 
 const JWT_SECRET_REF_KEY: &str = "jwt-secret";
-const JWT_SECRET_REF_NAME: &str = "database-secrets";
+const JWT_SECRET_REF_NAME: &str = "event-secrets";
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Validate)]
 #[serde(rename_all = "camelCase")]
