@@ -397,7 +397,7 @@ async fn generate_k8s_specs_and_secret(
 
             let database_pod_config = DatabasePodConfig {
                 worker_threads: Some(1),
-                address: "0.0.0.0:5000".parse().map_err(|_| {
+                address: "0.0.0.0:5005".parse().map_err(|_| {
                     InternalError::serialize_error("Unable to convert address to SocketAddr", None)
                 })?,
                 environment: state.config.environment,
