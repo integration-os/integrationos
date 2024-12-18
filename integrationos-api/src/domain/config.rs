@@ -124,6 +124,7 @@ impl Display for ConnectionsConfig {
             self.connection_cache_ttl_secs
         )?;
         writeln!(f, "EMIT_URL: {}", self.emit_url)?;
+        writeln!(f, "CONNECTIONS_URL: {}", self.connections_url)?;
         writeln!(
             f,
             "CONNECTION_DEFINITION_CACHE_TTL_SECS: {}",
