@@ -115,6 +115,7 @@ impl DatabasePodConfig {
         );
         map.insert("EMIT_URL".to_string(), self.emit_url.clone());
         map.insert("CONNECTION_ID".to_string(), self.connection_id.clone());
+        map.insert("CONNECTIONS_URL".to_string(), self.connections_url.clone());
         map.insert(
             "DATABASE_CONNECTION_TYPE".to_string(),
             self.database_connection_type.as_ref().into(),
