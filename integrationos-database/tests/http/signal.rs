@@ -27,7 +27,7 @@ async fn test_kill_signal() -> Result<Unit, IntegrationOSError> {
     };
     let body = serde_json::to_string(&body).expect("Failed to serialize body");
 
-    let emit_req = mock_server
+    let callback_req = mock_server
         .mock("POST", path.as_str())
         .match_header(CONTENT_TYPE, "application/json")
         .match_header(ACCEPT, "*/*")
@@ -46,7 +46,7 @@ async fn test_kill_signal() -> Result<Unit, IntegrationOSError> {
     .await;
 
     secret_req.expect(1).assert_async().await;
-    emit_req.expect(1).assert_async().await;
+    callback_req.expect(1).assert_async().await;
 
     Ok(())
 }
