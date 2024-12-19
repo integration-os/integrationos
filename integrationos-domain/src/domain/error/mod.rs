@@ -18,7 +18,7 @@ pub trait ErrorMeta {
     fn code(&self) -> ErrorCode;
     fn key(&self) -> ErrorKey;
     fn message(&self) -> ErrorMessage;
-    fn meta(&self) -> Option<Value>;
+    fn meta(&self) -> Option<Box<Value>>;
 }
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize)]
@@ -86,79 +86,79 @@ pub enum InternalError {
     UnknownError {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("A unique field violation occurred: {}", .message)]
     UniqueFieldViolation {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("A timeout occurred: {}", .message)]
     Timeout {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("A connection error occurred: {}", .message)]
     ConnectionError {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Entity not found: {}", .message)]
     KeyNotFound {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Argument provided is invalid: {}", .message)]
     InvalidArgument {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("An error while performing an IO operation: {}", .message)]
     IOErr {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Encription error: {}", .message)]
     EncryptionError {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Decryption error: {}", .message)]
     DecryptionError {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Configuration error: {}", .message)]
     ConfigurationError {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Serialization error: {}", .message)]
     SerializeError {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Deserialization error: {}", .message)]
     DeserializeError {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("An error occurred running the javascript function: {}", .message)]
     ScriptError {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
 }
 
@@ -280,7 +280,7 @@ impl InternalError {
         })
     }
 
-    fn set_meta(self, metadata: Value) -> Self {
+    fn set_meta(self, metadata: Box<Value>) -> Self {
         match self {
             InternalError::UnknownError {
                 message, subtype, ..
@@ -461,7 +461,7 @@ impl ErrorMeta for InternalError {
     }
 
     // TODO: Implement this
-    fn meta(&self) -> Option<Value> {
+    fn meta(&self) -> Option<Box<Value>> {
         match self {
             InternalError::UnknownError { meta, .. } => meta.clone(),
             InternalError::UniqueFieldViolation { meta, .. } => meta.clone(),
@@ -502,73 +502,73 @@ pub enum ApplicationError {
     BadRequest {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Conflict: {}", .message)]
     Conflict {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Forbidden: {}", .message)]
     Forbidden {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Internal Server Error: {}", .message)]
     InternalServerError {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Method Not Allowed: {}", .message)]
     MethodNotAllowed {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Not Found: {}", .message)]
     NotFound {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Not Implemented: {}", .message)]
     NotImplemented {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Precondition Failed: {}", .message)]
     FailedDependency {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Service Unavailable: {}", .message)]
     ServiceUnavailable {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Too Many Requests: {}", .message)]
     TooManyRequests {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Unauthorized: {}", .message)]
     Unauthorized {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
     #[error("Unprocessable Entity: {}", .message)]
     UnprocessableEntity {
         message: String,
         subtype: Option<String>,
-        meta: Option<Value>,
+        meta: Option<Box<Value>>,
     },
 }
 
@@ -682,7 +682,7 @@ impl ApplicationError {
         })
     }
 
-    fn set_meta(self, meta: Value) -> Self {
+    fn set_meta(self, meta: Box<Value>) -> Self {
         match self {
             ApplicationError::BadRequest {
                 message, subtype, ..
@@ -854,7 +854,7 @@ impl ErrorMeta for ApplicationError {
         }
     }
 
-    fn meta(&self) -> Option<Value> {
+    fn meta(&self) -> Option<Box<Value>> {
         match self {
             ApplicationError::BadRequest { meta, .. } => meta.clone(),
             ApplicationError::Conflict { meta, .. } => meta.clone(),
@@ -1139,13 +1139,6 @@ impl IntegrationOSError {
         StatusCode::from(self).as_u16()
     }
 
-    pub fn is_unique_error(&self) -> bool {
-        match self {
-            IntegrationOSError::Internal(InternalError::UniqueFieldViolation { .. }) => true,
-            _ => false,
-        }
-    }
-
     fn internal(internal: InternalError) -> Self {
         IntegrationOSError::Internal(internal)
     }
@@ -1291,10 +1284,10 @@ impl IntegrationOSError {
     pub fn set_meta(self, meta: &Value) -> Self {
         match self {
             IntegrationOSError::Internal(e) => {
-                IntegrationOSError::internal(e.set_meta(meta.clone()))
+                IntegrationOSError::internal(e.set_meta(Box::new(meta.clone())))
             }
             IntegrationOSError::Application(e) => {
-                IntegrationOSError::application(e.set_meta(meta.clone()))
+                IntegrationOSError::application(e.set_meta(Box::new(meta.clone())))
             }
         }
     }
@@ -1330,7 +1323,7 @@ impl ErrorMeta for IntegrationOSError {
         }
     }
 
-    fn meta(&self) -> Option<Value> {
+    fn meta(&self) -> Option<Box<Value>> {
         match self {
             IntegrationOSError::Internal(e) => e.meta(),
             IntegrationOSError::Application(e) => e.meta(),

@@ -7,7 +7,7 @@ use super::extractor::HttpExtractor;
 #[serde(rename_all = "camelCase", tag = "_type")]
 pub enum Middleware {
     #[serde(rename = "extractor::http")]
-    HttpExtractor(HttpExtractor),
+    HttpExtractor(Box<HttpExtractor>),
     Transformer {
         language: String,
         code: String,

@@ -401,7 +401,6 @@ async fn generate_k8s_specs_and_secret(
                     InternalError::serialize_error("Unable to convert address to SocketAddr", None)
                 })?,
                 environment: state.config.environment,
-                emit_url: state.config.emit_url.clone(),
                 connections_url: state.config.connections_url.clone(),
                 database_connection_type: connection_config.platform.parse().map_err(|_| {
                     InternalError::serialize_error(
@@ -410,7 +409,6 @@ async fn generate_k8s_specs_and_secret(
                     )
                 })?,
                 connection_id: connection_id.to_string(),
-                emitter_enabled: state.config.emitter_enabled,
                 jwt_secret: None,
             };
 
