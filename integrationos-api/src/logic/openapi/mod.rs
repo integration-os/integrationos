@@ -65,7 +65,7 @@ pub struct CachedSchema {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", untagged)]
 pub enum OpenApiSchema {
-    OpenAPI(OpenAPI),
+    OpenAPI(Box<OpenAPI>),
     Accepted(String),
     Error(String),
 }

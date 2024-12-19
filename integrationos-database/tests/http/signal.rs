@@ -1,7 +1,7 @@
 use crate::context::TestServer;
 use http::header::{ACCEPT, CONTENT_LENGTH, CONTENT_TYPE, HOST};
 use integrationos_domain::{
-    emitted_events::DatabaseConnectionLost, prefix::IdPrefix, Id, IntegrationOSError, Unit,
+    emitted_events::ConnectionLostReason, prefix::IdPrefix, Id, IntegrationOSError, Unit,
 };
 use mockito::Server as MockServer;
 use std::collections::HashMap;
@@ -20,19 +20,15 @@ async fn test_kill_signal() -> Result<Unit, IntegrationOSError> {
         .create_async()
         .await;
 
-    let path = "/v1/emit";
-    let body = DatabaseConnectionLost {
-        connection_id,
-        reason: Some(
-            "Deserialization error: Failed to deserialize secret: error decoding response body"
-                .to_string(),
-        ),
-        schedule_on: None,
-    }
-    .as_event();
+    let path = format!("/v1/database-connection-lost/{connection_id}");
+    let body = ConnectionLostReason {
+        reason: "Deserialization error: Failed to deserialize secret: error decoding response body"
+            .to_string(),
+    };
+    let body = serde_json::to_string(&body).expect("Failed to serialize body");
 
     let emit_req = mock_server
-        .mock("POST", path)
+        .mock("POST", path.as_str())
         .match_header(CONTENT_TYPE, "application/json")
         .match_header(ACCEPT, "*/*")
         .match_header(HOST, mock_server.host_with_port().as_str())
@@ -45,7 +41,6 @@ async fn test_kill_signal() -> Result<Unit, IntegrationOSError> {
     let _ = TestServer::new(HashMap::from([
         ("CONNECTION_ID".to_string(), connection_id.to_string()),
         ("POSTGRES_PASSWORD".to_string(), "wrongpass".to_string()),
-        ("EMIT_URL".to_string(), mock_uri.clone()),
         ("CONNECTIONS_URL".to_string(), mock_uri),
     ]))
     .await;

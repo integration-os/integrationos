@@ -78,10 +78,6 @@ pub struct DatabasePodConfig {
     pub address: SocketAddr,
     #[envconfig(from = "ENVIRONMENT", default = "development")]
     pub environment: Environment,
-    #[envconfig(from = "EMIT_URL", default = "http://localhost:3001")]
-    pub emit_url: String,
-    #[envconfig(from = "EMITTER_ENABLED", default = "false")]
-    pub emitter_enabled: bool,
     #[envconfig(from = "CONNECTIONS_URL", default = "http://localhost:3005")]
     pub connections_url: String,
     #[envconfig(from = "DATABASE_CONNECTION_TYPE", default = "postgresql")]
@@ -104,16 +100,11 @@ impl DatabasePodConfig {
             "INTERNAL_SERVER_ADDRESS".to_string(),
             self.address.to_string(),
         );
-        map.insert(
-            "EMITTER_ENABLED".to_string(),
-            self.emitter_enabled.to_string(),
-        );
         map.insert("ENVIRONMENT".to_string(), self.environment.to_string());
         map.insert(
             "DATABASE_CONNECTION_TYPE".to_string(),
             self.database_connection_type.as_ref().into(),
         );
-        map.insert("EMIT_URL".to_string(), self.emit_url.clone());
         map.insert("CONNECTION_ID".to_string(), self.connection_id.clone());
         map.insert("CONNECTIONS_URL".to_string(), self.connections_url.clone());
         map.insert(
@@ -129,9 +120,7 @@ impl Display for DatabasePodConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "WORKER_THREADS: {:?}", self.worker_threads)?;
         writeln!(f, "INTERNAL_SERVER_ADDRESS: {}", self.address)?;
-        writeln!(f, "EMIT_URL: {}", self.emit_url)?;
         writeln!(f, "ENVIRONMENT: {}", self.environment)?;
-        writeln!(f, "EMITTER_ENABLED: {}", self.emitter_enabled)?;
         writeln!(f, "JWT_SECRET: ***")?;
         writeln!(
             f,

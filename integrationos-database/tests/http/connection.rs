@@ -58,7 +58,6 @@ async fn test_execute_probe() -> Result<Unit, IntegrationOSError> {
 
     let server = TestServer::new(HashMap::from([
         ("CONNECTION_ID".to_string(), connection_id.to_string()),
-        ("EMIT_URL".to_string(), mock_uri.clone()),
         ("CONNECTIONS_URL".to_string(), mock_uri),
     ]))
     .await?;
@@ -125,7 +124,6 @@ async fn test_execute_raw() -> Result<Unit, IntegrationOSError> {
 
     let server = TestServer::new(HashMap::from([
         ("CONNECTION_ID".to_string(), connection_id.to_string()),
-        ("EMIT_URL".to_string(), mock_uri.clone()),
         ("CONNECTIONS_URL".to_string(), mock_uri),
     ]))
     .await?;

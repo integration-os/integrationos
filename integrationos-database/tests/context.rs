@@ -63,7 +63,6 @@ impl TestServer {
                 Id::now(IdPrefix::Connection).to_string(),
             ),
             ("JWT_SECRET".to_string(), "secret".to_string()),
-            ("EMITTER_ENABLED".to_string(), "true".to_string()),
         ])
         .into_iter()
         .chain(r#override.into_iter())

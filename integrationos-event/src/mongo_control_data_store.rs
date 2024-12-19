@@ -5,7 +5,6 @@ use crate::{
 use anyhow::{bail, Context as AnyhowContext, Result};
 use async_trait::async_trait;
 use bson::doc;
-
 use futures::future::join_all;
 use handlebars::Handlebars;
 use http::header::AUTHORIZATION;
@@ -279,7 +278,7 @@ impl ControlDataStore for MongoControlDataStore {
         for e in pipeline.middleware {
             if let Middleware::HttpExtractor(e) = e {
                 if e.key == extractor_key {
-                    return Ok(e);
+                    return Ok(*e);
                 }
             }
         }
