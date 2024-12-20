@@ -1,6 +1,6 @@
 use crate::{
     client::CallerClient,
-    request::{
+    domain::{
         PathParams, RequestCrud, RequestCrudBorrowed, ResponseCrud, ResponseCrudToMap,
         ResponseCrudToMapRequest,
     },
@@ -12,9 +12,8 @@ use futures::{future::join_all, join, FutureExt};
 use handlebars::Handlebars;
 use http::{HeaderMap, HeaderName, HeaderValue, Response, StatusCode};
 use integrationos_cache::local::{
-    connection_cache::ConnectionCacheArcStrKey,
-    connection_model_definition_cache::ConnectionModelDefinitionDestinationKey,
-    connection_model_schema_cache::ConnectionModelSchemaCache, secrets_cache::SecretCache,
+    ConnectionCache, ConnectionModelDefinitionDestinationCache, ConnectionModelSchemaCache,
+    LocalCacheExt, SecretCache,
 };
 use integrationos_domain::{
     api_model_config::{ModelPaths, RequestModelPaths, ResponseModelPaths},
@@ -29,7 +28,7 @@ use integrationos_domain::{
     hashed_secret::HashedSecret,
     id::{prefix::IdPrefix, Id},
     prelude::{MongoStore, TimedExt},
-    ApplicationError, Connection, ErrorMeta, IntegrationOSError, SecretExt, Store,
+    ApplicationError, Connection, ErrorMeta, IntegrationOSError, Secret, SecretExt, Store,
 };
 use js_sandbox_ios::Script;
 use mongodb::{
@@ -59,9 +58,9 @@ pub struct SendToDestinationUnified {
 
 #[derive(Clone)]
 pub struct UnifiedDestination {
-    pub connections_cache: ConnectionCacheArcStrKey,
+    pub connections_cache: ConnectionCache,
     pub connections_store: MongoStore<Connection>,
-    pub connection_model_definitions_cache: ConnectionModelDefinitionDestinationKey,
+    pub connection_model_definitions_cache: ConnectionModelDefinitionDestinationCache,
     pub connection_model_definitions_store: MongoStore<ConnectionModelDefinition>,
     pub connection_model_schemas_cache: ConnectionModelSchemaCache,
     pub connection_model_schemas_store: MongoStore<ConnectionModelSchema>,
@@ -86,8 +85,8 @@ impl UnifiedDestination {
     ) -> Result<Self, IntegrationOSError> {
         let http_client = reqwest::Client::new();
         let connections_cache =
-            ConnectionCacheArcStrKey::new(cache_size, cache_ttls.connection_cache_ttl_secs);
-        let connection_model_definitions_cache = ConnectionModelDefinitionDestinationKey::create(
+            ConnectionCache::new(cache_size, cache_ttls.connection_cache_ttl_secs);
+        let connection_model_definitions_cache = ConnectionModelDefinitionDestinationCache::new(
             cache_size,
             cache_ttls.connection_model_definition_cache_ttl_secs,
         );
@@ -235,28 +234,14 @@ impl UnifiedDestination {
         }
     }
 
-    // FIXME: This function is way too long. It should be broken down into smaller more manageable
-    // pieces.
-    #[allow(clippy::too_many_arguments)]
-    pub async fn send_to_destination_unified(
+    pub async fn get_dependencies(
         &self,
-        connection: Arc<Connection>,
-        action: Action,
-        include_passthrough: bool,
-        environment: Environment,
-        mut headers: HeaderMap,
-        mut query_params: HashMap<String, String>,
-        mut body: Option<Value>,
-    ) -> Result<UnifiedResponse, IntegrationOSError> {
-        let key = Destination {
-            platform: connection.platform.clone(),
-            action: action.clone(),
-            connection_key: connection.key.clone(),
-        };
-
+        key: &Destination,
+        connection: &Connection,
+    ) -> Result<(ConnectionModelDefinition, Secret), IntegrationOSError> {
         let config_fut = self
             .connection_model_definitions_cache
-            .get_or_insert_with_fn(key.clone(), || async {
+            .get_or_insert_with_fn(&key, || async {
                 match self.get_connection_model_definition(&key).await {
                     Ok(Some(c)) => Ok(c),
                     Ok(None) => Err(InternalError::key_not_found("model definition", None)),
@@ -271,23 +256,63 @@ impl UnifiedDestination {
                 }
             });
 
-        let secret_fut =
-            self.secrets_cache
-                .get_or_insert_with_fn(connection.as_ref().clone(), || async {
-                    match self
-                        .secrets_client
-                        .get(&connection.secrets_service_id, &connection.ownership.id)
-                        .map(|v| Some(v).transpose())
-                        .await
-                    {
-                        Ok(Some(c)) => Ok(c.as_value()?),
-                        Ok(None) => Err(InternalError::key_not_found("secret", None)),
-                        Err(e) => Err(InternalError::connection_error(
-                            format!("Failed to get secret: {}", e.message().as_ref()).as_str(),
-                            None,
-                        )),
-                    }
-                });
+        let secret_fut = self
+            .secrets_cache
+            .get_or_insert_with_fn(&connection, || async {
+                match self
+                    .secrets_client
+                    .get(&connection.secrets_service_id, &connection.ownership.id)
+                    .map(|v| Some(v).transpose())
+                    .await
+                {
+                    Ok(Some(c)) => Ok(c),
+                    Ok(None) => Err(InternalError::key_not_found("secret", None)),
+                    Err(e) => Err(InternalError::connection_error(
+                        format!("Failed to get secret: {}", e.message().as_ref()).as_str(),
+                        None,
+                    )),
+                }
+            });
+
+        let res = tokio::join!(config_fut, secret_fut);
+
+        match res {
+            (Ok(c), Ok(s)) => Ok((c, s)),
+            (Err(e), _) => Err(e),
+            (_, Err(e)) => Err(e),
+        }
+    }
+
+    // FIXME: This function is way too long. It should be broken down into smaller more manageable
+    // pieces.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn send_to_destination_unified(
+        &self,
+        connection: Arc<Connection>,
+        action: Action,
+        environment: Environment,
+        mut headers: HeaderMap,
+        mut query_params: HashMap<String, String>,
+        mut body: Option<Value>,
+    ) -> Result<UnifiedResponse, IntegrationOSError> {
+        let key = Destination {
+            platform: connection.platform.clone(),
+            action: action.clone(),
+            connection_key: connection.key.clone(),
+        };
+
+        match action {
+            Action::Unified {
+                name,
+                action,
+                id,
+                passthrough,
+            } => todo!(),
+            Action::Passthrough { method, path } => Err(InternalError::invalid_argument(
+                &format!("Passthrough action is not supported for destination {}, in method {method} and path {path}", key.connection_key),
+                None,
+            )),
+        }
 
         // let Action::Unified {
         //     action: _,
@@ -1064,7 +1089,6 @@ impl UnifiedDestination {
         //     metadata: metadata.clone(),
         //     response: res,
         // })
-        todo!()
     }
 
     pub async fn send_to_destination(
@@ -1081,9 +1105,10 @@ impl UnifiedDestination {
             Arc::new(
                 self.connections_cache
                     .get_or_insert_with_filter(
-                        destination.connection_key.clone(),
+                        &destination.connection_key,
                         self.connections_store.clone(),
                         doc! { "key": destination.connection_key.as_ref() },
+                        None,
                     )
                     .await?,
             )
@@ -1114,14 +1139,14 @@ impl UnifiedDestination {
 
         let secret = self
             .secrets_cache
-            .get_or_insert_with_fn(connection.as_ref().clone(), || async {
+            .get_or_insert_with_fn(connection.as_ref(), || async {
                 match self
                     .secrets_client
                     .get(&connection.secrets_service_id, &connection.ownership.id)
                     .map(|v| Some(v).transpose())
                     .await
                 {
-                    Ok(Some(c)) => Ok(c.as_value()?),
+                    Ok(Some(c)) => Ok(c),
                     Ok(None) => Err(InternalError::key_not_found("Secrets", None)),
                     Err(e) => Err(InternalError::connection_error(
                         format!("Failed to get secret: {}", e.message().as_ref()).as_str(),
@@ -1144,7 +1169,13 @@ impl UnifiedDestination {
             _ => config.clone(),
         };
 
-        self.execute_model_definition(&templated_config, headers, &query_params, &secret, context)
-            .await
+        self.execute_model_definition(
+            &templated_config,
+            headers,
+            &query_params,
+            &secret.as_value()?,
+            context,
+        )
+        .await
     }
 }

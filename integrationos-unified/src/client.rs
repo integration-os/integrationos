@@ -1,3 +1,4 @@
+use derive_builder::Builder;
 use http::HeaderMap;
 use indexmap::IndexMap;
 use integrationos_domain::{
@@ -11,7 +12,7 @@ use reqwest::{Client, Response, Url};
 use serde_json::Value;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Builder)]
 pub struct CallerClient<'a> {
     config: &'a ApiModelConfig,
     action: http::Method,

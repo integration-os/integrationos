@@ -38,6 +38,7 @@ pub struct PathParams {
 
 pub async fn get_request(
     access: Extension<Arc<EventAccess>>,
+    Extension(passthrough): Extension<Arc<bool>>,
     state: State<Arc<AppState>>,
     Path(params): Path<PathParams>,
     headers: HeaderMap,
@@ -52,6 +53,7 @@ pub async fn get_request(
             name: params.model.to_case(Case::Pascal).into(),
             action: CrudAction::GetOne,
             id: Some(params.id.into()),
+            passthrough: *passthrough,
         },
         None,
     )
@@ -62,6 +64,7 @@ const META: &str = "meta";
 
 pub async fn update_request(
     access: Extension<Arc<EventAccess>>,
+    Extension(passthrough): Extension<Arc<bool>>,
     state: State<Arc<AppState>>,
     Path(params): Path<PathParams>,
     headers: HeaderMap,
@@ -77,6 +80,7 @@ pub async fn update_request(
             name: params.model.to_case(Case::Pascal).into(),
             action: CrudAction::Update,
             id: Some(params.id.into()),
+            passthrough: *passthrough,
         },
         Some(body),
     )
@@ -85,6 +89,7 @@ pub async fn update_request(
 
 pub async fn upsert_request(
     access: Extension<Arc<EventAccess>>,
+    Extension(passthrough): Extension<Arc<bool>>,
     state: State<Arc<AppState>>,
     Path(model): Path<String>,
     headers: HeaderMap,
@@ -100,6 +105,7 @@ pub async fn upsert_request(
             name: model.to_case(Case::Pascal).into(),
             action: CrudAction::Upsert,
             id: None,
+            passthrough: *passthrough,
         },
         Some(body),
     )
@@ -108,6 +114,7 @@ pub async fn upsert_request(
 
 pub async fn list_request(
     access: Extension<Arc<EventAccess>>,
+    Extension(passthrough): Extension<Arc<bool>>,
     state: State<Arc<AppState>>,
     Path(model): Path<String>,
     headers: HeaderMap,
@@ -122,6 +129,7 @@ pub async fn list_request(
             name: model.to_case(Case::Pascal).into(),
             action: CrudAction::GetMany,
             id: None,
+            passthrough: *passthrough,
         },
         None,
     )
@@ -130,6 +138,7 @@ pub async fn list_request(
 
 pub async fn count_request(
     access: Extension<Arc<EventAccess>>,
+    Extension(passthrough): Extension<Arc<bool>>,
     state: State<Arc<AppState>>,
     Path(model): Path<String>,
     headers: HeaderMap,
@@ -144,6 +153,7 @@ pub async fn count_request(
             name: model.to_case(Case::Pascal).into(),
             action: CrudAction::GetCount,
             id: None,
+            passthrough: *passthrough,
         },
         None,
     )
@@ -153,6 +163,7 @@ pub async fn count_request(
 pub async fn create_request(
     access: Extension<Arc<EventAccess>>,
     state: State<Arc<AppState>>,
+    Extension(passthrough): Extension<Arc<bool>>,
     Path(model): Path<String>,
     headers: HeaderMap,
     query_params: Option<Query<HashMap<String, String>>>,
@@ -167,6 +178,7 @@ pub async fn create_request(
             name: model.to_case(Case::Pascal).into(),
             action: CrudAction::Create,
             id: None,
+            passthrough: *passthrough,
         },
         Some(body),
     )
@@ -175,6 +187,7 @@ pub async fn create_request(
 
 pub async fn delete_request(
     access: Extension<Arc<EventAccess>>,
+    Extension(passthrough): Extension<Arc<bool>>,
     state: State<Arc<AppState>>,
     Path(params): Path<PathParams>,
     headers: HeaderMap,
@@ -189,6 +202,7 @@ pub async fn delete_request(
             name: params.model.to_case(Case::Pascal).into(),
             action: CrudAction::Delete,
             id: Some(params.id.into()),
+            passthrough: *passthrough,
         },
         None,
     )
@@ -223,12 +237,6 @@ pub async fn process_request(
 
     let Query(query_params) = query_params.unwrap_or_default();
 
-    let include_passthrough = headers
-        .get(&state.config.headers.enable_passthrough_header)
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s == "true")
-        .unwrap_or_default();
-
     let access_key_header_value = headers.get(&state.config.headers.auth_header).cloned();
 
     remove_event_headers(&mut headers, &state.config.headers);
@@ -251,7 +259,6 @@ pub async fn process_request(
         .send_to_destination_unified(
             connection.clone(),
             action.clone(),
-            include_passthrough,
             state.config.environment,
             headers,
             query_params,
