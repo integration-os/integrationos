@@ -23,6 +23,7 @@ bson = "2.13.0"
 chrono = { version = "0.4.38", features = ["serde"] }
 convert_case = "0.6.0"
 dotenvy = "0.15.7"
+derive_builder = "0.20.0"
 envconfig = "0.10.0"
 fake = { version = "2.10.0", features = [
     "uuid",
