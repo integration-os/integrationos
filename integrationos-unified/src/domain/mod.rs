@@ -48,6 +48,10 @@ impl RequestCrud {
         self.body.as_ref()
     }
 
+    pub fn get_path_params(&self) -> Option<&HashMap<String, String>> {
+        self.path_params.as_ref()
+    }
+
     pub fn remove_query_params(mut self, key: &str) -> (Self, Option<String>) {
         let removed = self.query_params.remove(key);
 
@@ -76,6 +80,19 @@ impl RequestCrud {
             headers: &self.headers,
             path_params: id,
         }
+    }
+
+    pub fn extend_body(mut self, other: Value) -> Self {
+        match (&mut self.body, other) {
+            (Some(Value::Object(a)), Value::Object(b)) => {
+                a.extend(b); // Merge JSON objects
+            }
+            (body @ None, mapped_body) => {
+                body.replace(mapped_body); // Assign `other` to `body` if `body` is None
+            }
+            _ => {}
+        }
+        self
     }
 }
 

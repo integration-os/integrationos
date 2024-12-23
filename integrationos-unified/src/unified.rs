@@ -370,10 +370,11 @@ impl UnifiedDestination {
                     None => body.to_owned()
                 };
 
-                let crud_mapping: Option<Result<(), IntegrationOSError>> = OptionFuture::from(config.mapping.as_ref().map(|m| m.from_common_model.to_owned())
+                let default_params = params.clone();
+                let request_crud: Option<Result<RequestCrud, IntegrationOSError>> = OptionFuture::from(config.mapping.as_ref().map(|m| m.from_common_model.to_owned())
                     .map(|code| async {
                         match code {
-                            None => Ok(()),
+                            None => Ok(params),
                             Some(code) => {
                                 let namespace = crud_namespace.clone() + "_mapFromCrudRequest";
                                 let jsruntime = JSRuntimeImplBuilder::default().namespace(namespace).code(code).build()
@@ -382,25 +383,18 @@ impl UnifiedDestination {
                                     })?;
                                 let jsruntime = jsruntime.create("mapCrudRequest")?;
 
-                                let params: RequestCrud = prepare_crud_mapping(params, &config)?;
+                                let params: RequestCrud = jsruntime.run(&prepare_crud_mapping(params, &config)?).await?;
+                                let params: RequestCrud = params.extend_body(body);
 
-
-                                let params: RequestCrud = jsruntime.run(&params).await?;
-                                    // JS_RUNTIME
-                                    // .with_borrow_mut(|script| script.call_namespace(&ns, request))
-                                    // .map_err(|e| {
-                                    //     error!("Failed to run request crud mapping script for connection model. ID: {}, Error: {}", config.id, e);
-                                    // 
-                                    //     ApplicationError::bad_request(
-                                    //         &format!("Failed while running request crud mapping script: {e}"),
-                                    //         None,
-                                    //     )
-                                    //         .set_meta(&metadata)
-                                    // })?;
-                                Ok(())
+                                Ok(params)
                             }
                         }
                     })).await;
+
+                let params = request_crud.unwrap_or(Ok(default_params))?;
+                let secret = extend_secret(secret, params.get_path_params());
+
+                let PlatformInfo::Api(api_config) = &config.platform_info;
 
 
                 todo!()
@@ -499,6 +493,20 @@ impl UnifiedDestination {
         )
         .await
     }
+}
+
+fn extend_secret(mut secret: Value, get_path_params: Option<&HashMap<String, String>>) -> Value {
+    if let Value::Object(sec) = &mut secret {
+        if let Some(path_params) = get_path_params {
+            sec.extend(
+                path_params
+                    .iter()
+                    .map(|(lhs, rhs)| (lhs.to_string(), Value::String(rhs.to_string()))),
+            );
+        }
+    }
+
+    secret
 }
 
 fn generate_script_namespace(max_capacity: u64, key: &str) -> String {

@@ -101,6 +101,14 @@ pub enum PlatformInfo {
     Api(ApiModelConfig),
 }
 
+impl PlatformInfo {
+    pub fn config(&self) -> &ApiModelConfig {
+        match self {
+            PlatformInfo::Api(config) => config,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "dummy", derive(fake::Dummy))]
 #[serde(rename_all = "camelCase")]

@@ -1,10 +1,10 @@
 use derive_builder::Builder;
 use integrationos_domain::{ApplicationError, IntegrationOSError};
 use js_sandbox_ios::Script;
+use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 use std::cell::RefCell;
-use serde::de::DeserializeOwned;
 
 thread_local! {
     static JS_RUNTIME: RefCell<Script> = RefCell::new(Script::new());
@@ -53,7 +53,7 @@ impl JSRuntimeImpl {
                 None,
             )
         })?;
-        
+
         let body = JS_RUNTIME
             .with_borrow_mut(|script| script.call_namespace(&self.namespace, body))
             .map_err(|e| {
