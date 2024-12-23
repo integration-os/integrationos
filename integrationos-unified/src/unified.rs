@@ -1,3 +1,4 @@
+use crate::domain::{ResponseCrudToMap, ResponseCrudToMapBuilder, ResponseCrudToMapRequest};
 use crate::{
     algebra::jsruntime::{self, JSRuntimeImpl, JSRuntimeImplBuilder},
     client::CallerClient,
@@ -376,22 +377,22 @@ impl UnifiedDestination {
                 let error_for_status = if (response.status().is_client_error() || response.status().is_server_error()) {
                     Ok(())
                 } else {
-                    Err(InternalError::invalid_argument("Invalid response status", None))
+                    Err(InternalError::invalid_argument(&format!("Invalid response status: {}", status), None))
                 };
 
-                let json = response.json().await.map_err(|e| {
+                let model_definition_json: Result<Value, IntegrationOSError> = response.json().await.map_err(|e| {
                     error!("Failed to get json body from successful response. ID: {}, Error: {}", config.id, e);
 
                     IntegrationOSError::from_err_code(status, &e.to_string(), None)
-                })?;
+                });
 
-                let json = match error_for_status {
+                let model_definition_json: Option<Value> = match error_for_status {
                     Err(e) => {
                         error!("Failed to execute model definition. ID: {}, Error: {}", config.id, e);
 
                         let mut response = Response::builder()
                             .status(status)
-                            .body(json)
+                            .body(model_definition_json?)
                             .map_err(|e| {
                                 error!("Failed to create response from builder for unsuccessful response. ID: {}, Error: {}", config.id, e);
 
@@ -400,11 +401,38 @@ impl UnifiedDestination {
                         *response.headers_mut() = headers;
                         return Ok(UnifiedResponse { response, metadata: metadata.build()? });
                     }
-                    Ok(_) => json,
+                    Ok(_) => model_definition_json.ok(),
                 };
 
-                let passthrough = if is_passthrough { Some(json) } else { None };
+                let passthrough: Option<Value> = if is_passthrough { model_definition_json.clone() } else { None };
+                let pagination: Option<Value> = match &config.action_name {
+                    CrudAction::GetMany => {
+                        match cms.mapping.as_ref().map(|m| m.from_common_model.as_str()) {
+                            Some(code) => {
+                                let namespace = crud_namespace.clone() + "_mapToCrudRequest";
+                                let jsruntime = JSRuntimeImplBuilder::default().namespace(namespace).code(code).build()
+                                    .inspect_err(|e| {
+                                        error!("Failed to create request crud mapping script for connection model. ID: {}, Error: {}", config.id, e);
+                                    })?;
+                                let jsruntime: JSRuntimeImpl = jsruntime.create("mapCrudRequest")?;
 
+                                let pagination = extract_pagination(&config, &model_definition_json)?;
+                                let res_to_map = ResponseCrudToMapBuilder::default()
+                                    .headers(&headers)
+                                    .pagination(pagination)
+                                    .request(ResponseCrudToMapRequest::new(&params.get_query_params()))
+                                    .build()?;
+
+                                let response: ResponseCrud = jsruntime.run(&res_to_map).await?;
+
+                                response.get_pagination().cloned()
+                            }
+                            _ => None
+                        }
+                    }
+                    _ => None
+                };
+                // ** --> Progress
 
                 todo!()
             }
@@ -579,6 +607,7 @@ impl UnifiedDestination {
     //         "connectionKey": connection.key,
     //     });
     //
+    //     **Again this is referencing the model_definition_json not the body from the request --> Progress
     //     body = if let Some(body) = body {
     //         if let Some(js) = mapping.as_ref().map(|m| m.from_common_model.as_str()) {
     //             debug!(
@@ -828,6 +857,8 @@ impl UnifiedDestination {
     //     }
     //
     //     let status = res.status();
+    //     // From this point on anything related to body is no longer the body that came in the
+    //     // function but the body that was returned by the destination
     //
     //     let mut body: Option<Value> = res.json().await.ok();
     //
@@ -1406,6 +1437,44 @@ impl UnifiedDestination {
             (_, _, Err(e)) => Err(e),
         }
     }
+}
+
+fn extract_pagination(
+    config: &ConnectionModelDefinition,
+    body: &Option<Value>,
+) -> Result<Option<Value>, IntegrationOSError> {
+    let path = match config
+        .platform_info
+        .config()
+        .paths
+        .as_ref()
+        .and_then(|paths| paths.response.as_ref())
+        .and_then(|response| response.cursor.as_ref())
+    {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+
+    let body_value = match body {
+        Some(b) => b,
+        None => return Ok(None),
+    };
+
+    let wrapped_body = json!({ "body": body_value });
+
+    let mut bodies = jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
+        error!(
+            "Failed to select cursor at response path. ID: {}, Path: {}, Error: {}",
+            config.id, path, e
+        );
+        ApplicationError::bad_request(&e.to_string(), None)
+    })?;
+
+    Ok(if bodies.len() == 1 {
+        Some(bodies.remove(0).clone())
+    } else {
+        Some(Value::Null)
+    })
 }
 
 fn insert_body_into_path_object(

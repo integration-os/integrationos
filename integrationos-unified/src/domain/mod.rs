@@ -118,25 +118,39 @@ pub struct RequestForId<'a> {
     path_params: Option<&'a str>,
 }
 
-// #[derive(Debug, Clone, PartialEq, Serialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct ResponseCrudToMap<'a> {
-//     #[serde(with = "http_serde_ext_ios::header_map")]
-//     headers: &'a HeaderMap,
-//     pagination: Option<Value>,
-//     request: ResponseCrudToMapRequest<'a>,
-// }
+#[derive(Debug, Clone, PartialEq, Serialize, Builder)]
+#[serde(rename_all = "camelCase")]
+#[builder(setter(into), build_fn(error = "IntegrationOSError"))]
+pub struct ResponseCrudToMap<'a> {
+    #[serde(with = "http_serde_ext_ios::header_map")]
+    headers: &'a HeaderMap,
+    #[builder(default)]
+    pagination: Option<Value>,
+    request: ResponseCrudToMapRequest<'a>,
+}
 
-// #[derive(Debug, Clone, PartialEq, Serialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct ResponseCrudToMapRequest<'a> {
-//     query_params: &'a HashMap<String, String>,
-// }
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResponseCrudToMapRequest<'a> {
+    query_params: &'a HashMap<String, String>,
+}
+
+impl<'a> ResponseCrudToMapRequest<'a> {
+    pub fn new(query_params: &'a HashMap<String, String>) -> Self {
+        Self { query_params }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResponseCrud {
     pagination: Option<Value>,
+}
+
+impl ResponseCrud {
+    pub fn get_pagination(&self) -> Option<&Value> {
+        self.pagination.as_ref()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Builder)]
