@@ -95,7 +95,7 @@ impl Secret {
     }
 
     pub fn encrypted_secret(&self) -> SecretString {
-        SecretString::new(self.encrypted_secret.clone())
+        SecretString::from(self.encrypted_secret.clone())
     }
 }
 

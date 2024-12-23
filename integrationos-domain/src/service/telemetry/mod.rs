@@ -5,9 +5,10 @@ use axum::middleware::Next;
 use axum::response::IntoResponse;
 use http::StatusCode;
 use opentelemetry::{global, trace::TracerProvider};
-use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_otlp::{MetricExporter, SpanExporter, WithExportConfig};
 use opentelemetry_sdk::runtime::Tokio;
-use opentelemetry_sdk::trace::{BatchConfig, Config};
+use opentelemetry_sdk::trace::TracerProvider as OtelTracerProvider;
+use opentelemetry_sdk::trace::{BatchConfig, Builder, Config};
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
@@ -39,22 +40,18 @@ where
 
     match otlp_url {
         Some(otlp_url) => {
-            let exporter = opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint(otlp_url.clone());
+            let exporter = SpanExporter::builder()
+                .with_tonic()
+                .with_endpoint(otlp_url.clone())
+                .build()
+                .expect("Failed to create OTLP exporter");
 
-            let provider = opentelemetry_otlp::new_pipeline()
-                .tracing()
-                .with_trace_config(Config::default().with_resource(
-                    opentelemetry_sdk::Resource::new(vec![opentelemetry::KeyValue::new(
-                        "service.name",
-                        name,
-                    )]),
-                ))
-                .with_batch_config(BatchConfig::default())
-                .with_exporter(exporter)
-                .install_batch(Tokio)
-                .expect("Failed to install tracing pipeline");
+            let provider = OtelTracerProvider::builder()
+                .with_resource(opentelemetry_sdk::Resource::new(vec![
+                    opentelemetry::KeyValue::new("service.name", name),
+                ]))
+                .with_batch_exporter(exporter, Tokio)
+                .build();
 
             global::set_tracer_provider(provider.clone());
             let tracer = provider.tracer("tracing-otel-subscriber");

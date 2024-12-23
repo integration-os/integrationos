@@ -14,6 +14,7 @@ use integrationos_domain::{
     encrypted_access_key::EncryptedAccessKey, encrypted_data::PASSWORD_LENGTH,
     event_access::EventAccess, AccessKey, ApplicationError, Event, InternalError,
 };
+use integrationos_unified::domain::{RequestCrud, RequestCrudBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{collections::HashMap, sync::Arc};
@@ -260,9 +261,18 @@ pub async fn process_request(
             connection.clone(),
             action.clone(),
             state.config.environment,
-            headers,
-            query_params,
-            payload,
+            RequestCrudBuilder::default()
+                .headers(headers)
+                .query_params(query_params)
+                .body(payload)
+                .build()
+                .map_err(|e| {
+                    error!("Error building request crud: {e}");
+                    InternalError::invalid_argument(
+                        &format!("Error building request crud: {e}"),
+                        None,
+                    )
+                })?,
         )
         .await
         .inspect_err(|e| {

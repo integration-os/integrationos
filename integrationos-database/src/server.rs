@@ -1,4 +1,4 @@
-use crate::{router, service::storage::Storage};
+use crate::{algebra::storage::Storage, router};
 use anyhow::Result as AnyhowResult;
 use axum::Router;
 use integrationos_domain::database::DatabasePodConfig;

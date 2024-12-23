@@ -1,6 +1,7 @@
 pub mod axum_error;
 
 use crate::prelude::StringExt;
+use derive_builder::UninitializedFieldError;
 use http::StatusCode;
 use mongodb::error::WriteFailure;
 use serde::Serialize;
@@ -1337,6 +1338,13 @@ impl Display for IntegrationOSError {
             IntegrationOSError::Internal(e) => write!(f, "{}", e),
             IntegrationOSError::Application(e) => write!(f, "{}", e),
         }
+    }
+}
+
+impl From<UninitializedFieldError> for IntegrationOSError {
+    fn from(ufe: UninitializedFieldError) -> Self {
+        InternalError::invalid_argument(&format!("Uninitialized field: {}", ufe.field_name()), None)
+            .into()
     }
 }
 
