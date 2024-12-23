@@ -52,6 +52,14 @@ impl RequestCrud {
         self.path_params.as_ref()
     }
 
+    pub fn get_query_params(&self) -> &HashMap<String, String> {
+        &self.query_params
+    }
+    
+    pub fn get_headers(&self) -> &HeaderMap {
+        &self.headers
+    }
+
     pub fn remove_query_params(mut self, key: &str) -> (Self, Option<String>) {
         let removed = self.query_params.remove(key);
 
@@ -92,6 +100,11 @@ impl RequestCrud {
             }
             _ => {}
         }
+        self
+    }
+
+    pub fn set_body(mut self, body: Option<Value>) -> Self {
+        self.body = body;
         self
     }
 }
@@ -139,10 +152,18 @@ pub struct UnifiedMetadata {
     transaction_key: Id,
     platform: String,
     platform_version: String,
-    action: String,
-    common_model: String,
+    #[builder(default)]
+    action: Option<String>,
+    #[builder(default)]
+    common_model: Option<String>,
     common_model_version: String,
     connection_key: String,
+}
+
+impl UnifiedMetadata {
+    pub fn as_value(&self) -> Value {
+        serde_json::to_value(self).unwrap_or_default()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]

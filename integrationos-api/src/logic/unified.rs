@@ -257,7 +257,7 @@ pub async fn process_request(
 
     let mut response = state
         .extractor_caller
-        .send_to_destination_unified(
+        .dispatch_unified_request(
             connection.clone(),
             action.clone(),
             state.config.environment,
@@ -295,7 +295,7 @@ pub async fn process_request(
         .collect::<HeaderMap>();
 
     let (parts, body) = response.response.into_parts();
-    let mut metadata = body.get(META).unwrap_or(&response.metadata).clone();
+    let mut metadata = body.get(META).unwrap_or(&response.metadata.as_value()).clone();
 
     if let Some(Ok(encrypted_access_key)) =
         access_key_header_value.map(|v| v.to_str().map(|s| s.to_string()))

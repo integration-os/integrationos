@@ -950,6 +950,12 @@ pub enum IntegrationOSError {
     Application(ApplicationError),
 }
 
+impl From<reqwest::Error> for IntegrationOSError {
+    fn from(err: reqwest::Error) -> Self {
+        InternalError::io_err(&err.to_string(), None)
+    }
+}
+
 impl AsRef<str> for IntegrationOSError {
     fn as_ref(&self) -> &str {
         match self {

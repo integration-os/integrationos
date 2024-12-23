@@ -68,7 +68,7 @@ pub async fn passthrough_request(
 
     let model_execution_result = state
         .extractor_caller
-        .send_to_destination(
+        .dispatch_destination_request(
             Some(connection.clone()),
             &destination,
             headers,
