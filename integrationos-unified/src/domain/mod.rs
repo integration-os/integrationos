@@ -55,7 +55,7 @@ impl RequestCrud {
     pub fn get_query_params(&self) -> &HashMap<String, String> {
         &self.query_params
     }
-    
+
     pub fn get_headers(&self) -> &HeaderMap {
         &self.headers
     }
