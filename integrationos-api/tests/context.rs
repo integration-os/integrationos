@@ -514,6 +514,7 @@ impl TestServer {
             paths: None,
             is_default_crud_mapping: None,
             test_connection_payload: None,
+            test_connection_status: None,
             mapping: Some(CrudMapping {
                 action: CrudAction::GetMany,
                 common_model_name: connection_def.name,
