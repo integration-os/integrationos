@@ -69,6 +69,7 @@ async fn test_passthrough_api() {
         responses: vec![],
         is_default_crud_mapping: None,
         test_connection_payload: None,
+        test_connection_status: None,
         mapping: None,
         supported: Some(true),
         active: Some(true),
