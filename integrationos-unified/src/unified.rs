@@ -365,7 +365,6 @@ impl UnifiedDestination {
                 let params: RequestCrud = request_crud.unwrap_or(Ok(default_params))?;
                 let secret: Value = extend_secret(secret, params.get_path_params());
 
-
                 let body: Option<Value> = insert_body_into_path_object(&config, params.get_body());
                 let params: RequestCrud = params.set_body(body);
 
@@ -374,7 +373,7 @@ impl UnifiedDestination {
                 let headers: HeaderMap = response.headers().clone();
 
                 // convert to Result
-                let error_for_status = if (response.status().is_client_error() || response.status().is_server_error()) {
+                let error_for_status = if response.status().is_client_error() || response.status().is_server_error() {
                     Ok(())
                 } else {
                     Err(InternalError::invalid_argument(&format!("Invalid response status: {}", status), None))
@@ -432,9 +431,11 @@ impl UnifiedDestination {
                     }
                     _ => None
                 };
-                // ** --> Progress
 
+                let model_definition_json = transform_response_with_path(&config, model_definition_json, &environment);
+                // https://github.com/integration-os/integrationos/blob/main/integrationos-unified/src/unified.rs#L842
                 todo!()
+
             }
             Action::Passthrough { method, path } => Err(InternalError::invalid_argument(
                 &format!("Passthrough action is not supported for destination {}, in method {method} and path {path}", key.connection_key),
@@ -442,838 +443,6 @@ impl UnifiedDestination {
             )),
         }
     }
-
-    // #[allow(clippy::too_many_arguments)]
-    // pub async fn send_to_destination_unified(
-    //     &self,
-    //     connection: Arc<Connection>,
-    //     action: Action,
-    //     include_passthrough: bool,
-    //     environment: Environment,
-    //     mut headers: HeaderMap,
-    //     mut query_params: HashMap<String, String>,
-    //     mut body: Option<Value>,
-    // ) -> Result<UnifiedResponse, IntegrationOSError> {
-    //     let key = Destination {
-    //         platform: connection.platform.clone(),
-    //         action: action.clone(),
-    //         connection_key: connection.key.clone(),
-    //     };
-    //
-    //     let config_fut = self
-    //         .connection_model_definitions_cache
-    //         .get_or_insert_with_fn(key.clone(), || async {
-    //             match self.get_connection_model_definition(&key).await {
-    //                 Ok(Some(c)) => Ok(c),
-    //                 Ok(None) => Err(InternalError::key_not_found("model definition", None)),
-    //                 Err(e) => Err(InternalError::connection_error(
-    //                     format!(
-    //                         "Failed to get connection model definition: {}",
-    //                         e.message().as_ref()
-    //                     )
-    //                         .as_str(),
-    //                     None,
-    //                 )),
-    //             }
-    //         });
-    //
-    //     let secret_fut =
-    //         self.secrets_cache
-    //             .get_or_insert_with_fn(connection.as_ref().clone(), || async {
-    //                 match self
-    //                     .secrets_client
-    //                     .get(&connection.secrets_service_id, &connection.ownership.id)
-    //                     .map(|v| Some(v).transpose())
-    //                     .await
-    //                 {
-    //                     Ok(Some(c)) => Ok(c.as_value()?),
-    //                     Ok(None) => Err(InternalError::key_not_found("secret", None)),
-    //                     Err(e) => Err(InternalError::connection_error(
-    //                         format!("Failed to get secret: {}", e.message().as_ref()).as_str(),
-    //                         None,
-    //                     )),
-    //                 }
-    //             });
-    //
-    //     let Action::Unified {
-    //         action: _,
-    //         id,
-    //         name,
-    //     } = &action
-    //     else {
-    //         return Err(InternalError::invalid_argument(
-    //             "Sent a passthrough to the unified send to destination",
-    //             None,
-    //         ));
-    //     };
-    //
-    //     let schema_key = (connection.platform.clone(), name.clone());
-    //
-    //     let schema_fut = self
-    //         .connection_model_schemas_cache
-    //         .get_or_insert_with_filter(
-    //             &schema_key,
-    //             self.connection_model_schemas_store.clone(),
-    //             doc! {
-    //                 "connectionPlatform": connection.platform.as_ref(),
-    //                 "mapping.commonModelName": name.as_ref(),
-    //             },
-    //             Some(
-    //                 FindOneOptions::builder()
-    //                     .collation(Some(
-    //                         Collation::builder()
-    //                             .strength(CollationStrength::Secondary)
-    //                             .locale("en")
-    //                             .build(),
-    //                     ))
-    //                     .build(),
-    //             ),
-    //         );
-    //
-    //     tracing::debug!("Joining futures for {schema_key:?}");
-    //
-    //     let join_result = join!(config_fut, secret_fut, schema_fut);
-    //
-    //     let config = join_result.0.map_err(|e| {
-    //         error!("Could not find connection model definition for destination with cache key {:?}: {:?}", key, e);
-    //
-    //         InternalError::key_not_found("model definition", None)
-    //     })?;
-    //     tracing::debug!(
-    //         "Connection model definition found for destination with cache key {:?}",
-    //         key
-    //     );
-    //
-    //     let mut secret = join_result.1.map_err(|e| {
-    //         error!(
-    //             "Error getting secret for destination with cache key {:?}: {e}",
-    //             key
-    //         );
-    //         InternalError::key_not_found(e.to_string().as_str(), None)
-    //     })?;
-    //
-    //     tracing::debug!("Secret found for destination with cache key {:?}", key);
-    //
-    //     let cms = join_result.2.map_err(|e| {
-    //         InternalError::key_not_found(&format!("model schema {name} for destination: {e}"), None)
-    //     })?;
-    //
-    //     tracing::debug!(
-    //         "Connection model schema found for destination with cache key {:?}",
-    //         key
-    //     );
-    //
-    //     let ConnectionModelSchema {
-    //         id: schema_id,
-    //         mapping,
-    //         ..
-    //     } = cms;
-    //
-    //     if let Some(id) = id {
-    //         let secret = &mut secret;
-    //         if let Value::Object(sec) = secret {
-    //             const ID: &str = "id";
-    //             sec.insert(ID.to_string(), Value::String(id.to_string()));
-    //         }
-    //     }
-    //
-    //     let crud_script_namespace = if self.secrets_cache.max_capacity() == 0 {
-    //         "$".to_string() + &uuid::Uuid::new_v4().simple().to_string()
-    //     } else {
-    //         config.id.to_string().replace([':', '-'], "_")
-    //     };
-    //     let schema_script_namespace = if self.secrets_cache.max_capacity() == 0 {
-    //         "$".to_string() + &uuid::Uuid::new_v4().simple().to_string()
-    //     } else {
-    //         schema_id.to_string().replace([':', '-'], "_")
-    //     };
-    //
-    //     let mut metadata = json!({
-    //         "timestamp": Utc::now().timestamp_millis(),
-    //         "platformRateLimitRemaining": 0,
-    //         "rateLimitRemaining": 0,
-    //         "host": headers.get("host").map(|v| v.to_str().unwrap_or("")),
-    //         "cache": {
-    //             "hit": false,
-    //             "ttl": 0,
-    //             "key": ""
-    //         },
-    //         "transactionKey": Id::now(IdPrefix::Transaction),
-    //         "platform": connection.platform,
-    //         "platformVersion": connection.platform_version,
-    //         "action": config.action_name,
-    //         "commonModel": config.mapping.as_ref().map(|m| &m.common_model_name),
-    //         "commonModelVersion": "v1",
-    //         "connectionKey": connection.key,
-    //     });
-    //
-    //     **Again this is referencing the model_definition_json not the body from the request --> Progress
-    //     body = if let Some(body) = body {
-    //         if let Some(js) = mapping.as_ref().map(|m| m.from_common_model.as_str()) {
-    //             debug!(
-    //                 "Mapping request body {}\nUsing js {js}",
-    //                 serde_json::to_string_pretty(&body)
-    //                     .map_err(|e| {
-    //                         error!("Failed to convert body to pretty string for connection model. ID: {}, Body: {}, Error: {}", config.id, body, e);
-    //                     })
-    //                     .unwrap_or_default(),
-    //             );
-    //
-    //             let ns: String = schema_script_namespace.clone() + "_mapFromCommonModel";
-    //             JS_RUNTIME
-    //                 .with_borrow_mut(|script| script.add_script(&ns, "mapFromCommonModel", js))
-    //                 .map_err(|e| {
-    //                     error!("Failed to create request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
-    //
-    //                     ApplicationError::bad_request(
-    //                         &format!("Failed while creating request schema mapping script: {e}"),
-    //                         None,
-    //                     )
-    //                         .set_meta(&metadata)
-    //                 })?;
-    //             let body = JS_RUNTIME
-    //                 .with_borrow_mut(|script| script.call_namespace(&ns, body))
-    //                 .map_err(|e| {
-    //                     error!("Failed to run request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
-    //
-    //                     ApplicationError::bad_request(
-    //                         &format!("Failed while running request schema mapping script: {e}"),
-    //                         None,
-    //                     )
-    //                         .set_meta(&metadata)
-    //                 })?;
-    //
-    //             tokio::task::yield_now().await;
-    //
-    //             let body = remove_nulls(&body);
-    //
-    //             debug!(
-    //                 "Mapped body to {}",
-    //                 serde_json::to_string_pretty(&body)
-    //                     .map_err(|e| {
-    //                         error!("Failed to convert mapped body to pretty string. ID: {}, Body: {}, Error: {}", config.id, body, e);
-    //                     })
-    //                     .unwrap_or_default(),
-    //             );
-    //
-    //             Some(body)
-    //         } else {
-    //             debug!(
-    //                 "No js for schema mapping to common model {name} for {}",
-    //                 connection.platform
-    //             );
-    //             Some(body)
-    //         }
-    //     } else {
-    //         debug!("No body to map");
-    //         None
-    //     };
-    //
-    //     if let Some(CrudMapping {
-    //                     from_common_model: Some(js),
-    //                     ..
-    //                 }) = &config.mapping
-    //     {
-    //         if !js.is_empty() {
-    //             let ns: String = crud_script_namespace.clone() + "_mapFromCrudRequest";
-    //             JS_RUNTIME
-    //                 .with_borrow_mut(|script| script.add_script(&ns, "mapCrudRequest", js.as_str()))
-    //                 .map_err(|e| {
-    //                     error!("Failed to create request crud mapping script for connection model. ID: {}, JS: {}, Error: {}", config.id, js, e);
-    //                     ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
-    //                 })?;
-    //
-    //             const PASSTHROUGH_PARAMS: &str = "passthroughForward";
-    //             const PASSHTROUGH_HEADERS: &str = "x-integrationos-passthrough-forward";
-    //
-    //             if let Some(custom_params) = query_params.remove(PASSTHROUGH_PARAMS) {
-    //                 let pairs = custom_params.split('&').filter_map(|pair| {
-    //                     pair.split_once('=')
-    //                         .map(|(a, b)| (a.to_owned(), b.to_owned()))
-    //                 });
-    //                 query_params.extend(pairs);
-    //             }
-    //
-    //             if let Some(custom_headers) = headers.remove(PASSHTROUGH_HEADERS) {
-    //                 let pairs = custom_headers
-    //                     .to_str()
-    //                     .map_err(|e| {
-    //                         error!(
-    //                             "Failed to convert custom headers to string. ID {:?}, Error: {:?}",
-    //                             config.id, e
-    //                         );
-    //                         InternalError::invalid_argument(&e.to_string(), None)
-    //                             .set_meta(&metadata)
-    //                     })?
-    //                     .split(';')
-    //                     .filter_map(|pair| pair.split_once('='))
-    //                     .filter_map(|(a, b)| {
-    //                         match (HeaderName::from_str(a).ok(), HeaderValue::try_from(b).ok()) {
-    //                             (Some(a), Some(b)) => Some((Some(a), b)),
-    //                             _ => None,
-    //                         }
-    //                     });
-    //                 headers.extend(pairs);
-    //             }
-    //
-    //             let request = RequestCrudBorrowed {
-    //                 query_params: &query_params,
-    //                 headers: &headers,
-    //                 path_params: id.as_ref().map(|id| PathParams { id }),
-    //             };
-    //
-    //             debug!(
-    //                 "Mapping request crud {}\nUsing js {js}",
-    //                 serde_json::to_string_pretty(&request)
-    //                     .map_err(|e| {
-    //                         error!("Failed to convert request crud to pretty string. ID: {}, Request: {:?}, Error: {}", config.id, request, e);
-    //                     })
-    //                     .unwrap_or_default(),
-    //             );
-    //
-    //             let res: RequestCrud = JS_RUNTIME
-    //                 .with_borrow_mut(|script| script.call_namespace(&ns, request))
-    //                 .map_err(|e| {
-    //                     error!("Failed to run request crud mapping script for connection model. ID: {}, Error: {}", config.id, e);
-    //
-    //                     ApplicationError::bad_request(
-    //                         &format!("Failed while running request crud mapping script: {e}"),
-    //                         None,
-    //                     )
-    //                         .set_meta(&metadata)
-    //                 })?;
-    //
-    //             debug!(
-    //                 "Mapped request crud to {}",
-    //                 serde_json::to_string_pretty(&res)
-    //                     .map_err(|e| {
-    //                         error!("Failed to convert crud to pretty string. ID: {}, Res: {:?}, Error: {}", config.id, res, e);
-    //                     })
-    //                     .unwrap_or_default(),
-    //             );
-    //
-    //             headers = res.headers;
-    //
-    //             query_params = res.query_params.unwrap_or_default();
-    //
-    //             let secret = &mut secret;
-    //             if let Value::Object(ref mut sec) = secret {
-    //                 if let Some(path_params) = res.path_params {
-    //                     sec.extend(path_params.into_iter().map(|(a, b)| (a, Value::String(b))));
-    //                 }
-    //             }
-    //
-    //             match (&mut body, res.body) {
-    //                 (Some(Value::Object(a)), Some(Value::Object(b))) => {
-    //                     a.extend(b);
-    //                 }
-    //                 (body @ None, Some(mapped_body)) => {
-    //                     body.replace(mapped_body);
-    //                 }
-    //                 _ => {}
-    //             }
-    //         }
-    //     }
-    //
-    //     let PlatformInfo::Api(api_config) = &config.platform_info;
-    //
-    //     if let Some(ModelPaths {
-    //                     request: Some(RequestModelPaths { object: Some(path) }),
-    //                     ..
-    //                 }) = &api_config.paths
-    //     {
-    //         if let Some(path) = path.strip_prefix("$.body.") {
-    //             body = body.map(|body| json!({path: body}));
-    //             debug!(
-    //                 "Mapped request body to {path}: {}",
-    //                 serde_json::to_string_pretty(&body)
-    //                     .map_err(|e| {
-    //                         error!("Failed to convert mapped body to pretty string. ID: {}, Body: {:?}, Error: {}", config.id, body, e);
-    //                     })
-    //                     .unwrap_or_default(),
-    //             );
-    //         }
-    //     }
-    //
-    //     debug!("Executing model definition with config {config:#?}, headers {headers:#?}, query params {query_params:#?}");
-    //
-    //     let context = match body {
-    //         None | Some(Value::Null) => None,
-    //         _ => Some(serde_json::to_vec(&body).map_err(|e| {
-    //             error!(
-    //                 "Failed to convert body to vec. ID: {}, Error: {}",
-    //                 config.id, e
-    //             );
-    //
-    //             ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
-    //         })?),
-    //     };
-    //
-    //     let mut latency = 0i64;
-    //     let mut res = self
-    //         .execute_model_definition(&config, headers, &query_params, &secret, context)
-    //         .timed(|_, duration| {
-    //             latency = duration.as_millis() as i64;
-    //         })
-    //         .await
-    //         .map_err(|e| {
-    //             error!(
-    //                 "Failed to execute connection model definition. ID: {}, Error: {:?}",
-    //                 config.id, e
-    //             );
-    //             e.set_meta(&metadata)
-    //         })?;
-    //
-    //     debug!(
-    //         "Executed model definition with status code {}, headers: {:#?}",
-    //         res.status(),
-    //         res.headers()
-    //     );
-    //
-    //     let headers = std::mem::take(res.headers_mut());
-    //
-    //     if !res.status().is_success() {
-    //         let status = res.status();
-    //
-    //         let mut res = Response::builder()
-    //             .status(status)
-    //             .body(res.json().await.map_err(|e| {
-    //                 error!("Failed to get json body from unsuccessful response. ID: {}, Error: {}", config.id, e);
-    //
-    //                 IntegrationOSError::from_err_code(status, &e.to_string(), None)
-    //                     .set_meta(&metadata)
-    //             })?)
-    //             .map_err(|e| {
-    //                 error!("Failed to create response from builder for unsuccessful response. ID: {}, Error: {}", config.id, e);
-    //
-    //                 IntegrationOSError::from_err_code(status, &e.to_string(), None)
-    //                     .set_meta(&metadata)
-    //             })?;
-    //         *res.headers_mut() = headers;
-    //         return Ok(UnifiedResponse {
-    //             metadata: metadata.clone(),
-    //             response: res,
-    //         });
-    //     }
-    //
-    //     let status = res.status();
-    //     // From this point on anything related to body is no longer the body that came in the
-    //     // function but the body that was returned by the destination
-    //
-    //     let mut body: Option<Value> = res.json().await.ok();
-    //
-    //     let passthrough = if include_passthrough {
-    //         body.clone()
-    //     } else {
-    //         None
-    //     };
-    //
-    //     debug!(
-    //         "Received response body: {}",
-    //         serde_json::to_string_pretty(&body)
-    //             .map_err(|e| {
-    //                 error!(
-    //                     "Failed to convert body to pretty string. ID: {}, Body: {:?}, Error: {} ",
-    //                     config.id, body, e
-    //                 );
-    //             })
-    //             .unwrap_or_default(),
-    //     );
-    //
-    //     let pagination = if config.action_name == CrudAction::GetMany {
-    //         if let Some(CrudMapping {
-    //                         to_common_model: Some(js),
-    //                         ..
-    //                     }) = &config.mapping
-    //         {
-    //             if !js.is_empty() {
-    //                 let ns: String = crud_script_namespace + "_mapToCrudRequest";
-    //                 JS_RUNTIME
-    //                     .with_borrow_mut(|script| {
-    //                         script.add_script(&ns, "mapCrudRequest", js.as_str())
-    //                     })
-    //                     .map_err(|e| {
-    //                         error!("Failed to create response crud mapping script for connection model. ID: {}, JS: {}, Error: {}", config.id, js, e);
-    //
-    //                         ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
-    //                     })?;
-    //
-    //                 let pagination = if let (
-    //                     Some(ModelPaths {
-    //                              response:
-    //                              Some(ResponseModelPaths {
-    //                                       cursor: Some(path), ..
-    //                                   }),
-    //                              ..
-    //                          }),
-    //                     Some(body),
-    //                 ) = (&api_config.paths, &body)
-    //                 {
-    //                     let wrapped_body = json!({"body":body});
-    //                     let mut bodies =
-    //                         jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
-    //                             error!("Failed to select cursor at response path. ID: {}, Path: {}, Error: {}", config.id, path, e);
-    //
-    //                             ApplicationError::bad_request(&e.to_string(), None)
-    //                                 .set_meta(&metadata)
-    //                         })?;
-    //                     if bodies.len() != 1 {
-    //                         Some(Value::Null)
-    //                     } else {
-    //                         Some(bodies.remove(0).clone())
-    //                     }
-    //                 } else {
-    //                     None
-    //                 };
-    //
-    //                 let res_to_map = ResponseCrudToMap {
-    //                     headers: &headers,
-    //                     pagination,
-    //                     request: ResponseCrudToMapRequest {
-    //                         query_params: &query_params,
-    //                     },
-    //                 };
-    //
-    //                 debug!(
-    //                     "Mapping response crud {}\nUsing js {js}",
-    //                     serde_json::to_string_pretty(&res_to_map).map_err(|e| {
-    //                         error!("Failed to convert response crud to pretty string. ID: {}, Response to Map: {:?}, Error: {}", config.id, res_to_map, e);
-    //                     })
-    //                     .unwrap_or_default(),
-    //                 );
-    //
-    //                 let res: ResponseCrud = JS_RUNTIME
-    //                     .with_borrow_mut(|script| script.call_namespace(&ns, &res_to_map))
-    //                     .map_err(|e| {
-    //                         ApplicationError::bad_request(
-    //                             &format!("Failed while running response crud mapping script. ID: {}, Error: {}", config.id, e),
-    //                             None,
-    //                         )
-    //                             .set_meta(&metadata)
-    //                     })?;
-    //
-    //                 tokio::task::yield_now().await;
-    //
-    //                 debug!(
-    //                     "Mapped response crud to {}",
-    //                     serde_json::to_string_pretty(&res).map_err(|e| {
-    //                         error!("Failed to convert response crud to pretty string. ID: {}, Response: {:?}, Error: {}", config.id, res, e);
-    //
-    //                         InternalError::invalid_argument(&e.to_string(), None)
-    //                             .set_meta(&metadata)
-    //                     })?
-    //                 );
-    //
-    //                 res.pagination
-    //             } else {
-    //                 None
-    //             }
-    //         } else {
-    //             None
-    //         }
-    //     } else {
-    //         None
-    //     };
-    //
-    //     if let Some(ModelPaths {
-    //                     response:
-    //                     Some(ResponseModelPaths {
-    //                              object: Some(path), ..
-    //                          }),
-    //                     ..
-    //                 }) = &api_config.paths
-    //     {
-    //         body = if let Some(body) = body {
-    //             let wrapped_body = json!({"body":body});
-    //             let mut bodies = jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
-    //                 error!(
-    //                     "Failed to select body at response path. ID {}, Path {}, Error {}",
-    //                     config.id, path, e
-    //                 );
-    //
-    //                 ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
-    //             })?;
-    //
-    //             let is_returning_error = !environment.is_production()
-    //                 && matches!(config.action_name, CrudAction::GetMany | CrudAction::GetOne);
-    //             let is_parseable_body = !bodies.is_empty() && bodies.len() == 1;
-    //
-    //             if bodies.is_empty() && is_returning_error {
-    //                 let error_string = format!(
-    //                     "Could not map unified model. 3rd party Connection returned an invalid response. Expected model at path {path} but found none.",
-    //                 );
-    //                 let mut res = Response::builder()
-    //                     .status(StatusCode::UNPROCESSABLE_ENTITY)
-    //                     .body(json!({
-    //                         "message": error_string,
-    //                         "passthrough": wrapped_body
-    //                     }))
-    //                     .map_err(|e| {
-    //                         error!("Failed to create response from builder for missing body. ID: {}, Error: {}", config.id, e);
-    //
-    //                         IntegrationOSError::from_err_code(
-    //                             StatusCode::UNPROCESSABLE_ENTITY,
-    //                             &e.to_string(),
-    //                             None,
-    //                         )
-    //                             .set_meta(&metadata)
-    //                     })?;
-    //                 *res.headers_mut() = headers;
-    //                 return Ok(UnifiedResponse {
-    //                     metadata: metadata.clone(),
-    //                     response: res,
-    //                 });
-    //             }
-    //
-    //             if bodies.len() != 1 && is_returning_error {
-    //                 return Err(InternalError::invalid_argument(
-    //                     &format!(
-    //                         "Invalid number of selected bodies ({}) at response path {} for CMD with ID: {}",
-    //                         bodies.len(),
-    //                         path,
-    //                         config.id
-    //                     ),
-    //                     None,
-    //                 )
-    //                     .set_meta(&metadata));
-    //             }
-    //
-    //             if is_parseable_body {
-    //                 Some(bodies.remove(0).clone())
-    //             } else {
-    //                 None
-    //             }
-    //         } else {
-    //             None
-    //         };
-    //         debug!(
-    //             "Mapped response body to {path}: {}",
-    //             serde_json::to_string_pretty(&body)
-    //                 .map_err(|e| {
-    //                     error!("Could not convert mapped body to pretty string {body:?}: {e}");
-    //                 })
-    //                 .unwrap_or_default(),
-    //         );
-    //     }
-    //
-    //     if matches!(
-    //         config.action_name,
-    //         CrudAction::GetMany | CrudAction::GetOne | CrudAction::Create | CrudAction::Upsert
-    //     ) {
-    //         let Some(js) = mapping.as_ref().map(|m| &m.to_common_model) else {
-    //             return Err(InternalError::invalid_argument(
-    //                 &format!(
-    //                     "No js for schema mapping to common model {name} for {}. ID: {}",
-    //                     connection.platform, config.id
-    //                 ),
-    //                 None,
-    //             )
-    //                 .set_meta(&metadata));
-    //         };
-    //         let ns: String = schema_script_namespace + "_mapToCommonModel";
-    //         JS_RUNTIME
-    //             .with_borrow_mut(|script| script.add_script(&ns, "mapToCommonModel", js))
-    //             .map_err(|e| {
-    //                 error!("Failed to create response schema mapping script for connection model. ID: {}, JS: {}, Error: {}", config.id, js, e);
-    //
-    //                 ApplicationError::bad_request(&e.to_string(), None).set_meta(&metadata)
-    //             })?;
-    //
-    //         debug!(
-    //             "Mapping response body {}\nUsing js {js}",
-    //             serde_json::to_string_pretty(&body)
-    //                 .map_err(|e| {
-    //                     error!("Could not convert body to pretty string {body:?}: {e}");
-    //                 })
-    //                 .unwrap_or_default(),
-    //         );
-    //
-    //         const ID_KEY: &str = "id";
-    //         const MODIFY_TOKEN_KEY: &str = "modifyToken";
-    //
-    //         let mapped_body: Value = if let Some(Value::Array(arr)) = body {
-    //             let mut futs = Vec::with_capacity(arr.len());
-    //             for body in arr {
-    //                 futs.push(async {
-    //                     let res =
-    //                         JS_RUNTIME.with_borrow_mut(|script| {
-    //                             script
-    //                                 .add_script(&ns, "mapToCommonModel", js)
-    //                                 .and_then(|_| script.call_namespace(&ns, body))
-    //                                 .map_err(|e| {
-    //                                     ApplicationError::bad_request(
-    //                                         &format!("Failed while running response schema mapping script: {}. ID: {}", e, config.id),
-    //                                         None,
-    //                                     )
-    //                                         .set_meta(&metadata)
-    //                                 })
-    //                         });
-    //                     tokio::task::yield_now().await;
-    //                     res.map(|mut body| {
-    //                         if let Value::Object(map) = &mut body {
-    //                             if !map.contains_key(MODIFY_TOKEN_KEY) {
-    //                                 let v = map.get(ID_KEY).cloned().unwrap_or(json!(""));
-    //                                 map.insert(MODIFY_TOKEN_KEY.to_owned(), v);
-    //                             }
-    //                         }
-    //                         body
-    //                     })
-    //                 });
-    //             }
-    //             let values = join_all(futs)
-    //                 .await
-    //                 .into_iter()
-    //                 .collect::<Result<Vec<Value>, _>>()?;
-    //             Value::Array(values)
-    //         } else if let Some(body) = &body {
-    //             JS_RUNTIME
-    //                 .with_borrow_mut(|script| script.call_namespace(&ns, body))
-    //                 .map(|mut body| {
-    //                     if let Value::Object(map) = &mut body {
-    //                         if !map.contains_key(MODIFY_TOKEN_KEY) {
-    //                             let v = map.get(ID_KEY).cloned().unwrap_or(json!(""));
-    //                             map.insert(MODIFY_TOKEN_KEY.to_owned(), v);
-    //                         }
-    //                     }
-    //                     body
-    //                 })
-    //                 .map_err(|e| {
-    //                     ApplicationError::bad_request(
-    //                         &format!("Failed while running response schema mapping script. ID: {}, Error: {}", config.id, e),
-    //                         None,
-    //                     )
-    //                         .set_meta(&metadata)
-    //                 })?
-    //         } else if matches!(config.action_name, CrudAction::GetMany) {
-    //             Value::Array(Default::default())
-    //         } else {
-    //             Value::Object(Default::default())
-    //         };
-    //
-    //         let mapped_body = remove_nulls(&mapped_body);
-    //
-    //         body = Some(mapped_body);
-    //     } else if matches!(config.action_name, CrudAction::Update | CrudAction::Delete) {
-    //         body = None;
-    //     }
-    //
-    //     debug!(
-    //         "Mapped response body to {}",
-    //         serde_json::to_string_pretty(&body)
-    //             .map_err(|e| {
-    //                 error!("Could not convert body to pretty string {body:?}: {e}");
-    //             })
-    //             .unwrap_or_default(),
-    //     );
-    //
-    //     let mut response = json!({});
-    //
-    //     let response_len = if let Some(Value::Array(arr)) = &body {
-    //         arr.len()
-    //     } else {
-    //         0
-    //     };
-    //
-    //     let hash = HashedSecret::try_from(json!({
-    //         "response": &body,
-    //         "action": config.action_name,
-    //         "commonModel": config.mapping.as_ref().map(|m| &m.common_model_name),
-    //     }))
-    //         .map_err(|e| e.set_meta(&metadata))?;
-    //
-    //     match body {
-    //         Some(body) => {
-    //             const UNIFIED: &str = "unified";
-    //             const COUNT: &str = "count";
-    //
-    //             match response {
-    //                 Value::Object(ref mut response) => {
-    //                     if config.action_name == CrudAction::GetCount {
-    //                         response.insert(UNIFIED.to_string(), json!({ COUNT: body }));
-    //                     } else {
-    //                         response.insert(UNIFIED.to_string(), body);
-    //                     }
-    //                 }
-    //                 Value::Number(ref mut count) => {
-    //                     if config.action_name == CrudAction::GetCount {
-    //                         response = json!({ UNIFIED: { COUNT: count } });
-    //                     }
-    //                 }
-    //                 _ => {}
-    //             }
-    //         }
-    //         None => tracing::info!(
-    //             "There was no response body to map for this action. ID: {}",
-    //             config.id
-    //         ),
-    //     };
-    //
-    //     if let (true, Some(passthrough), Value::Object(ref mut response)) =
-    //         (include_passthrough, passthrough, &mut response)
-    //     {
-    //         const PASSTHROUGH: &str = "passthrough";
-    //         response.insert(PASSTHROUGH.to_string(), passthrough);
-    //     }
-    //
-    //     if let (Some(Value::Object(mut pagination)), Value::Object(ref mut response)) =
-    //         (pagination, &mut response)
-    //     {
-    //         const LIMIT: &str = "limit";
-    //         if let Some(Ok(limit)) = query_params.get(LIMIT).map(|s| s.parse::<u32>()) {
-    //             pagination.insert(LIMIT.to_string(), Value::Number(Number::from(limit)));
-    //         }
-    //         const PAGE_SIZE: &str = "pageSize";
-    //         pagination.insert(
-    //             PAGE_SIZE.to_string(),
-    //             Value::Number(Number::from(response_len)),
-    //         );
-    //         const PAGINATION: &str = "pagination";
-    //         response.insert(PAGINATION.to_string(), Value::Object(pagination));
-    //     }
-    //
-    //     if let Value::Object(ref mut response) = &mut response {
-    //         if let Some(meta) = metadata.as_object_mut() {
-    //             meta.insert("latency".to_string(), Value::Number(Number::from(latency)));
-    //             meta.insert("hash".to_string(), Value::String(hash.inner().into()));
-    //         }
-    //
-    //         const META: &str = "meta";
-    //         response.insert(META.to_string(), metadata.clone());
-    //     }
-    //
-    //     let mut builder = Response::builder();
-    //
-    //     if status.is_success() {
-    //         const STATUS_HEADER: &str = "response-status";
-    //         builder = builder
-    //             .header::<&'static str, HeaderValue>(STATUS_HEADER, status.as_u16().into())
-    //             .status(StatusCode::OK);
-    //     } else {
-    //         builder = builder.status(status);
-    //     }
-    //     if let Some(builder_headers) = builder.headers_mut() {
-    //         builder_headers.extend(headers.into_iter());
-    //     } else {
-    //         return Err(IntegrationOSError::from_err_code(
-    //             status,
-    //             "Could not get headers from builder",
-    //             None,
-    //         )
-    //             .set_meta(&metadata));
-    //     };
-    //     let res = builder.body(response).map_err(|e| {
-    //         error!(
-    //             "Failed to create response from builder for successful response. ID: {}, Error: {}",
-    //             config.id, e
-    //         );
-    //         IntegrationOSError::from_err_code(status, &e.to_string(), None).set_meta(&metadata)
-    //     })?;
-    //
-    //     Ok(UnifiedResponse {
-    //         metadata: metadata.clone(),
-    //         response: res,
-    //     })
-    // }
 
     pub async fn dispatch_destination_request(
         &self,
@@ -1435,6 +604,69 @@ impl UnifiedDestination {
             (Err(e), _, _) => Err(e),
             (_, Err(e), _) => Err(e),
             (_, _, Err(e)) => Err(e),
+        }
+    }
+}
+
+fn transform_response_with_path(
+    config: &ConnectionModelDefinition,
+    model_definition_json: Option<Value>,
+    environment: &Environment,
+) -> Result<Option<Value>, IntegrationOSError> {
+    let path = config
+        .platform_info
+        .config()
+        .paths
+        .as_ref()
+        .and_then(|paths| paths.response.as_ref())
+        .and_then(|response| response.object.as_ref());
+
+    match path {
+        None => Ok(model_definition_json),
+        Some(path) => {
+            let wrapped_body = json!({ "body": model_definition_json });
+            let mut bodies = jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
+                error!(
+                    "Failed to select body at response path. ID {}, Path {}, Error {}",
+                    config.id, path, e
+                );
+
+                ApplicationError::bad_request(&e.to_string(), None)
+            })?;
+
+            let is_returning_error = !environment.is_production()
+                && matches!(config.action_name, CrudAction::GetMany | CrudAction::GetOne);
+            let is_parseable_body = !bodies.is_empty() && bodies.len() == 1;
+
+            if bodies.is_empty() && is_returning_error {
+                let error_string = format!(
+                    "Could not map unified model. 3rd party Connection returned an invalid response. Expected model at path {path} but found none.",
+                );
+
+                return Err(IntegrationOSError::from_err_code(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    &error_string,
+                    None,
+                ));
+            }
+
+            if bodies.len() != 1 && is_returning_error {
+                return Err(InternalError::invalid_argument(
+                    &format!(
+                        "Invalid number of selected bodies ({}) at response path {} for CMD with ID: {}",
+                        bodies.len(),
+                        path,
+                        config.id
+                    ),
+                    None,
+                ));
+            }
+
+            if is_parseable_body {
+                Ok(Some(bodies.remove(0).clone()))
+            } else {
+                Ok(None)
+            }
         }
     }
 }
