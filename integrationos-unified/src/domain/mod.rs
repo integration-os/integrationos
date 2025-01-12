@@ -7,21 +7,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
-// #[derive(Debug, Clone, PartialEq, Serialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct RequestCrudBorrowed<'a> {
-//     query_params: &'a HashMap<String, String>,
-//     #[serde(with = "http_serde_ext_ios::header_map", default)]
-//     headers: &'a HeaderMap,
-//     path_params: Option<PathParams<'a>>,
-// }
-//
-// #[derive(Debug, Clone, PartialEq, Serialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct PathParams<'a> {
-//     id: &'a str,
-// }
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Builder)]
 #[builder(setter(into))]
 #[serde(rename_all = "camelCase")]
