@@ -14,7 +14,7 @@ use integrationos_domain::{
     encrypted_access_key::EncryptedAccessKey, encrypted_data::PASSWORD_LENGTH,
     event_access::EventAccess, AccessKey, ApplicationError, Event, InternalError,
 };
-use integrationos_unified::domain::{RequestCrud, RequestCrudBuilder};
+use integrationos_unified::domain::RequestCrudBuilder;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{collections::HashMap, sync::Arc};

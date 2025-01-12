@@ -172,6 +172,10 @@ pub struct UnifiedMetadata {
     common_model: Option<String>,
     common_model_version: String,
     connection_key: String,
+    #[builder(setter(strip_option), default)]
+    latency: Option<i32>,
+    #[builder(setter(strip_option), default)]
+    hash: Option<String>,
 }
 
 impl UnifiedMetadata {

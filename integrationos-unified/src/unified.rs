@@ -1,18 +1,21 @@
-use crate::domain::{ResponseCrudToMap, ResponseCrudToMapBuilder, ResponseCrudToMapRequest};
+use crate::domain::{ResponseCrudToMapBuilder, ResponseCrudToMapRequest};
 use crate::{
-    algebra::jsruntime::{self, JSRuntimeImpl, JSRuntimeImplBuilder},
+    algebra::jsruntime::{JSRuntimeImpl, JSRuntimeImplBuilder},
     client::CallerClient,
-    domain::{RequestCrud, ResponseCrud, UnifiedCache, UnifiedMetadata, UnifiedMetadataBuilder},
+    domain::{RequestCrud, ResponseCrud, UnifiedMetadata, UnifiedMetadataBuilder},
     utility::{match_route, template_route},
+};
+use crate::{
+    BODY_KEY, COUNT_KEY, ID_KEY, LIMIT_KEY, META_KEY, MODIFY_TOKEN_KEY, PAGE_SIZE_KEY,
+    PAGINATION_KEY, PASSTHROUGH_KEY, STATUS_HEADER_KEY, UNIFIED_KEY,
 };
 use bson::doc;
 use chrono::Utc;
 use futures::{
     future::{join_all, OptionFuture},
-    join, FutureExt,
+    FutureExt,
 };
 use handlebars::Handlebars;
-use http::header::ToStrError;
 use http::{HeaderMap, HeaderName, HeaderValue, Response, StatusCode};
 use integrationos_cache::local::{
     ConnectionCache, ConnectionModelDefinitionDestinationCache, ConnectionModelSchemaCache,
@@ -20,10 +23,8 @@ use integrationos_cache::local::{
 };
 use integrationos_domain::{
     algebra::JsonExt,
-    api_model_config::{ModelPaths, RequestModelPaths, ResponseModelPaths},
-    connection_model_definition::{
-        ConnectionModelDefinition, CrudAction, CrudMapping, PlatformInfo,
-    },
+    api_model_config::{ModelPaths, RequestModelPaths},
+    connection_model_definition::{ConnectionModelDefinition, CrudAction, PlatformInfo},
     connection_model_schema::ConnectionModelSchema,
     database::DatabaseConfig,
     destination::{Action, Destination},
@@ -34,14 +35,13 @@ use integrationos_domain::{
     prelude::{MongoStore, TimedExt},
     ApplicationError, Connection, ErrorMeta, IntegrationOSError, Secret, SecretExt, Store,
 };
-use js_sandbox_ios::Script;
 use mongodb::{
     options::{Collation, CollationStrength, FindOneOptions},
     Client,
 };
 use serde_json::{json, Number, Value};
-use std::{cell::RefCell, collections::HashMap, str::FromStr, sync::Arc};
-use tracing::{debug, error};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
+use tracing::error;
 
 pub struct UnifiedResponse {
     pub response: Response<Value>,
@@ -368,30 +368,31 @@ impl UnifiedDestination {
                 let body: Option<Value> = insert_body_into_path_object(&config, params.get_body());
                 let params: RequestCrud = params.set_body(body);
 
-                let response: reqwest::Response = self.execute_model_definition_from_request(&config, &params, &secret).await?;
+                let response: reqwest::Response = self.execute_model_definition_from_request(&config, &params, &secret).timed(|_, duration| {
+                    metadata.latency(duration.as_millis() as i32);
+                }).await?;
                 let status: StatusCode = response.status();
                 let headers: HeaderMap = response.headers().clone();
 
-                // convert to Result
                 let error_for_status = if response.status().is_client_error() || response.status().is_server_error() {
                     Ok(())
                 } else {
                     Err(InternalError::invalid_argument(&format!("Invalid response status: {}", status), None))
                 };
 
-                let model_definition_json: Result<Value, IntegrationOSError> = response.json().await.map_err(|e| {
+                let body: Result<Value, IntegrationOSError> = response.json().await.map_err(|e| {
                     error!("Failed to get json body from successful response. ID: {}, Error: {}", config.id, e);
 
                     IntegrationOSError::from_err_code(status, &e.to_string(), None)
                 });
 
-                let model_definition_json: Option<Value> = match error_for_status {
+                let body: Option<Value> = match error_for_status {
                     Err(e) => {
                         error!("Failed to execute model definition. ID: {}, Error: {}", config.id, e);
 
                         let mut response = Response::builder()
                             .status(status)
-                            .body(model_definition_json?)
+                            .body(body?)
                             .map_err(|e| {
                                 error!("Failed to create response from builder for unsuccessful response. ID: {}, Error: {}", config.id, e);
 
@@ -400,10 +401,10 @@ impl UnifiedDestination {
                         *response.headers_mut() = headers;
                         return Ok(UnifiedResponse { response, metadata: metadata.build()? });
                     }
-                    Ok(_) => model_definition_json.ok(),
+                    Ok(_) => body.ok(),
                 };
 
-                let passthrough: Option<Value> = if is_passthrough { model_definition_json.clone() } else { None };
+                let passthrough: Option<Value> = if is_passthrough { body.clone() } else { None };
                 let pagination: Option<Value> = match &config.action_name {
                     CrudAction::GetMany => {
                         match cms.mapping.as_ref().map(|m| m.from_common_model.as_str()) {
@@ -415,11 +416,11 @@ impl UnifiedDestination {
                                     })?;
                                 let jsruntime: JSRuntimeImpl = jsruntime.create("mapCrudRequest")?;
 
-                                let pagination = extract_pagination(&config, &model_definition_json)?;
+                                let pagination = extract_pagination(&config, &body)?;
                                 let res_to_map = ResponseCrudToMapBuilder::default()
                                     .headers(&headers)
                                     .pagination(pagination)
-                                    .request(ResponseCrudToMapRequest::new(&params.get_query_params()))
+                                    .request(ResponseCrudToMapRequest::new(params.get_query_params()))
                                     .build()?;
 
                                 let response: ResponseCrud = jsruntime.run(&res_to_map).await?;
@@ -432,10 +433,74 @@ impl UnifiedDestination {
                     _ => None
                 };
 
-                let model_definition_json = transform_response_with_path(&config, model_definition_json, &environment);
-                // https://github.com/integration-os/integrationos/blob/main/integrationos-unified/src/unified.rs#L842
-                todo!()
+                let body = transform_response_with_path(&config, body, &environment);
+                let body = match config.action_name {
+                    CrudAction::GetMany | CrudAction::GetOne | CrudAction::Create | CrudAction::Upsert => {
+                        match cms.mapping.as_ref().map(|m| m.to_common_model.as_str()) {
+                            Some(code) => {
+                                let namespace = schema_namespace.clone() + "_mapToCommonModel";
 
+                                let jsruntime = JSRuntimeImplBuilder::default().namespace(namespace).code(code).build()
+                                    .inspect_err(|e| {
+                                        error!("Failed to create request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
+                                    })?;
+                                let jsruntime = jsruntime.create("mapToCommonModel").inspect_err(|e| {
+                                    error!("Failed to create request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
+                                })?;
+
+                                let mapped_body = match body {
+                                    Ok(Some(Value::Array(arr))) => {
+                                        let futures = arr.into_iter().map(|body| {
+                                            let jsruntime = &jsruntime;
+                                            async move {
+                                                let mut response = jsruntime.run::<Value, Value>(&body).await.inspect_err(|e| {
+                                                    error!("Failed to run request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
+                                                })?.drop_nulls();
+
+                                                if let Value::Object(map) = &mut response{
+                                                    if !map.contains_key(MODIFY_TOKEN_KEY) {
+                                                        let v = map.get(ID_KEY).cloned().unwrap_or_else(|| json!(""));
+                                                        map.insert(MODIFY_TOKEN_KEY.to_owned(), v);
+                                                    }
+                                                    Ok::<_, IntegrationOSError>(Value::Object(map.clone()))
+                                                } else {
+                                                    Ok(response)
+                                                }
+                                            }
+                                        });
+                                        let values = join_all(futures)
+                                                .await
+                                                .into_iter()
+                                                .collect::<Result<Vec<Value>, _>>()?;
+                                        Ok(Value::Array(values))
+                                    },
+                                    Ok(Some(body)) => {
+                                        Ok(jsruntime.run::<Value, Value>(&body).await.inspect_err(|e| {
+                                            error!("Failed to run request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
+                                        })?.drop_nulls())
+                                    },
+                                    Ok(_) if config.action_name == CrudAction::GetMany => Ok(Value::Array(Default::default())),
+                                    Err(e) => Err(e),
+                                    _ => Ok(Value::Object(Default::default())),
+                                };
+
+                                mapped_body.map(Some)
+                            },
+                            None => Err(InternalError::invalid_argument(
+                                        &format!(
+                                            "No js for schema mapping to common model {name} for {}. ID: {}",
+                                            connection.platform, config.id
+                                        ),
+                                        None,
+                                    )
+                            )
+                        }
+                    },
+                    CrudAction::GetCount | CrudAction::Custom => body,
+                    CrudAction::Update | CrudAction::Delete => Ok(None),
+                }?;
+
+                build_unified_response(config, metadata, is_passthrough)(body, pagination,  passthrough, params, status, headers)
             }
             Action::Passthrough { method, path } => Err(InternalError::invalid_argument(
                 &format!("Passthrough action is not supported for destination {}, in method {method} and path {path}", key.connection_key),
@@ -608,6 +673,115 @@ impl UnifiedDestination {
     }
 }
 
+fn build_unified_response(
+    config: ConnectionModelDefinition,
+    metadata: &mut UnifiedMetadataBuilder,
+    is_passthrough: bool,
+) -> impl FnOnce(
+    Option<Value>,
+    Option<Value>,
+    Option<Value>,
+    RequestCrud,
+    StatusCode,
+    HeaderMap,
+) -> Result<UnifiedResponse, IntegrationOSError>
+       + '_ {
+    move |body, pagination, passthrough, params, status, headers| {
+        let mut response = json!({});
+
+        let response_len = match &body {
+            Some(Value::Array(arr)) => arr.len(),
+            _ => 0,
+        };
+
+        let hash = HashedSecret::try_from(json!({
+            "response": &body,
+            "action": config.action_name,
+            "commonModel": config.mapping.as_ref().map(|m| &m.common_model_name),
+        }))?;
+        metadata.hash(hash.inner());
+
+        if let Some(body) = body {
+            if let Value::Object(ref mut resp) = response {
+                if config.action_name == CrudAction::GetCount {
+                    resp.insert(UNIFIED_KEY.to_string(), json!({ COUNT_KEY: body }));
+                } else {
+                    resp.insert(UNIFIED_KEY.to_string(), body);
+                }
+            }
+        } else {
+            tracing::info!("No response body to map for this action. ID: {}", config.id);
+        }
+
+        // Insert passthrough data if needed
+        if is_passthrough {
+            if let Some(passthrough) = passthrough {
+                if let Value::Object(ref mut resp) = response {
+                    resp.insert(PASSTHROUGH_KEY.to_string(), passthrough);
+                }
+            }
+        }
+
+        if let Some(Value::Object(pagination_obj)) = pagination {
+            let mut pagination_obj = pagination_obj.clone(); // Clone the pagination data to modify it
+                                                             // Add limit if available in the query params
+            if let Some(Ok(limit)) = params
+                .get_query_params()
+                .get(LIMIT_KEY)
+                .map(|s| s.parse::<u32>())
+            {
+                pagination_obj.insert(LIMIT_KEY.to_string(), Value::Number(Number::from(limit)));
+            }
+            pagination_obj.insert(
+                PAGE_SIZE_KEY.to_string(),
+                Value::Number(Number::from(response_len)),
+            );
+
+            if let Value::Object(ref mut resp) = response {
+                resp.insert(PAGINATION_KEY.to_string(), Value::Object(pagination_obj));
+            }
+        }
+
+        let metadata_value = metadata.build()?;
+        if let Value::Object(ref mut resp) = response {
+            resp.insert(META_KEY.to_string(), metadata_value.as_value().clone());
+        }
+
+        let mut builder = Response::builder();
+
+        if status.is_success() {
+            builder = builder
+                .header::<&'static str, HeaderValue>(STATUS_HEADER_KEY, status.as_u16().into())
+                .status(StatusCode::OK);
+        } else {
+            builder = builder.status(status);
+        }
+
+        if let Some(builder_headers) = builder.headers_mut() {
+            builder_headers.extend(headers);
+        } else {
+            return Err(IntegrationOSError::from_err_code(
+                status,
+                "Could not get headers from builder",
+                None,
+            ));
+        }
+
+        let res = builder.body(response).map_err(|e| {
+            error!(
+                "Failed to create response from builder for successful response. Error: {}",
+                e
+            );
+            IntegrationOSError::from_err_code(status, &e.to_string(), None)
+        })?;
+
+        Ok(UnifiedResponse {
+            response: res,
+            metadata: metadata.build()?,
+        })
+    }
+}
+
 fn transform_response_with_path(
     config: &ConnectionModelDefinition,
     model_definition_json: Option<Value>,
@@ -624,7 +798,7 @@ fn transform_response_with_path(
     match path {
         None => Ok(model_definition_json),
         Some(path) => {
-            let wrapped_body = json!({ "body": model_definition_json });
+            let wrapped_body = json!({ BODY_KEY: model_definition_json });
             let mut bodies = jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
                 error!(
                     "Failed to select body at response path. ID {}, Path {}, Error {}",
@@ -692,7 +866,7 @@ fn extract_pagination(
         None => return Ok(None),
     };
 
-    let wrapped_body = json!({ "body": body_value });
+    let wrapped_body = json!({ BODY_KEY: body_value });
 
     let mut bodies = jsonpath_lib::select(&wrapped_body, path).map_err(|e| {
         error!(
@@ -753,7 +927,7 @@ fn generate_script_namespace(max_capacity: u64, key: &str) -> String {
 fn insert_action_id(secret: Value, id: Option<&Arc<str>>) -> Value {
     if let Value::Object(mut sec) = secret {
         if let Some(id) = id {
-            sec.insert("id".to_string(), Value::String(id.to_string()));
+            sec.insert(ID_KEY.to_string(), Value::String(id.to_string()));
         }
         Value::Object(sec)
     } else {

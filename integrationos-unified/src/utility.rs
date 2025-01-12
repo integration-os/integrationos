@@ -1,5 +1,3 @@
-use serde_json::Value;
-
 pub fn match_route<'a>(
     full_path: &'a str,
     routes: impl Iterator<Item = &'a str>,

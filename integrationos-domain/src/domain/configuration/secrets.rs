@@ -80,8 +80,6 @@ impl Display for SecretsConfig {
 
 #[cfg(test)]
 mod tests {
-    use secrecy::ExposeSecret;
-
     use super::*;
 
     #[tokio::test]

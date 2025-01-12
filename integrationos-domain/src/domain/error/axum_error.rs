@@ -11,7 +11,7 @@ impl IntoResponse for IntegrationOSError {
     }
 }
 
-impl<'a> IntoResponse for &'a IntegrationOSError {
+impl IntoResponse for &IntegrationOSError {
     fn into_response(self) -> Response {
         let body = self.to_owned().as_application().as_json();
 

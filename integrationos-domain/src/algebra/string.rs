@@ -77,7 +77,7 @@ impl StringExt for String {
     }
 }
 
-impl<'a> StringExt for &'a str {
+impl StringExt for &str {
     fn capitalize(&self) -> String {
         self.to_string().capitalize()
     }
