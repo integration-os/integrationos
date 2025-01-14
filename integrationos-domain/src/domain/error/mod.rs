@@ -1350,7 +1350,6 @@ impl Display for IntegrationOSError {
 impl From<UninitializedFieldError> for IntegrationOSError {
     fn from(ufe: UninitializedFieldError) -> Self {
         InternalError::invalid_argument(&format!("Uninitialized field: {}", ufe.field_name()), None)
-            .into()
     }
 }
 

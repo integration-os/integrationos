@@ -75,12 +75,12 @@ impl RequestCrud {
         }
     }
 
-    pub fn extend_body(mut self, other: Value) -> Self {
+    pub fn extend_body(mut self, other: Option<Value>) -> Self {
         match (&mut self.body, other) {
-            (Some(Value::Object(a)), Value::Object(b)) => {
+            (Some(Value::Object(a)), Some(Value::Object(b))) => {
                 a.extend(b); // Merge JSON objects
             }
-            (body @ None, mapped_body) => {
+            (body @ None, Some(mapped_body)) => {
                 body.replace(mapped_body); // Assign `other` to `body` if `body` is None
             }
             _ => {}

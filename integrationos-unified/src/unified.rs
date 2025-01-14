@@ -326,7 +326,7 @@ impl UnifiedDestination {
                 let schema_namespace = generate_script_namespace(self.secrets_cache.max_capacity(), &cms.id.to_string());
 
 
-                let body = params.get_body().ok_or_else(|| InternalError::invalid_argument("No body found", None))?;
+                let body = params.get_body();
                 let body = match cms.mapping.as_ref().map(|m| m.from_common_model.as_str()) {
                     Some(code) => {
                         let namespace = schema_namespace.clone() + "_mapFromCommonModel";
@@ -336,9 +336,9 @@ impl UnifiedDestination {
                                 error!("Failed to create request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
                             })?;
 
-                        jsruntime.create("mapFromCommonModel")?.run::<Value, Value>(body).await?.drop_nulls()
+                        jsruntime.create("mapFromCommonModel")?.run::<Option<&Value>, Option<Value>>(&body).await?.map(|v| v.drop_nulls())
                     }
-                    None => body.to_owned()
+                    None => body.cloned()
                 };
 
                 let default_params = params.clone();
