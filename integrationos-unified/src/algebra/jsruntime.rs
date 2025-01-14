@@ -1,4 +1,3 @@
-use derive_builder::Builder;
 use integrationos_domain::{ApplicationError, IntegrationOSError};
 use js_sandbox_ios::Script;
 use serde::de::DeserializeOwned;
@@ -9,12 +8,8 @@ thread_local! {
     static JS_RUNTIME: RefCell<Script> = RefCell::new(Script::new());
 }
 
-#[derive(Builder)]
-#[builder(setter(into), build_fn(error = "IntegrationOSError"))]
-pub struct JSRuntimeImpl {
-    namespace: String,
-    code: String,
-}
+#[derive(Default, Clone, Copy)]
+pub struct JSRuntimeImpl;
 
 impl JSRuntimeImpl {
     /// Adds a JavaScript script to the runtime environment under a specific namespace.
@@ -22,6 +17,8 @@ impl JSRuntimeImpl {
     /// # Parameters
     ///
     /// - `fn_name`: The name of the JavaScript function to be added to the runtime.
+    /// - `namespace`: The namespace
+    /// - `code`: The JavaScript code to be added to the runtime.
     ///
     /// # Returns
     ///
@@ -33,13 +30,18 @@ impl JSRuntimeImpl {
     ///
     /// Returns an error if adding the script to the runtime fails, logging the error
     /// and returning a `bad_request` application error.
-    pub fn create(self, fn_name: &str) -> Result<Self, IntegrationOSError> {
+    pub fn create(
+        &self,
+        fn_name: &str,
+        namespace: &str,
+        code: &str,
+    ) -> Result<Self, IntegrationOSError> {
         JS_RUNTIME
-            .with_borrow_mut(|script| script.add_script(&self.namespace, fn_name, &self.code))
+            .with_borrow_mut(|script| script.add_script(namespace, fn_name, code))
             .map_err(|e| {
                 tracing::error!(
-                    "Failed to create request schema mapping script. ID: {}, Error: {}",
-                    self.namespace,
+                    "Failed to create javascript function in namespace {}. Error: {}",
+                    namespace,
                     e
                 );
 
@@ -49,7 +51,7 @@ impl JSRuntimeImpl {
                 )
             })?;
 
-        Ok(self)
+        Ok(*self)
     }
 
     /// Executes a JavaScript function in the runtime associated with a specific namespace,
@@ -74,14 +76,14 @@ impl JSRuntimeImpl {
     ///
     /// Returns an error if serialization of the input data fails or if the JavaScript
     /// function fails to execute. Logs the error and returns a `bad_request` application error.
-    pub async fn run<P, R>(&self, body: &P) -> Result<R, IntegrationOSError>
+    pub async fn run<P, R>(&self, payload: &P, namespace: &str) -> Result<R, IntegrationOSError>
     where
         P: Serialize,
         R: DeserializeOwned,
     {
-        let body = serde_json::to_value(body).map_err(|e| {
+        let body = serde_json::to_value(payload).map_err(|e| {
             tracing::error!(
-                "Failed to serialize request for request schema mapping script for connection model. Error: {}",
+                "Error serializing payload: {}",
                 e
             );
 
@@ -92,10 +94,10 @@ impl JSRuntimeImpl {
         })?;
 
         let body = JS_RUNTIME
-            .with_borrow_mut(|script| script.call_namespace(&self.namespace, body))
+            .with_borrow_mut(|script| script.call_namespace(namespace, body))
             .map_err(|e| {
                 tracing::error!(
-                    "Failed to run request schema mapping script for connection model. Error: {}",
+                    "Error running javascript function: {}",
                     e
                 );
 

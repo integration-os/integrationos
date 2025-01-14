@@ -1,6 +1,6 @@
 use crate::domain::{ResponseCrudToMapBuilder, ResponseCrudToMapRequest};
 use crate::{
-    algebra::jsruntime::{JSRuntimeImpl, JSRuntimeImplBuilder},
+    algebra::jsruntime::JSRuntimeImpl,
     client::CallerClient,
     domain::{RequestCrud, ResponseCrud, UnifiedMetadata, UnifiedMetadataBuilder},
     utility::{match_route, template_route},
@@ -314,6 +314,7 @@ impl UnifiedDestination {
                 let (config, secret, cms) = self.get_dependencies(&key, &connection, &name).await.inspect_err(|e| {
                     error!("Failed to get dependencies for unified destination. Destination: {:?}, Error: {e}", key);
                 })?;
+                tracing::debug!("Got dependencies for unified destination. Destination: {:?}, Config: {config:?}, Secret: {secret:?}, ConnectionModelSchema: {cms:?}", key);
 
                 let metadata = metadata
                     .action(action.to_string())
@@ -322,24 +323,23 @@ impl UnifiedDestination {
                 let secret = insert_action_id(secret.as_value()?, id.as_ref());
 
                 // Namespace for js scripts
+                let jsruntime = JSRuntimeImpl;
                 let crud_namespace = generate_script_namespace(self.secrets_cache.max_capacity(), &config.id.to_string());
                 let schema_namespace = generate_script_namespace(self.secrets_cache.max_capacity(), &cms.id.to_string());
 
+                tracing::debug!("Got namespace for unified destination. Destination: {:?}, CrudNamespace: {crud_namespace:?}, SchemaNamespace: {schema_namespace:?}", key);
 
                 let body = params.get_body();
                 let body = match cms.mapping.as_ref().map(|m| m.from_common_model.as_str()) {
                     Some(code) => {
                         let namespace = schema_namespace.clone() + "_mapFromCommonModel";
 
-                        let jsruntime = JSRuntimeImplBuilder::default().namespace(namespace).code(code).build()
-                            .inspect_err(|e| {
-                                error!("Failed to create request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
-                            })?;
-
-                        jsruntime.create("mapFromCommonModel")?.run::<Option<&Value>, Option<Value>>(&body).await?.map(|v| v.drop_nulls())
+                        jsruntime.create("mapFromCommonModel", &namespace, &code)?.run::<Option<&Value>, Option<Value>>(&body, &namespace).await?.map(|v| v.drop_nulls())
                     }
                     None => body.cloned()
                 };
+
+                tracing::debug!("Got body for unified destination. Destination: {:?}, Body: {body:?}", key);
 
                 let default_params = params.clone();
                 let request_crud: Option<Result<RequestCrud, IntegrationOSError>> = OptionFuture::from(config.mapping.as_ref().map(|m| m.from_common_model.to_owned())
@@ -348,19 +348,17 @@ impl UnifiedDestination {
                             None => Ok(params),
                             Some(code) => {
                                 let namespace = crud_namespace.clone() + "_mapFromCrudRequest";
-                                let jsruntime = JSRuntimeImplBuilder::default().namespace(namespace).code(code).build()
-                                    .inspect_err(|e| {
-                                        error!("Failed to create request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
-                                    })?;
-                                let jsruntime = jsruntime.create("mapCrudRequest")?;
+                                let jsruntime = jsruntime.create("mapCrudRequest", &namespace, &code)?;
 
-                                let params: RequestCrud = jsruntime.run(&prepare_crud_mapping(params, &config)?).await?;
+                                let params: RequestCrud = jsruntime.run(&prepare_crud_mapping(params, &config)?, &namespace).await?;
                                 let params: RequestCrud = params.extend_body(body);
 
                                 Ok(params)
                             }
                         }
                     })).await;
+
+                tracing::debug!("Got request crud for unified destination. Destination: {:?}, RequestCrud: {request_crud:?}", key);
 
                 let params: RequestCrud = request_crud.unwrap_or(Ok(default_params))?;
                 let secret: Value = extend_secret(secret, params.get_path_params());
@@ -371,6 +369,8 @@ impl UnifiedDestination {
                 let response: reqwest::Response = self.execute_model_definition_from_request(&config, &params, &secret).timed(|_, duration| {
                     metadata.latency(duration.as_millis() as i32);
                 }).await?;
+
+                tracing::debug!("Got response for unified destination. Destination: {:?}, Response: {response:?}", key);
                 let status: StatusCode = response.status();
                 let headers: HeaderMap = response.headers().clone();
 
@@ -410,11 +410,9 @@ impl UnifiedDestination {
                         match cms.mapping.as_ref().map(|m| m.from_common_model.as_str()) {
                             Some(code) => {
                                 let namespace = crud_namespace.clone() + "_mapToCrudRequest";
-                                let jsruntime = JSRuntimeImplBuilder::default().namespace(namespace).code(code).build()
-                                    .inspect_err(|e| {
-                                        error!("Failed to create request crud mapping script for connection model. ID: {}, Error: {}", config.id, e);
-                                    })?;
-                                let jsruntime: JSRuntimeImpl = jsruntime.create("mapCrudRequest")?;
+                                let jsruntime: JSRuntimeImpl = jsruntime.create("mapCrudRequest", &namespace, &code).inspect_err(|e| {
+                                    error!("Failed to create request crud mapping script for connection model. ID: {}, Error: {}", config.id, e);
+                                })?;
 
                                 let pagination = extract_pagination(&config, &body)?;
                                 let res_to_map = ResponseCrudToMapBuilder::default()
@@ -423,7 +421,7 @@ impl UnifiedDestination {
                                     .request(ResponseCrudToMapRequest::new(params.get_query_params()))
                                     .build()?;
 
-                                let response: ResponseCrud = jsruntime.run(&res_to_map).await?;
+                                let response: ResponseCrud = jsruntime.run(&res_to_map, &namespace).await?;
 
                                 response.get_pagination().cloned()
                             }
@@ -440,21 +438,18 @@ impl UnifiedDestination {
                             Some(code) => {
                                 let namespace = schema_namespace.clone() + "_mapToCommonModel";
 
-                                let jsruntime = JSRuntimeImplBuilder::default().namespace(namespace).code(code).build()
-                                    .inspect_err(|e| {
-                                        error!("Failed to create request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
-                                    })?;
-                                let jsruntime = jsruntime.create("mapToCommonModel").inspect_err(|e| {
-                                    error!("Failed to create request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
+                                let jsruntime = jsruntime.create("mapToCommonModel", &namespace, &code).inspect_err(|e| {
+                                    error!("Failed to create request schema mapping script for connection model schema. ID: {}, Error: {}", config.id, e);
                                 })?;
 
                                 let mapped_body = match body {
                                     Ok(Some(Value::Array(arr))) => {
                                         let futures = arr.into_iter().map(|body| {
                                             let jsruntime = &jsruntime;
+                                            let namespace = &namespace;
                                             async move {
-                                                let mut response = jsruntime.run::<Value, Value>(&body).await.inspect_err(|e| {
-                                                    error!("Failed to run request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
+                                                let mut response = jsruntime.run::<Value, Value>(&body, namespace).await.inspect_err(|e| {
+                                                    error!("Failed to run request schema mapping script for connection model schema. ID: {}, Error: {}", config.id, e);
                                                 })?.drop_nulls();
 
                                                 if let Value::Object(map) = &mut response{
@@ -475,8 +470,8 @@ impl UnifiedDestination {
                                         Ok(Value::Array(values))
                                     },
                                     Ok(Some(body)) => {
-                                        Ok(jsruntime.run::<Value, Value>(&body).await.inspect_err(|e| {
-                                            error!("Failed to run request schema mapping script for connection model. ID: {}, Error: {}", config.id, e);
+                                        Ok(jsruntime.run::<Value, Value>(&body, &namespace).await.inspect_err(|e| {
+                                            error!("Failed to run request schema mapping script for connection model schema. ID: {}, Error: {}", config.id, e);
                                         })?.drop_nulls())
                                     },
                                     Ok(_) if config.action_name == CrudAction::GetMany => Ok(Value::Array(Default::default())),
