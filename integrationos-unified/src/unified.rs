@@ -314,7 +314,7 @@ impl UnifiedDestination {
                 let (config, secret, cms) = self.get_dependencies(&key, &connection, &name).await.inspect_err(|e| {
                     error!("Failed to get dependencies for unified destination. Destination: {:?}, Error: {e}", key);
                 })?;
-                tracing::debug!("Got dependencies for unified destination. Destination: {:?}, Config: {config:?}, Secret: {secret:?}, ConnectionModelSchema: {cms:?}", key);
+                tracing::info!("Dependencies retrieved for unified destination. Destination: {:?}, Config: {config:?}, Secret: {secret:?}, ConnectionModelSchema: {cms:?}", key);
 
                 let metadata = metadata
                     .action(action.to_string())
@@ -327,8 +327,6 @@ impl UnifiedDestination {
                 let crud_namespace = generate_script_namespace(self.secrets_cache.max_capacity(), &config.id.to_string());
                 let schema_namespace = generate_script_namespace(self.secrets_cache.max_capacity(), &cms.id.to_string());
 
-                tracing::debug!("Got namespace for unified destination. Destination: {:?}, CrudNamespace: {crud_namespace:?}, SchemaNamespace: {schema_namespace:?}", key);
-
                 let body = params.get_body();
                 let body = match cms.mapping.as_ref().map(|m| m.from_common_model.as_str()) {
                     Some(code) => {
@@ -339,7 +337,6 @@ impl UnifiedDestination {
                     None => body.cloned()
                 };
 
-                tracing::debug!("Got body for unified destination. Destination: {:?}, Body: {body:?}", key);
 
                 let default_params = params.clone();
                 let request_crud: Option<Result<RequestCrud, IntegrationOSError>> = OptionFuture::from(config.mapping.as_ref().map(|m| m.from_common_model.to_owned())
@@ -358,8 +355,6 @@ impl UnifiedDestination {
                         }
                     })).await;
 
-                tracing::debug!("Got request crud for unified destination. Destination: {:?}, RequestCrud: {request_crud:?}", key);
-
                 let params: RequestCrud = request_crud.unwrap_or(Ok(default_params))?;
                 let secret: Value = extend_secret(secret, params.get_path_params());
 
@@ -370,9 +365,10 @@ impl UnifiedDestination {
                     metadata.latency(duration.as_millis() as i32);
                 }).await?;
 
-                tracing::debug!("Got response for unified destination. Destination: {:?}, Response: {response:?}", key);
                 let status: StatusCode = response.status();
                 let headers: HeaderMap = response.headers().clone();
+
+                tracing::info!("Received response for unified destination. Status: {:?}", response.status());
 
                 let error_for_status = if response.status().is_client_error() || response.status().is_server_error() {
                     Ok(())
@@ -403,6 +399,8 @@ impl UnifiedDestination {
                     }
                     Ok(_) => body.ok(),
                 };
+
+                tracing::info!("Final mapped body for unified destination ready. Destination: {:?}, MappedBody: {body:?}", key);
 
                 let passthrough: Option<Value> = if is_passthrough { body.clone() } else { None };
                 let pagination: Option<Value> = match &config.action_name {
