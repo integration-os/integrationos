@@ -7,7 +7,8 @@ use crate::{
 };
 use crate::{
     BODY_KEY, COUNT_KEY, ID_KEY, LIMIT_KEY, META_KEY, MODIFY_TOKEN_KEY, PAGE_SIZE_KEY,
-    PAGINATION_KEY, PASSTHROUGH_KEY, STATUS_HEADER_KEY, UNIFIED_KEY,
+    PAGINATION_KEY, PASSTHROUGH_HEADERS, PASSTHROUGH_KEY, PASSTHROUGH_PARAMS, STATUS_HEADER_KEY,
+    UNIFIED_KEY,
 };
 use bson::doc;
 use chrono::Utc;
@@ -39,6 +40,7 @@ use mongodb::{
     options::{Collation, CollationStrength, FindOneOptions},
     Client,
 };
+use serde::Deserialize;
 use serde_json::{json, Number, Value};
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tracing::error;
@@ -312,9 +314,9 @@ impl UnifiedDestination {
             } => {
                 // (ConnectionModelDefinition, Secret, ConnectionModelSchema)
                 let (config, secret, cms) = self.get_dependencies(&key, &connection, &name).await.inspect_err(|e| {
-                    error!("Failed to get dependencies for unified destination. Destination: {:?}, Error: {e}", key);
+                    error!("Failed to get dependencies for unified destination. Destination: {:?}, Error: {e}", key.platform);
                 })?;
-                tracing::info!("Dependencies retrieved for unified destination. Destination: {:?}, Config: {config:?}, Secret: {secret:?}, ConnectionModelSchema: {cms:?}", key);
+                tracing::info!("Dependencies retrieved for unified destination. Destination: {:?}, Config: {}, ConnectionModelSchema: {}", key.platform, config.id, cms.id);
 
                 let metadata = metadata
                     .action(action.to_string())
@@ -332,11 +334,10 @@ impl UnifiedDestination {
                     Some(code) => {
                         let namespace = schema_namespace.clone() + "_mapFromCommonModel";
 
-                        jsruntime.create("mapFromCommonModel", &namespace, &code)?.run::<Option<&Value>, Option<Value>>(&body, &namespace).await?.map(|v| v.drop_nulls())
+                        jsruntime.create("mapFromCommonModel", &namespace, code)?.run::<Option<&Value>, Option<Value>>(&body, &namespace).await?.map(|v| v.drop_nulls())
                     }
                     None => body.cloned()
                 };
-
 
                 let default_params = params.clone();
                 let request_crud: Option<Result<RequestCrud, IntegrationOSError>> = OptionFuture::from(config.mapping.as_ref().map(|m| m.from_common_model.to_owned())
@@ -346,14 +347,20 @@ impl UnifiedDestination {
                             Some(code) => {
                                 let namespace = crud_namespace.clone() + "_mapFromCrudRequest";
                                 let jsruntime = jsruntime.create("mapCrudRequest", &namespace, &code)?;
+                                tracing::info!("Code for mapping crud request ready for unified destination. Code: {code}, Namespace: {namespace}");
 
-                                let params: RequestCrud = jsruntime.run(&prepare_crud_mapping(params, &config)?, &namespace).await?;
-                                let params: RequestCrud = params.extend_body(body);
+                                let payload = prepare_crud_mapping(params, &config)?;
+
+                                let params: RequestCrud = jsruntime.run(&payload, &namespace).await?;
+                                let params: RequestCrud = params.extend_body(body)
+                                    .add_path_param(ID_KEY.to_string(), id.as_ref().map(|id| id.to_string()));
 
                                 Ok(params)
                             }
                         }
                     })).await;
+
+                tracing::info!("Request crud prepared for unified destination. RequestCrud: {:?}", request_crud);
 
                 let params: RequestCrud = request_crud.unwrap_or(Ok(default_params))?;
                 let secret: Value = extend_secret(secret, params.get_path_params());
@@ -946,7 +953,7 @@ fn prepare_crud_mapping(
     config: &ConnectionModelDefinition,
 ) -> Result<RequestCrud, IntegrationOSError> {
     // Remove passthroughForward query param and add user-defined + connection-specific query params
-    let (params, removed) = params.remove_query_params("passthroughForward");
+    let (params, removed) = params.remove_query_params(PASSTHROUGH_PARAMS);
     let custom_query_params = removed
         .unwrap_or_default()
         .split('&')
@@ -958,7 +965,7 @@ fn prepare_crud_mapping(
     let params = params.extend_query_params(custom_query_params);
 
     // Remove passthroughHeaders query param and add user-defined + connection-specific headers
-    let (params, removed) = params.remove_header("x-integrationos-passthrough-forward");
+    let (params, removed) = params.remove_header(PASSTHROUGH_HEADERS);
     let custom_headers: HashMap<HeaderName, HeaderValue> = removed
         .map(|v| v.to_str().map(|s| s.to_string()))
         .map(|s| match s {

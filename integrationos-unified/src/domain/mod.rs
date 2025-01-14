@@ -15,6 +15,7 @@ pub struct RequestCrud {
     #[serde(with = "http_serde_ext_ios::header_map", default)]
     headers: HeaderMap,
     #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     body: Option<Value>,
     #[builder(default)]
     path_params: Option<HashMap<String, String>>,
@@ -78,12 +79,19 @@ impl RequestCrud {
     pub fn extend_body(mut self, other: Option<Value>) -> Self {
         match (&mut self.body, other) {
             (Some(Value::Object(a)), Some(Value::Object(b))) => {
-                a.extend(b); // Merge JSON objects
+                a.extend(b);
             }
             (body @ None, Some(mapped_body)) => {
-                body.replace(mapped_body); // Assign `other` to `body` if `body` is None
+                body.replace(mapped_body);
             }
             _ => {}
+        }
+        self
+    }
+
+    pub fn add_path_param(mut self, key: String, value: Option<String>) -> Self {
+        if let (Some(path_params), Some(value)) = (self.path_params.as_mut(), value) {
+            path_params.insert(key, value);
         }
         self
     }

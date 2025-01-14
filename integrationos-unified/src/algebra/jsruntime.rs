@@ -3,6 +3,7 @@ use js_sandbox_ios::Script;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::cell::RefCell;
+use std::fmt::Debug;
 
 thread_local! {
     static JS_RUNTIME: RefCell<Script> = RefCell::new(Script::new());
@@ -79,9 +80,9 @@ impl JSRuntimeImpl {
     pub async fn run<P, R>(&self, payload: &P, namespace: &str) -> Result<R, IntegrationOSError>
     where
         P: Serialize,
-        R: DeserializeOwned,
+        R: DeserializeOwned + Debug,
     {
-        let body = serde_json::to_value(payload).map_err(|e| {
+        let payload = serde_json::to_value(payload).map_err(|e| {
             tracing::error!("Error serializing payload: {}", e);
 
             ApplicationError::bad_request(
@@ -90,8 +91,8 @@ impl JSRuntimeImpl {
             )
         })?;
 
-        let body = JS_RUNTIME
-            .with_borrow_mut(|script| script.call_namespace(namespace, body))
+        let payload = JS_RUNTIME
+            .with_borrow_mut(|script| script.call_namespace(namespace, payload))
             .map_err(|e| {
                 tracing::error!("Error running javascript function: {}", e);
 
@@ -103,6 +104,6 @@ impl JSRuntimeImpl {
 
         tokio::task::yield_now().await;
 
-        body
+        payload
     }
 }
