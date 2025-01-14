@@ -82,10 +82,7 @@ impl JSRuntimeImpl {
         R: DeserializeOwned,
     {
         let body = serde_json::to_value(payload).map_err(|e| {
-            tracing::error!(
-                "Error serializing payload: {}",
-                e
-            );
+            tracing::error!("Error serializing payload: {}", e);
 
             ApplicationError::bad_request(
                 &format!("Failed while serializing request for request schema mapping script: {e}"),
@@ -96,10 +93,7 @@ impl JSRuntimeImpl {
         let body = JS_RUNTIME
             .with_borrow_mut(|script| script.call_namespace(namespace, body))
             .map_err(|e| {
-                tracing::error!(
-                    "Error running javascript function: {}",
-                    e
-                );
+                tracing::error!("Error running javascript function: {}", e);
 
                 ApplicationError::bad_request(
                     &format!("Failed while running request schema mapping script: {e}"),
