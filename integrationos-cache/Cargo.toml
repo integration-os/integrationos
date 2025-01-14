@@ -1,6 +1,6 @@
 [package]
 name = "integrationos-cache"
-description = "Cache library for IntegrationOS"
+description = "Cache library for Pica"
 version = "0.1.0"
 edition = "2021"
 

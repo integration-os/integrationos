@@ -119,7 +119,7 @@ async fn test_passthrough_api() {
                 vec![
                     (CONTENT_TYPE.to_string(), "application/json".to_string()),
                     (
-                        "x-integrationos-connection-key".to_string(),
+                        "x-pica-connection-key".to_string(),
                         connection.key.to_string(),
                     ),
                 ]
@@ -146,7 +146,7 @@ async fn test_passthrough_api() {
                 vec![
                     (CONTENT_TYPE.to_string(), "application/json".to_string()),
                     (
-                        "x-integrationos-connection-key".to_string(),
+                        "x-pica-connection-key".to_string(),
                         connection.key.to_string(),
                     ),
                 ]

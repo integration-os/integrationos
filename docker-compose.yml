@@ -1,7 +1,7 @@
 services:
   typescript-services:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/typescript-services:1.24.0
+    image: us-docker.pkg.dev/pica/docker-oss/typescript-services:1.24.0
     ports:
       - 3001:3001
     environment:
@@ -13,12 +13,12 @@ services:
       - DEMO_ACCOUNT_EVENT_ACCESS_KEY=${DEVELOPER_ACCOUNT_ACCESS_KEY}
       - ENGINEERING_ACCOUNT_BUILDABLE_ID=${DEVELOPER_ACCOUNT_ID}
       - EVENT_ACCESS_ENCRYPTION_PASSWORD=${EVENT_ACCESS_PASSWORD}
-      - JWT_AUDIENCE=integrationos-users
+      - JWT_AUDIENCE=pica-users
       - JWT_EXPIRES_AFTER=90d
-      - JWT_ISSUER=integrationos
+      - JWT_ISSUER=pica
       - JWT_SECRET=${JWT_SECRET}
       - MONGO_DB_NAME=events-service
-      - MONGO_URI=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017/events-service?authSource=admin
+      - MONGO_URI=mongodb://pica:${MONGO_PASSWORD}@mongo:27017/events-service?authSource=admin
       - NODE_ENV=localhost
       - QA_ACCOUNT_BUILDABLE_ID=build-${DEVELOPER_ACCOUNT_ID}
       - QA_ACCOUNT_EVENT_ACCESS_KEY=${DEVELOPER_ACCOUNT_ACCESS_KEY}
@@ -27,19 +27,19 @@ services:
 
   connections-api:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/api:1.24.0
+    image: us-docker.pkg.dev/pica/docker-oss/api:1.24.0
     ports:
       - 3005:3005
     environment:
       - ACCESS_KEY_WHITELIST_REFRESH_INTERVAL_SECS=30
       - CACHE_SIZE=1000
       - CONTROL_DATABASE_NAME=events-service
-      - CONTROL_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - CONTROL_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - DEBUG_MODE=false
       - ENGINEERING_ACCOUNT_ID=${DEVELOPER_ACCOUNT_ID}
       - EVENT_ACCESS_PASSWORD=${EVENT_ACCESS_PASSWORD}
       - EVENT_DATABASE_NAME=events-service
-      - EVENT_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - EVENT_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_KMS_KEY_ID=${KMS_KEY_ID}
       - GOOGLE_KMS_KEY_RING_ID=${KMS_KEY_RING_ID}
@@ -57,15 +57,15 @@ services:
 
   event-core:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/event-core:1.24.0
+    image: us-docker.pkg.dev/pica/docker-oss/event-core:1.24.0
     environment:
       - CONTEXT_COLLECTION_NAME=event-transactions
       - CONTEXT_DATABASE_NAME=events-service
-      - CONTEXT_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - CONTEXT_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - CONTROL_DATABASE_NAME=events-service
-      - CONTROL_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - CONTROL_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - EVENT_DATABASE_NAME=events-service
-      - EVENT_DATABASE_URL-mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - EVENT_DATABASE_URL-mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
       - GOOGLE_KMS_KEY_ID=${KMS_KEY_ID}
       - GOOGLE_KMS_KEY_RING_ID=${KMS_KEY_RING_ID}
@@ -80,17 +80,17 @@ services:
 
   gateway:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/gateway:1.24.0
+    image: us-docker.pkg.dev/pica/docker-oss/gateway:1.24.0
     ports:
       - 3002:3002
     environment:
       - CONTEXT_COLLECTION_NAME=event-transactions
       - CONTEXT_DATABASE_NAME=events-service
-      - CONTEXT_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - CONTEXT_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - CONTROL_DATABASE_NAME=events-service
-      - CONTROL_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - CONTROL_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - EVENT_DATABASE_NAME=events-service
-      - EVENT_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - EVENT_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - REDIS_URL=redis://redis:6379
       - RUST_LOG=gateway=info,tower_http=info
       - SECRET=${GATEWAY_SECRET}
@@ -98,7 +98,7 @@ services:
 
   oauth-refresh:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/oauth-refresh:1.24.0
+    image: us-docker.pkg.dev/pica/docker-oss/oauth-refresh:1.24.0
     ports:
       - 3003:3003
     environment:
@@ -107,13 +107,13 @@ services:
       - BURST_SIZE_LIMIT=30
       - CONTEXT_COLLECTION_NAME=event-transactions
       - CONTEXT_DATABASE_NAME=events-service
-      - CONTEXT_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - CONTEXT_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - CONTROL_DATABASE_NAME=events-service
-      - CONTROL_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - CONTROL_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - CREATE_SECRET_PATH=http://connections-api:3005/v1/secrets
       - ENVIRONMENT=production
       - EVENT_DATABASE_NAME=events-service
-      - EVENT_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - EVENT_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - GET_SECRET_PATH=http://connections-api:3005/v1/secrets
       - HOST=0.0.0.0
       - JWT_SECRET=${JWT_SECRET}
@@ -124,15 +124,15 @@ services:
 
   watchdog:
     platform: linux/amd64
-    image: us-docker.pkg.dev/integrationos/docker-oss/watchdog:1.24.0
+    image: us-docker.pkg.dev/pica/docker-oss/watchdog:1.24.0
     environment:
       - CONTEXT_COLLECTION_NAME=event-transactions
       - CONTEXT_DATABASE_NAME=events-service
-      - CONTEXT_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - CONTEXT_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - CONTROL_DATABASE_NAME=events-service
-      - CONTROL_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - CONTROL_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - EVENT_DATABASE_NAME=events-service
-      - EVENT_DATABASE_URL=mongodb://integrationos:${MONGO_PASSWORD}@mongo:27017
+      - EVENT_DATABASE_URL=mongodb://pica:${MONGO_PASSWORD}@mongo:27017
       - POLL_DURATION=1000
       - REDIS_URL=redis://redis:6379
       - RUST_LOG=watchdog=info
@@ -143,7 +143,7 @@ services:
       - 27017:27017
     environment:
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
-      - MONGO_INITDB_ROOT_USERNAME=integrationos
+      - MONGO_INITDB_ROOT_USERNAME=pica
 
   redis:
     image: redis:7.0

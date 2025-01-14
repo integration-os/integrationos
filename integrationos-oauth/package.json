@@ -17,7 +17,7 @@
     "prettier-watch:darwin:linux": "onchange 'src/**/*.ts' -- prettier --write {{changed}}",
     "prettier-watch:default": "onchange 'src/**/*.ts' -- prettier --write {{changed}}"
   },
-  "author": "@integrationos",
+  "author": "@pica",
   "license": "ISC",
   "description": "",
   "dependencies": {
