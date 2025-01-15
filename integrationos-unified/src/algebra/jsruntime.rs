@@ -79,7 +79,7 @@ impl JSRuntimeImpl {
     /// function fails to execute. Logs the error and returns a `bad_request` application error.
     pub async fn run<P, R>(&self, payload: &P, namespace: &str) -> Result<R, IntegrationOSError>
     where
-        P: Serialize,
+        P: Serialize + Debug,
         R: DeserializeOwned + Debug,
     {
         let payload = serde_json::to_value(payload).map_err(|e| {

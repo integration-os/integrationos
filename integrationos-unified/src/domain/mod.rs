@@ -11,6 +11,7 @@ use std::collections::HashMap;
 #[builder(setter(into))]
 #[serde(rename_all = "camelCase")]
 pub struct RequestCrud {
+    #[serde(default)]
     query_params: HashMap<String, String>,
     #[serde(with = "http_serde_ext_ios::header_map", default)]
     headers: HeaderMap,
