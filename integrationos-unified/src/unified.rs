@@ -469,7 +469,7 @@ impl UnifiedDestination {
                     })?;
 
                 const PASSTHROUGH_PARAMS: &str = "passthroughForward";
-                const PASSHTROUGH_HEADERS: &str = "x-integrationos-passthrough-forward";
+                const PASSHTROUGH_HEADERS: &str = "x-pica-passthrough-forward";
 
                 if let Some(custom_params) = query_params.remove(PASSTHROUGH_PARAMS) {
                     let pairs = custom_params.split('&').filter_map(|pair| {
