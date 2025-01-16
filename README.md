@@ -1,10 +1,6 @@
 <p align="center">
   <a href="https://picaos.com">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="./resources/images/logo-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="./resources/images/logo-light.svg">
-      <img alt="Pica Logo" src="./resources/images/logo-light.svg" height="100px">
-    </picture>
+    <img alt="Pica Logo" src="./resources/images/banner.png" style="border-radius: 10px;">
   </a>
 </p>
 
