@@ -31,7 +31,7 @@ use integrationos_domain::{
     secret::Secret,
     AccessKey, Claims, IntegrationOSError, SanitizedConnection, Store,
 };
-use integrationos_domain::{SecretExt, SecretVersion};
+use integrationos_domain::{SecretExt, SecretVersion, DEFAULT_AUDIENCE, DEFAULT_ISSUER};
 use jsonwebtoken::EncodingKey;
 use mockito::{Matcher, Server as MockServer, ServerGuard};
 use mongodb::Client;
@@ -248,8 +248,8 @@ impl TestServer {
                 is_buildable_core: true,
                 iat: 1703108904,
                 exp: 3157463108904,
-                aud: "buildable-users".to_string(),
-                iss: "buildable".to_string(),
+                aud: DEFAULT_AUDIENCE.to_string(),
+                iss: DEFAULT_ISSUER.to_string()
             },
             &EncodingKey::from_secret(token_secret.as_bytes()),
         );

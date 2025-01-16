@@ -7,7 +7,7 @@ use std::{collections::BTreeMap, sync::Arc};
 pub const DELETED_STR: &str = "deleted";
 const OWNERSHIP_STR: &str = "ownership.buildableId";
 const ENVIRONMENT_STR: &str = "environment";
-const DUAL_ENVIRONMENT_HEADER: &str = "x-integrationos-show-all-environments";
+const DUAL_ENVIRONMENT_HEADER: &str = "x-pica-show-all-environments";
 const LIMIT_STR: &str = "limit";
 const SKIP_STR: &str = "skip";
 

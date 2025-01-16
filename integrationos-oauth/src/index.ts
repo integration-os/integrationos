@@ -15,12 +15,12 @@ const hostname = process.env.EXPRESS_SERVER_HOSTNAME || '0.0.0.0';
 const SERVER_OAUTH_PATH = './connections';
 
 app.get('/', (_, res: Response) => {
-    res.send('IntegrationOS');
+    res.send('Pica');
 });
 
 app.listen(port, hostname, () => {
     console.log(
-        `IntegrationOS Oauth Server is running on http://${hostname}:${port}`,
+        `Pica Oauth Server is running on http://${hostname}:${port}`,
     );
 });
 

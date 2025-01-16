@@ -12,14 +12,14 @@ struct PathItemAction {
 }
 
 // OPENAPI METADATA
-const URI: &str = "https://api.integrationos.com/v1/unified";
+const URI: &str = "https://api.picaos.com/v1/unified";
 const OPENAPI_VERSION: &str = "3.0.3";
 const SPEC_VERSION: &str = "1.0.0";
 const TITLE: &str = "Common Models";
-const X_INTEGRATIONOS_SECRET: &str = "X-INTEGRATIONOS-SECRET";
-const X_INTEGRATIONOS_CONNECTION_KEY: &str = "X-INTEGRATIONOS-CONNECTION-KEY";
-const X_INTEGRATIONOS_ENABLE_PASSTHROUGH: &str = "X-INTEGRATIONOS-ENABLE-PASSTHROUGH";
-const X_INTEGRATIONOS_PASSTHROUGH_FORWARD: &str = "X-INTEGRATIONOS-PASSTHROUGH-FORWARD";
+const X_PICA_SECRET: &str = "X-PICA-SECRET";
+const X_PICA_CONNECTION_KEY: &str = "X-PICA-CONNECTION-KEY";
+const X_PICA_ENABLE_PASSTHROUGH: &str = "X-PICA-ENABLE-PASSTHROUGH";
+const X_PICA_PASSTHROUGH_FORWARD: &str = "X-PICA-PASSTHROUGH-FORWARD";
 
 pub fn generate_path_item(common_model: &CommonModel) -> IndexMap<String, ReferenceOr<PathItem>> {
     IndexMap::from_iter(
@@ -329,12 +329,12 @@ fn header() -> Vec<ReferenceOr<Parameter>> {
     vec![
         ReferenceOr::Item(Parameter::Header {
             parameter_data: ParameterData {
-                name: X_INTEGRATIONOS_SECRET.to_string(),
-                description: Some("IntegrationOS API key".to_string()),
+                name: X_PICA_SECRET.to_string(),
+                description: Some("Pica API key".to_string()),
                 required: true,
                 deprecated: Some(false),
                 format: ParameterSchemaOrContent::Schema(ReferenceOr::Item(Schema {
-                    schema_data: SchemaData { default: Some(serde_json::Value::String("{{integrationos-api-key}}".into())), ..Default::default() },
+                    schema_data: SchemaData { default: Some(serde_json::Value::String("{{pica-api-key}}".into())), ..Default::default() },
                     schema_kind: SchemaKind::Type(Type::String(StringType {
                         format: VariantOrUnknownOrEmpty::Unknown("string".to_string()),
                         pattern: None,
@@ -352,12 +352,12 @@ fn header() -> Vec<ReferenceOr<Parameter>> {
         }),
         ReferenceOr::Item(Parameter::Header {
             parameter_data: ParameterData {
-                name: X_INTEGRATIONOS_CONNECTION_KEY.to_string(),
+                name: X_PICA_CONNECTION_KEY.to_string(),
                 description: Some("The unique identifier of a Connected Account".to_string()),
                 required: true,
                 deprecated: Some(false),
                 format: ParameterSchemaOrContent::Schema(ReferenceOr::Item(Schema {
-                    schema_data: SchemaData { default: Some(serde_json::Value::String("{{integrationos-connection-key}}".into())), ..Default::default() },
+                    schema_data: SchemaData { default: Some(serde_json::Value::String("{{pica-connection-key}}".into())), ..Default::default() },
                     schema_kind: SchemaKind::Type(Type::String(StringType {
                         format: VariantOrUnknownOrEmpty::Unknown("string".to_string()),
                         ..Default::default()
@@ -372,7 +372,7 @@ fn header() -> Vec<ReferenceOr<Parameter>> {
         }),
         ReferenceOr::Item(Parameter::Header {
             parameter_data: ParameterData {
-                name: X_INTEGRATIONOS_ENABLE_PASSTHROUGH.to_string(),
+                name: X_PICA_ENABLE_PASSTHROUGH.to_string(),
                 description: Some("Set to true to receive the exact API response from the connection platform in the passthrough object".to_string()),
                 required: false,
                 deprecated: Some(false),
@@ -392,7 +392,7 @@ fn header() -> Vec<ReferenceOr<Parameter>> {
         }),
         ReferenceOr::Item(Parameter::Header {
             parameter_data: ParameterData {
-                name: X_INTEGRATIONOS_PASSTHROUGH_FORWARD.to_string(),
+                name: X_PICA_PASSTHROUGH_FORWARD.to_string(),
                 description: Some("A string of all headers to forward in the request to the 3rd-party platform".to_string()),
                 required: false,
                 deprecated: Some(false),

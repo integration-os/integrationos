@@ -4,11 +4,11 @@ use chrono::Utc;
 use jsonwebtoken::{EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 
-pub const DEFAULT_AUDIENCE: &str = "integrationos-users";
-pub const DEFAULT_ISSUER: &str = "integrationos";
+pub const DEFAULT_AUDIENCE: &str = "pica-users";
+pub const DEFAULT_ISSUER: &str = "pica";
 
-pub const FALLBACK_AUDIENCE: &str = "buildable-users";
-pub const FALLBACK_ISSUER: &str = "buildable";
+pub const FALLBACK_AUDIENCE: &str = "pica-users";
+pub const FALLBACK_ISSUER: &str = "pica";
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Default)]
 #[serde(rename_all = "camelCase")]

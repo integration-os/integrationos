@@ -11,12 +11,7 @@ use tracing::info;
 async fn main() -> Result<()> {
     dotenv().ok();
 
-    let suscriber = get_subscriber(
-        "integrationos-gateway".into(),
-        "info".into(),
-        std::io::stdout,
-        None,
-    );
+    let suscriber = get_subscriber("gateway".into(), "info".into(), std::io::stdout, None);
     init_subscriber(suscriber);
 
     let config = Config::init_from_env()?;
