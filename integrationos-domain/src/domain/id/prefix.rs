@@ -237,6 +237,7 @@ mod test {
         assert_eq!(IdPrefix::try_from("st").unwrap(), IdPrefix::Settings);
         assert_eq!(IdPrefix::try_from("tx").unwrap(), IdPrefix::Transaction);
         assert_eq!(IdPrefix::try_from("ut").unwrap(), IdPrefix::UnitTest);
+        assert_eq!(IdPrefix::try_from("ea").unwrap(), IdPrefix::EarlyAccess);
     }
 
     #[test]
@@ -282,5 +283,6 @@ mod test {
         assert_eq!(format!("{}", IdPrefix::Settings), "st");
         assert_eq!(format!("{}", IdPrefix::Transaction), "tx");
         assert_eq!(format!("{}", IdPrefix::UnitTest), "ut");
+        assert_eq!(format!("{}", IdPrefix::EarlyAccess), "ea");
     }
 }
