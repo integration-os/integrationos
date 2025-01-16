@@ -1,7 +1,7 @@
 services:
   typescript-services:
     platform: linux/amd64
-    image: us-docker.pkg.dev/pica/docker-oss/typescript-services:1.24.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/typescript-services:1.24.0
     ports:
       - 3001:3001
     environment:
@@ -27,7 +27,7 @@ services:
 
   connections-api:
     platform: linux/amd64
-    image: us-docker.pkg.dev/pica/docker-oss/api:1.24.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/api:1.24.0
     ports:
       - 3005:3005
     environment:
@@ -57,7 +57,7 @@ services:
 
   event-core:
     platform: linux/amd64
-    image: us-docker.pkg.dev/pica/docker-oss/event-core:1.24.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/event-core:1.24.0
     environment:
       - CONTEXT_COLLECTION_NAME=event-transactions
       - CONTEXT_DATABASE_NAME=events-service
@@ -80,7 +80,7 @@ services:
 
   gateway:
     platform: linux/amd64
-    image: us-docker.pkg.dev/pica/docker-oss/gateway:1.24.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/gateway:1.24.0
     ports:
       - 3002:3002
     environment:
@@ -98,7 +98,7 @@ services:
 
   oauth-refresh:
     platform: linux/amd64
-    image: us-docker.pkg.dev/pica/docker-oss/oauth-refresh:1.24.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/oauth-refresh:1.24.0
     ports:
       - 3003:3003
     environment:
@@ -124,7 +124,7 @@ services:
 
   watchdog:
     platform: linux/amd64
-    image: us-docker.pkg.dev/pica/docker-oss/watchdog:1.24.0
+    image: us-docker.pkg.dev/integrationos/docker-oss/watchdog:1.24.0
     environment:
       - CONTEXT_COLLECTION_NAME=event-transactions
       - CONTEXT_DATABASE_NAME=events-service
