@@ -12,7 +12,7 @@ struct PathItemAction {
 }
 
 // OPENAPI METADATA
-const URI: &str = "https://api.pica.com/v1/unified";
+const URI: &str = "https://api.picaos.com/v1/unified";
 const OPENAPI_VERSION: &str = "3.0.3";
 const SPEC_VERSION: &str = "1.0.0";
 const TITLE: &str = "Common Models";
