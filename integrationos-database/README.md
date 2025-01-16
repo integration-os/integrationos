@@ -1,10 +1,10 @@
-# IntegrationOS Storage
+# Pica Storage
 
-A versatile wrapper around multiple storage solutions, designed for single-tenant management of clients in the IntegrationOS project.
+A versatile wrapper around multiple storage solutions, designed for single-tenant management of clients in the Pica project.
 
 ## Purpose
 
-IntegrationOS Storage provides a unified interface for managing different storage backends, enabling single-tenant configurations for clients. It supports seamless integration of new databases, making it adaptable to various storage needs.
+Pica Storage provides a unified interface for managing different storage backends, enabling single-tenant configurations for clients. It supports seamless integration of new databases, making it adaptable to various storage needs.
 
 ## Running the Storage Service
 

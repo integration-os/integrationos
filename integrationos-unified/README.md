@@ -1,12 +1,12 @@
-# IntegrationOS Unified
+# Pica Unified
 
-The core logic for unification APIs and user request handling in the IntegrationOS project.
+The core logic for unification APIs and user request handling in the Pica project.
 
 ## Purpose
 
-IntegrationOS Unified provides the core functionality for managing and processing unification APIs, ensuring proper handling of user requests across the IntegrationOS ecosystem. While this service is not directly runnable, its logic forms the backbone of the unification process within the system.
+Pica Unified provides the core functionality for managing and processing unification APIs, ensuring proper handling of user requests across the Pica ecosystem. While this service is not directly runnable, its logic forms the backbone of the unification process within the system.
 
-For detailed usage and API references, visit the [API documentation](https://docs.integrationos.com/reference/list-connections).
+For detailed usage and API references, visit the [API documentation](https://docs.picaos.com).
 
 ## Running the Tests
 

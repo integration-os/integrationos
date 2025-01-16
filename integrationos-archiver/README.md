@@ -1,10 +1,10 @@
-# IntegrationOS Archiver
+# Pica Archiver
 
-A Rust-based archiver for the IntegrationOS project that archives the specified database.
+A Rust-based archiver for the Pica project that archives the specified database.
 
 ## Purpose
 
-IntegrationOS Archiver is a service designed to archive data from a specified database efficiently. It is built using Rust to ensure high performance and reliability in handling large volumes of data.
+Pica Archiver is a service designed to archive data from a specified database efficiently. It is built using Rust to ensure high performance and reliability in handling large volumes of data.
 
 ## Running the Archiver
 
