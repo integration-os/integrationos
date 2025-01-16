@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://picaos.com">
-    <img alt="Pica Logo" src="./resources/images/banner.png">
+    <img alt="Pica Logo" src="./resources/images/banner.png" style="border-radius: 10px;">
   </a>
 </p>
 
