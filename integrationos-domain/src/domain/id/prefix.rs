@@ -36,6 +36,7 @@ pub enum IdPrefix {
     Settings,
     Transaction,
     UnitTest,
+    EarlyAccess,
 }
 
 impl Display for IdPrefix {
@@ -73,6 +74,7 @@ impl Display for IdPrefix {
             IdPrefix::Settings => write!(f, "st"),
             IdPrefix::Transaction => write!(f, "tx"),
             IdPrefix::UnitTest => write!(f, "ut"),
+            IdPrefix::EarlyAccess => write!(f, "ea"),
         }
     }
 }
@@ -114,6 +116,7 @@ impl TryFrom<&str> for IdPrefix {
             "st" => Ok(IdPrefix::Settings),
             "tx" => Ok(IdPrefix::Transaction),
             "ut" => Ok(IdPrefix::UnitTest),
+            "ea" => Ok(IdPrefix::EarlyAccess),
             _ => Err(InternalError::invalid_argument(
                 &format!("Invalid ID prefix: {}", s),
                 None,
@@ -157,6 +160,7 @@ impl From<IdPrefix> for String {
             IdPrefix::Settings => "st".to_string(),
             IdPrefix::Transaction => "tx".to_string(),
             IdPrefix::UnitTest => "ut".to_string(),
+            IdPrefix::EarlyAccess => "ea".to_string(),
         }
     }
 }
