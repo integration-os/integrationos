@@ -70,7 +70,7 @@ impl TestGateway {
         let req = self
             .client
             .post(format!("http://localhost:{}/emit", self.port))
-            .header("x-buildable-secret", key)
+            .header("x-pica-secret", key)
             .json(&json!({"event": name, "payload": payload}));
 
         let res = req.send().await?;

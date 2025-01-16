@@ -77,10 +77,7 @@ pub struct ConnectionsConfig {
     pub rate_limit_enabled: bool,
     #[envconfig(from = "ENVIRONMENT", default = "development")]
     pub environment: Environment,
-    #[envconfig(
-        from = "DATABASE_CONNECTION_DOCKER_IMAGE",
-        default = "integrationos-database"
-    )]
+    #[envconfig(from = "DATABASE_CONNECTION_DOCKER_IMAGE", default = "pica-database")]
     pub database_connection_docker_image: String,
     #[envconfig(from = "NAMESPACE", default = "development")]
     pub namespace: String,
@@ -162,29 +159,23 @@ impl Display for ConnectionsConfig {
 
 #[derive(Envconfig, Default, Clone)]
 pub struct Headers {
-    #[envconfig(from = "HEADER_AUTH", default = "x-integrationos-secret")]
+    #[envconfig(from = "HEADER_AUTH", default = "x-pica-secret")]
     pub auth_header: String,
-    #[envconfig(from = "HEADER_CONNECTION", default = "x-integrationos-connection-key")]
+    #[envconfig(from = "HEADER_CONNECTION", default = "x-pica-connection-key")]
     pub connection_header: String,
     #[envconfig(
         from = "HEADER_ENABLE_PASSTHROUGH",
-        default = "x-integrationos-enable-passthrough"
+        default = "x-pica-enable-passthrough"
     )]
     pub enable_passthrough_header: String,
-    #[envconfig(
-        from = "HEADER_RATE_LIMIT_LIMIT",
-        default = "x-integrationos-rate-limit-limit"
-    )]
+    #[envconfig(from = "HEADER_RATE_LIMIT_LIMIT", default = "x-pica-rate-limit-limit")]
     pub rate_limit_limit: String,
     #[envconfig(
         from = "HEADER_RATE_LIMIT_REMAINING",
-        default = "x-integrationos-rate-limit-remainings"
+        default = "x-pica-rate-limit-remainings"
     )]
     pub rate_limit_remaining: String,
-    #[envconfig(
-        from = "HEADER_RATE_LIMIT_REST",
-        default = "x-integrationos-rate-limit-reset"
-    )]
+    #[envconfig(from = "HEADER_RATE_LIMIT_REST", default = "x-pica-rate-limit-reset")]
     pub rate_limit_reset: String,
 }
 

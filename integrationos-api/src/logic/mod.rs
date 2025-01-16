@@ -45,7 +45,7 @@ pub mod unified;
 pub mod utility;
 pub mod vault_connection;
 
-const INTEGRATION_OS_PASSTHROUGH_HEADER: &str = "x-integrationos-passthrough";
+const INTEGRATION_OS_PASSTHROUGH_HEADER: &str = "x-pica-passthrough";
 
 pub trait RequestExt: Sized {
     type Output: Serialize + DeserializeOwned + Unpin + Sync + Send + 'static;

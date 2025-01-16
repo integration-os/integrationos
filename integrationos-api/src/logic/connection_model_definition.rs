@@ -302,6 +302,7 @@ pub struct CreateRequest {
     pub version: Version, // the event-inc-version
     pub is_default_crud_mapping: Option<bool>,
     pub test_connection_payload: Option<Value>,
+    pub test_connection_status: Option<TestConnection>,
     pub mapping: Option<CrudMapping>,
     pub paths: Option<ModelPaths>,
     pub supported: Option<bool>,
@@ -352,7 +353,7 @@ impl RequestExt for CreateRequest {
             action: self.http_method.clone(),
             action_name: self.action_name.clone(),
             extractor_config: self.extractor_config.clone(),
-            test_connection_status: TestConnection::default(),
+            test_connection_status: self.test_connection_status.clone().unwrap_or_default(),
             test_connection_payload: self.test_connection_payload.clone(),
             is_default_crud_mapping: self.is_default_crud_mapping,
             mapping: self.mapping.clone(),
@@ -411,6 +412,10 @@ impl RequestExt for CreateRequest {
 
         if let Some(test_connection_payload) = &self.test_connection_payload {
             record.test_connection_payload = Some(test_connection_payload.clone());
+        }
+
+        if let Some(test_connection_status) = &self.test_connection_status {
+            record.test_connection_status = test_connection_status.clone();
         }
 
         record

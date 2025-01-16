@@ -63,7 +63,7 @@ async fn test_unified_api_get_many() {
                 vec![
                     (CONTENT_TYPE.to_string(), "application/json".to_string()),
                     (
-                        "x-integrationos-connection-key".to_string(),
+                        "x-pica-connection-key".to_string(),
                         connection.key.to_string(),
                     ),
                 ]
@@ -121,7 +121,7 @@ async fn test_unified_api_get_one() {
                 vec![
                     (CONTENT_TYPE.to_string(), "application/json".to_string()),
                     (
-                        "x-integrationos-connection-key".to_string(),
+                        "x-pica-connection-key".to_string(),
                         connection.key.to_string(),
                     ),
                 ]
@@ -177,7 +177,7 @@ async fn test_unified_api_get_count() {
                 vec![
                     (CONTENT_TYPE.to_string(), "application/json".to_string()),
                     (
-                        "x-integrationos-connection-key".to_string(),
+                        "x-pica-connection-key".to_string(),
                         connection.key.to_string(),
                     ),
                 ]
@@ -237,7 +237,7 @@ async fn test_unified_api_update() {
                 vec![
                     (CONTENT_TYPE.to_string(), "application/json".to_string()),
                     (
-                        "x-integrationos-connection-key".to_string(),
+                        "x-pica-connection-key".to_string(),
                         connection.key.to_string(),
                     ),
                 ]
@@ -295,7 +295,7 @@ async fn test_unified_api_delete() {
                 vec![
                     (CONTENT_TYPE.to_string(), "application/json".to_string()),
                     (
-                        "x-integrationos-connection-key".to_string(),
+                        "x-pica-connection-key".to_string(),
                         connection.key.to_string(),
                     ),
                 ]
@@ -353,7 +353,7 @@ async fn test_unified_api_create() {
                 vec![
                     (CONTENT_TYPE.to_string(), "application/json".to_string()),
                     (
-                        "x-integrationos-connection-key".to_string(),
+                        "x-pica-connection-key".to_string(),
                         connection.key.to_string(),
                     ),
                 ]
@@ -400,7 +400,7 @@ async fn test_unified_metrics() {
                 vec![
                     (CONTENT_TYPE.to_string(), "application/json".to_string()),
                     (
-                        "x-integrationos-connection-key".to_string(),
+                        "x-pica-connection-key".to_string(),
                         connection.key.to_string(),
                     ),
                 ]
@@ -433,7 +433,7 @@ async fn test_unified_metrics() {
                 vec![
                     (CONTENT_TYPE.to_string(), "application/json".to_string()),
                     (
-                        "x-integrationos-connection-key".to_string(),
+                        "x-pica-connection-key".to_string(),
                         connection.key.to_string(),
                     ),
                 ]
@@ -581,6 +581,7 @@ async fn create_connection_model_definition(
         responses: vec![],
         is_default_crud_mapping: None,
         test_connection_payload: None,
+        test_connection_status: None,
         mapping: Some(mapping.clone()),
         supported: Some(true),
         active: Some(true),

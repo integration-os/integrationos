@@ -28,11 +28,11 @@ use tower_http::{
 };
 use tracing::{error, info, warn};
 
-const HEADER_STR: &str = "x-buildable-secret";
+const HEADER_STR: &str = "x-pica-secret";
 const INVALID_ACCESS_KEY_ERROR: (StatusCode, &str) =
     (StatusCode::BAD_REQUEST, "Invalid access key");
 const MISSING_HEADER_ERROR: (StatusCode, &str) =
-    (StatusCode::BAD_REQUEST, "Missing x-buildable-secret header");
+    (StatusCode::BAD_REQUEST, "Missing x-pica-secret header");
 
 pub struct AppState {
     pub config: Config,

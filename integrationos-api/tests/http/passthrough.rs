@@ -69,6 +69,7 @@ async fn test_passthrough_api() {
         responses: vec![],
         is_default_crud_mapping: None,
         test_connection_payload: None,
+        test_connection_status: None,
         mapping: None,
         supported: Some(true),
         active: Some(true),
@@ -118,7 +119,7 @@ async fn test_passthrough_api() {
                 vec![
                     (CONTENT_TYPE.to_string(), "application/json".to_string()),
                     (
-                        "x-integrationos-connection-key".to_string(),
+                        "x-pica-connection-key".to_string(),
                         connection.key.to_string(),
                     ),
                 ]
@@ -145,7 +146,7 @@ async fn test_passthrough_api() {
                 vec![
                     (CONTENT_TYPE.to_string(), "application/json".to_string()),
                     (
-                        "x-integrationos-connection-key".to_string(),
+                        "x-pica-connection-key".to_string(),
                         connection.key.to_string(),
                     ),
                 ]
