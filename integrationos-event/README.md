@@ -1,4 +1,4 @@
-# IntegrationOS Event
+# Pica Event
 
 Processes incoming events from the [gateway](../integrationos-gateway/) over redis and executes the associated pipelines.
 

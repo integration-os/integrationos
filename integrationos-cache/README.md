@@ -1,10 +1,10 @@
-# IntegrationOS Cache
+# Pica Cache
 
-A minimal wrapper around Moka and Redis for caching in the IntegrationOS project.
+A minimal wrapper around Moka and Redis for caching in the Pica project.
 
 ## Purpose
 
-IntegrationOS Cache provides a lightweight, minimalistic interface to manage caching operations using Moka and Redis. While it is not runnable as a standalone service, it can be integrated into other systems and thoroughly tested to ensure reliable caching behavior.
+Pica Cache provides a lightweight, minimalistic interface to manage caching operations using Moka and Redis. While it is not runnable as a standalone service, it can be integrated into other systems and thoroughly tested to ensure reliable caching behavior.
 
 ## Running the Tests
 

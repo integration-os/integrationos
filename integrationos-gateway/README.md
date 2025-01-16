@@ -1,10 +1,10 @@
-# IntegrationOS Gateway
+# Pica Gateway
 
 Receives events by POSTing to the `/emit/:access_key` endpoint. Validates the access key and then stores the event in mongodb and transmits it over redis.
 
 ## Dependencies
 
-Requires redis to send events to the [integrationos-event](../integrationos-event) service.
+Requires redis to send events to the [pica-event](../integrationos-event) service.
 
 ```bash
 $ docker run -p 6379:6379 redis

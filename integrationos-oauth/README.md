@@ -1,4 +1,4 @@
-# IntegrationOS OAuth API
+# Pica OAuth API
 
 The API for OAuth based Connections.
 

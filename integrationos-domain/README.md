@@ -1,11 +1,11 @@
-# IntegrationOS Domain
+# Pica Domain
 
 This documentation does not aim to be an in-depth explanation of the code, but rather a high-level overview of the project.
 For a more detailed explanation, please refer to the code itself.
 
 ## Overview
 
-IntegrationOS domain seeks to hold the common data structures used on the [integration-os](https://github.com/integration-os/integration-os) repository. Along with these DS, it also
+Pica domain seeks to hold the common data structures used on the [pica](https://github.com/picahq/pica) repository. Along with these DS, it also
 has some utilities to create `id` and manipulate `json` as well as general purpose services.
 
 ### Environment Variables
@@ -40,9 +40,9 @@ The following environment variables are introduced, not necessarily used, by thi
 
 ### Services
 
-- Caller Client: A client to make requests to external APIs. It is used to make requests to external APIs and return the response. It is used by the `integration-os` repository to make requests to external APIs.
-- Secrets Client: A client to interact with the secrets service. It is used to get and create secrets in the secrets service. It is used by the `integration-os` repository to get and create secrets.
-- Watchdog Client: A client to start and stop the watchdog service. It is used to start the watchdog service. It is used by the `integration-os` repository to start and stop the watchdog service.
+- Caller Client: A client to make requests to external APIs. It is used to make requests to external APIs and return the response. It is used by the `pica` repository to make requests to external APIs.
+- Secrets Client: A client to interact with the secrets service. It is used to get and create secrets in the secrets service. It is used by the `pica` repository to get and create secrets.
+- Watchdog Client: A client to start and stop the watchdog service. It is used to start the watchdog service. It is used by the `pica` repository to start and stop the watchdog service.
 
 ### Data Structures
 
@@ -50,4 +50,4 @@ Please refer to the code itself for a detailed explanation of the data structure
 
 ### Utilities
 
-- Hash Data: A utility to hash data. It is used to hash data and return the hash. It is used by the `integration-os` repository to hash data.
+- Hash Data: A utility to hash data. It is used to hash data and return the hash. It is used by the `pica` repository to hash data.

@@ -1,29 +1,26 @@
 <p align="center">
-📖 Just launched <b><a href="https://www.integrationos.com/">IntegrationOS</a></b>
-  <br/>
- </p>
-
-<p align="center">
-  <a href="https://integrationos.com">
-    <img src="https://assets-global.website-files.com/5f6b97302bb70b93e591d51f/657a3a1aec47c8ec20b396fe_IntegrationOS%20main%20logo-p-500.png" height="64px">
+  <a href="https://picaos.com">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./resources/images/logo-dark.svg">
+      <source media="(prefers-color-scheme: light)" srcset="./resources/images/logo-light.svg">
+      <img alt="Pica Logo" src="./resources/images/logo-light.svg" height="100px">
+    </picture>
   </a>
 </p>
 
-<p align="center"><b>Ship integrations, remarkably fast.</b></p>
+<p align="center"><b>The Complete Agentic Infrastructure</b></p>
 
 <p align="center">
   <b>
-    <a href="https://www.integrationos.com/">Website</a>
+    <a href="https://www.picaos.com/">Website</a>
     ·
-    <a href="https://docs.integrationos.com/docs/quickstart">Documentation</a>
+    <a href="https://docs.picaos.com">Documentation</a>
     ·
-    <a href="https://www.integrationos.com/changelog">Changelog</a>
+    <a href="https://www.picaos.com/community">Community Hub</a>
     ·
-    <a href="https://www.integrationos.com/blog">Blog</a>
+    <a href="https://www.picaos.com/community/changelog">Changelog</a>
     ·
-    <a href="https://join.slack.com/t/integrationos-hq/shared_invite/zt-2dm9254tc-Eza~78acJllbP7ZFKuVYjw">Slack</a>
-    ·
-    <a href="https://twitter.com/integrationos">Twitter</a>
+    <a href="https://twitter.com/picahq">Twitter</a>
   </b>
 </p>
 
@@ -38,8 +35,8 @@ Forget the pain of having to manually parse through, transform and maintain hund
 
 To get the most out of this guide, you'll need:
 
-1. An [IntegrationOS account](https://app.integrationos.com)
-2. Your  IntegrationOS [API Key](https://docs.integrationos.com/docs/glossary#api-key)
+1. A [Pica account](https://app.picaos.com)
+2. Your Pica [API Key](https://docs.picaos.com/docs/glossary#api-key)
 
 ## Step 1: Backend - Create secure tokens
 
@@ -47,19 +44,19 @@ First, we'll add an endpoint to our backend that'll let us generate secure token
 
 ### Install the SDK
 
-To make this easy, IntegrationOS offers native SDKs in several popular programming languages. This guide will use the popular AuthKit SDK for Node.js.
+To make this easy, Pica offers native SDKs in several popular programming languages. This guide will use the popular AuthKit SDK for Node.js.
 
 ```shell npm
-npm install @integrationos/authkit-node
+npm install @picahq/authkit-node
 ```
 
 ### Set secrets
 
-To make calls to IntegrationOS, provide your API key. Store these values as managed secrets and pass them to the SDKs either as environment variables or directly in your app's configuration depending on your preferences.
+To make calls to Pica, provide your API key. Store these values as managed secrets and pass them to the SDKs either as environment variables or directly in your app's configuration depending on your preferences.
 
 ```shell
-INTEGRATIONOS_SANDBOX_API_KEY='sk_test_example_123456789'
-INTEGRATIONOS_PRODUCTION_API_KEY='sk_live_example_123456789'
+PICA_SANDBOX_API_KEY='sk_test_example_123456789'
+PICA_PRODUCTION_API_KEY='sk_live_example_123456789'
 ```
 
 ### Create a token endpoint
@@ -67,10 +64,10 @@ INTEGRATIONOS_PRODUCTION_API_KEY='sk_live_example_123456789'
 Next, we'll need to add the token endpoint which will exchange the authorization token (valid for 10 minutes) for an authenticated Connected Account.
 
 ```javascript
-import { AuthKitToken } from "@integrationos/authkit-node";
+import { AuthKitToken } from "@picahq/authkit-node";
 
 app.post("/authkit-token", async (request, response) => {
-  const authKitToken = new AuthKitToken(process.env.INTEGRATIONOS_SANDBOX_API_KEY);
+  const authKitToken = new AuthKitToken(process.env.PICA_SANDBOX_API_KEY);
 
   // Specifying how the token will be constructed
   const token = await authKitToken.create({
@@ -89,10 +86,10 @@ Next, we'll add the AuthKit component to your frontend application.
 
 ### Install the SDK
 
-In the same fashion, IntegrationOS offers native frontend SDKs in several popular frameworks. Compatible with React, Next.js, Vue, Svelte and more.
+In the same fashion, Pica offers native frontend SDKs in several popular frameworks. Compatible with React, Next.js, Vue, Svelte and more.
 
 ```shell npm
-npm install @integrationos/authkit
+npm install @picahq/authkit
 ```
 
 ### Use the AuthKit Component
@@ -100,7 +97,7 @@ npm install @integrationos/authkit
 Next, we need to add the AuthKit component and replace the token URL with the URL of the token endpoint URL you created in Step 1 of this guide.
 
 ```javascript
-import { useAuthKit } from "@integrationos/authkit";
+import { useAuthKit } from "@picahq/authkit";
 
 const { open } = useAuthKit({
   token: {
@@ -129,15 +126,13 @@ This will open the AuthKit modal so your user can:
 
 Once the flow is completed, AuthKit will return a Connection object to your onSuccess callback. Each connection object contains metadata about the connected account and can be used to make API requests.
 
-View the full guide [here](https://docs.integrationos.com/docs/quickstart).
+View the full guide [here](https://docs.picaos.com).
 
-# Running IntegrationOS locally
+# Running Pica locally
 
 ## Prerequisites
 
 * [Docker](https://docs.docker.com/engine/) and [Docker Compose](https://docs.docker.com/compose/)
-* A [Google Cloud KMS](https://cloud.google.com/kms/docs) key ring
-* [`gcloud`](https://cloud.google.com/sdk/gcloud) installed, logged into an account that has `roles/cloudkms.cryptoKeyEncrypterDecrypter` access, and configured with [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc)
 
 ## Setup
 
@@ -156,7 +151,7 @@ View the full guide [here](https://docs.integrationos.com/docs/quickstart).
     docker compose -f docker-compose.data.yml run --rm seed-data
     ```
 
-**Note:** If you want to run the latest version of the docker image, you can use the latest git commit hash as the tag. For example, `integrationos/integrationos:<commit-hash>`.
+**Note:** If you want to run the latest version of the docker image, you can use the latest git commit hash as the tag. For example, `picahq/pica:<commit-hash>`.
 
 ## Other actions
 
@@ -164,10 +159,10 @@ Connecting to a MongoDB shell
 
 ```shell
 source .env
-docker compose exec mongo mongosh -u integrationos -p $MONGO_PASSWORD --authenticationDatabase=admin events-service
+docker compose exec mongo mongosh -u pica -p $MONGO_PASSWORD --authenticationDatabase=admin events-service
 ```
 
 
 # License
 
-IntegrationOS is released under the [**GPL-3.0 license**](LICENSE).
+Pica is released under the [**GPL-3.0 license**](LICENSE).

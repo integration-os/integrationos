@@ -1,6 +1,6 @@
-## IntegrationOS API
+## Pica API
 
-Common API for the IntegrationOS project.
+Common API for the Pica project.
 
 For a full list of endpoints, please refer to the following files:
 
