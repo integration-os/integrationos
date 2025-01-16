@@ -305,7 +305,7 @@ impl UnifiedDestination {
             connection_key: connection.key.clone(),
         };
 
-      match action {
+        match action {
             Action::Unified {
                 name,
                 action,
