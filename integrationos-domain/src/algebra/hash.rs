@@ -29,7 +29,7 @@ impl HashExt for HashKecAlgImpl {
     }
 
     fn verify(&self, value: &str, hash: &str) -> bool {
-        self.hash(value).ok().map_or(false, |h| h == hash)
+        self.hash(value).ok().is_some_and(|h| h == hash)
     }
 }
 

@@ -40,7 +40,6 @@ use mongodb::{
     options::{Collation, CollationStrength, FindOneOptions},
     Client,
 };
-use serde::Deserialize;
 use serde_json::{json, Number, Value};
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tracing::error;
@@ -163,7 +162,7 @@ impl UnifiedDestination {
                     .filter(|c| match c.platform_info {
                         PlatformInfo::Api(ref c) => matched_route
                             .as_ref()
-                            .map_or(false, |mr| c.path.as_str() == mr),
+                            .is_some_and(|mr| c.path.as_str() == mr),
                     });
 
                 if let Some(connection_model_definition) = connection_model_definitions.next() {
@@ -415,7 +414,7 @@ impl UnifiedDestination {
                         match cms.mapping.as_ref().map(|m| m.from_common_model.as_str()) {
                             Some(code) => {
                                 let namespace = crud_namespace.clone() + "_mapToCrudRequest";
-                                let jsruntime: JSRuntimeImpl = jsruntime.create("mapCrudRequest", &namespace, &code).inspect_err(|e| {
+                                let jsruntime: JSRuntimeImpl = jsruntime.create("mapCrudRequest", &namespace, code).inspect_err(|e| {
                                     error!("Failed to create request crud mapping script for connection model. ID: {}, Error: {}", config.id, e);
                                 })?;
 
@@ -443,7 +442,7 @@ impl UnifiedDestination {
                             Some(code) => {
                                 let namespace = schema_namespace.clone() + "_mapToCommonModel";
 
-                                let jsruntime = jsruntime.create("mapToCommonModel", &namespace, &code).inspect_err(|e| {
+                                let jsruntime = jsruntime.create("mapToCommonModel", &namespace, code).inspect_err(|e| {
                                     error!("Failed to create request schema mapping script for connection model schema. ID: {}, Error: {}", config.id, e);
                                 })?;
 
