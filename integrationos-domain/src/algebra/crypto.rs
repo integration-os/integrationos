@@ -9,7 +9,6 @@ use google_cloud_kms::{
     client::{Client, ClientConfig},
     grpc::kms::v1::DecryptRequest,
 };
-use secrecy::ExposeSecret;
 use tracing::debug;
 
 #[async_trait]
@@ -47,7 +46,7 @@ impl CryptoExt for IOSCrypto {
 
 impl IOSCrypto {
     pub fn new(config: SecretsConfig) -> Result<Self, IntegrationOSError> {
-        let len = config.ios_crypto_secret.expose_secret().as_bytes().len();
+        let len = config.ios_crypto_secret.len();
 
         if len != 32 {
             return Err(InternalError::invalid_argument(
@@ -58,7 +57,6 @@ impl IOSCrypto {
 
         let key: [u8; 32] = config
             .ios_crypto_secret
-            .expose_secret()
             .as_bytes()
             .iter()
             .take(32)

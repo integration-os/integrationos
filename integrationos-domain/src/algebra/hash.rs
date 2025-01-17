@@ -7,21 +7,21 @@ pub trait HashExt {
     fn verify(&self, value: &str, hash: &str) -> bool;
 }
 
-pub struct HashKecAlg;
+pub struct HashKecAlgImpl;
 
-impl HashKecAlg {
+impl HashKecAlgImpl {
     pub fn new() -> Self {
-        HashKecAlg
+        HashKecAlgImpl
     }
 }
 
-impl Default for HashKecAlg {
+impl Default for HashKecAlgImpl {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl HashExt for HashKecAlg {
+impl HashExt for HashKecAlgImpl {
     fn hash(&self, value: &str) -> Result<String, IntegrationOSError> {
         let mut hasher = Keccak256::new();
         hasher.update(value);
@@ -29,7 +29,7 @@ impl HashExt for HashKecAlg {
     }
 
     fn verify(&self, value: &str, hash: &str) -> bool {
-        self.hash(value).ok().map_or(false, |h| h == hash)
+        self.hash(value).ok().is_some_and(|h| h == hash)
     }
 }
 
@@ -40,7 +40,7 @@ impl TryFrom<Value> for HashedSecret {
         let value_str = serde_json::to_string(&value).map_err(|err| {
             InternalError::serialize_error(&format!("Failed to serialize value: {err}"), None)
         })?;
-        let hash = HashKecAlg::new().hash(&value_str)?;
+        let hash = HashKecAlgImpl::new().hash(&value_str)?;
         Ok(HashedSecret::new(hash))
     }
 }
@@ -61,7 +61,7 @@ mod test {
             }
         });
 
-        let hash = HashKecAlg::new().hash(&value.to_string()).unwrap();
+        let hash = HashKecAlgImpl::new().hash(&value.to_string()).unwrap();
 
         assert_eq!(
             hash,
@@ -80,9 +80,9 @@ mod test {
             }
         });
 
-        let hash = HashKecAlg::new().hash(&value.to_string()).unwrap();
+        let hash = HashKecAlgImpl::new().hash(&value.to_string()).unwrap();
 
-        assert!(HashKecAlg::new().verify(&value.to_string(), &hash));
+        assert!(HashKecAlgImpl::new().verify(&value.to_string(), &hash));
     }
 
     #[test]

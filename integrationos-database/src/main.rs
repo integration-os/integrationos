@@ -1,7 +1,7 @@
 use anyhow::Result;
 use dotenvy::dotenv;
 use envconfig::Envconfig;
-use integrationos_database::service::{
+use integrationos_database::algebra::{
     init::{DatabaseInitializer, Initializer},
     on_error_callback,
 };

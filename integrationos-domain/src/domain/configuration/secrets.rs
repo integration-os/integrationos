@@ -1,5 +1,4 @@
 use envconfig::Envconfig;
-use secrecy::SecretString;
 use std::fmt::{Display, Formatter, Result};
 use strum::{AsRefStr, EnumString};
 
@@ -8,7 +7,6 @@ use strum::{AsRefStr, EnumString};
 pub enum SecretServiceProvider {
     GoogleKms,
     IosKms,
-    // TODO: Implement LocalStorage
 }
 
 #[derive(Debug, Clone, Envconfig)]
@@ -30,7 +28,7 @@ pub struct SecretsConfig {
         from = "IOS_CRYPTO_SECRET",
         default = "xTtUQejH8eSNmWP5rlnHLkOWkHeflivG"
     )]
-    pub ios_crypto_secret: SecretString,
+    pub ios_crypto_secret: String,
 }
 
 impl SecretsConfig {
@@ -41,7 +39,7 @@ impl SecretsConfig {
 
     #[cfg(test)]
     pub fn with_secret(mut self, secret: String) -> Self {
-        self.ios_crypto_secret = SecretString::new(secret);
+        self.ios_crypto_secret = secret;
         self
     }
 
@@ -60,7 +58,7 @@ impl Default for SecretsConfig {
             google_kms_location_id: "global".to_owned(),
             google_kms_key_ring_id: "secrets-service-local".to_owned(),
             google_kms_key_id: "secrets-service-local".to_owned(),
-            ios_crypto_secret: SecretString::new("xTtUQejH8eSNmWP5rlnHLkOWkHeflivG".to_owned()),
+            ios_crypto_secret: "xTtUQejH8eSNmWP5rlnHLkOWkHeflivG".to_owned(),
         }
     }
 }
@@ -82,8 +80,6 @@ impl Display for SecretsConfig {
 
 #[cfg(test)]
 mod tests {
-    use secrecy::ExposeSecret;
-
     use super::*;
 
     #[tokio::test]
@@ -91,7 +87,7 @@ mod tests {
         let config = SecretsConfig::new();
 
         assert_eq!(
-            config.ios_crypto_secret.expose_secret().as_str(),
+            config.ios_crypto_secret.as_str(),
             "xTtUQejH8eSNmWP5rlnHLkOWkHeflivG"
         );
         assert_eq!(config.provider, SecretServiceProvider::GoogleKms);

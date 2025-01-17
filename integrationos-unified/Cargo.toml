@@ -8,6 +8,7 @@ edition = "2021"
 jsonpath_lib.workspace = true
 bson.workspace = true
 chrono = { workspace = true, features = ["serde"] }
+derive_builder.workspace = true
 integrationos-cache = { path = "../integrationos-cache" }
 integrationos-domain = { path = "../integrationos-domain" }
 futures.workspace = true

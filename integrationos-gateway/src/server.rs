@@ -1,6 +1,6 @@
 use crate::{
     config::Config, finalizer::event::FinalizeEvent, mock::finalizer::MockFinalizer,
-    util::get_value_from_path,
+    utility::get_value_from_path,
 };
 use anyhow::{anyhow, Result};
 use axum::{

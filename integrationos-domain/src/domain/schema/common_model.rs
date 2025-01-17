@@ -744,12 +744,12 @@ impl CommonModel {
     /// * `cm_store` - The store for common models
     /// * `ce_store` - The store for common enums
     /// * `strategy` - The strategy to use for generating the type
-    pub async fn generate_as_expanded<'a>(
+    pub async fn generate_as_expanded(
         &self,
         lang: &Lang,
         cm_store: &MongoStore<CommonModel>,
         ce_store: &MongoStore<CommonEnum>,
-        strategy: TypeGenerationStrategy<'a>,
+        strategy: TypeGenerationStrategy<'_>,
     ) -> String {
         match lang {
             Lang::Rust => self.as_rust_expanded(cm_store, ce_store, strategy).await,
@@ -892,11 +892,11 @@ impl CommonModel {
     ///
     /// # Returns
     /// A string of all the enums and models recursively expanded in the specified language
-    async fn as_typescript_expanded<'a>(
+    async fn as_typescript_expanded(
         &self,
         cm_store: &MongoStore<CommonModel>,
         ce_store: &MongoStore<CommonEnum>,
-        strategy: TypeGenerationStrategy<'a>,
+        strategy: TypeGenerationStrategy<'_>,
     ) -> String {
         let mut long_lived_visited_enums = HashSet::new();
         let mut long_lived_visited_common_models = HashSet::new();
@@ -1002,11 +1002,11 @@ impl CommonModel {
     ///
     /// # Returns
     /// A string of all the enums and models recursively expanded in the specified language
-    async fn as_rust_expanded<'a>(
+    async fn as_rust_expanded(
         &self,
         cm_store: &MongoStore<CommonModel>,
         ce_store: &MongoStore<CommonEnum>,
-        strategy: TypeGenerationStrategy<'a>,
+        strategy: TypeGenerationStrategy<'_>,
     ) -> String {
         let mut long_lived_visited_enums = HashSet::new();
         let mut long_lived_visited_common_models = HashSet::new();

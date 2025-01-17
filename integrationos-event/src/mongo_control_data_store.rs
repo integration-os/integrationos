@@ -355,7 +355,7 @@ impl ControlDataStore for MongoControlDataStore {
     ) -> Result<String> {
         let response = self
             .destination_caller
-            .send_to_destination(
+            .dispatch_destination_request(
                 None,
                 &pipeline.destination,
                 event.headers.clone(),

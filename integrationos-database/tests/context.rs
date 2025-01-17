@@ -1,7 +1,7 @@
 use envconfig::Envconfig;
 use http::{Method, StatusCode};
-use integrationos_database::service::init::DatabaseInitializer;
-use integrationos_database::service::init::Initializer;
+use integrationos_database::algebra::init::DatabaseInitializer;
+use integrationos_database::algebra::init::Initializer;
 use integrationos_domain::prefix::IdPrefix;
 use integrationos_domain::Id;
 use integrationos_domain::{database::DatabasePodConfig, IntegrationOSError, InternalError};

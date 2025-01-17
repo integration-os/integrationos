@@ -9,7 +9,7 @@ use axum::{
 };
 use bson::doc;
 use http::{HeaderMap, HeaderValue};
-use integrationos_cache::local::connection_cache::ConnectionCacheArcStrHeaderKey;
+use integrationos_cache::local::{ConnectionHeaderCache, LocalCacheExt};
 use integrationos_domain::{
     algebra::MongoStore, event_access::EventAccess, ApplicationError, Connection,
     IntegrationOSError, InternalError, OAuth, Store, Unit,
@@ -42,7 +42,7 @@ pub mod schema_generator;
 pub mod secrets;
 pub mod transactions;
 pub mod unified;
-pub mod utils;
+pub mod utility;
 pub mod vault_connection;
 
 const INTEGRATION_OS_PASSTHROUGH_HEADER: &str = "x-pica-passthrough";
@@ -322,11 +322,11 @@ async fn get_connection(
     access: &EventAccess,
     connection_key: &HeaderValue,
     stores: &AppStores,
-    cache: &ConnectionCacheArcStrHeaderKey,
+    cache: &ConnectionHeaderCache,
 ) -> Result<Arc<Connection>, IntegrationOSError> {
     let connection = cache
         .get_or_insert_with_filter(
-            (access.ownership.id.clone(), connection_key.clone()),
+            &(access.ownership.id.clone(), connection_key.clone()),
             stores.connection.clone(),
             doc! {
                 "key": connection_key.to_str().map_err(|_| {
@@ -335,6 +335,7 @@ async fn get_connection(
                 "ownership.buildableId": access.ownership.id.as_ref(),
                 "deleted": false
             },
+            None,
         )
         .await?;
 

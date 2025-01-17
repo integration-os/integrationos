@@ -9,9 +9,10 @@ use crate::{
         unified, vault_connection,
     },
     middleware::{
-        blocker::{handle_blocked_error, BlockInvalidHeaders},
-        extractor::{rate_limit_middleware, RateLimiter},
         header_auth,
+        header_blocker::{handle_blocked_error, BlockInvalidHeaders},
+        header_passthrough,
+        rate_limiter::{rate_limit_middleware, RateLimiter},
     },
     server::AppState,
 };
@@ -71,6 +72,10 @@ pub async fn get_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
         .layer(from_fn_with_state(
             state.clone(),
             header_auth::header_auth_middleware,
+        ))
+        .layer(from_fn_with_state(
+            state.clone(),
+            header_passthrough::header_passthrough_middleware,
         ))
         .layer(from_fn(log_request_middleware))
         .layer(TraceLayer::new_for_http())
